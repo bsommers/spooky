@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="t d">
+  <title id="t">Spooky the black cat</title>
+  <desc id="d">A cute cartoon black cat with big yellow eyes, pink nose and a little pen-writing paw, sitting on a crescent moon.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
+      <stop offset="0" stop-color="#3b2a63"/>
+      <stop offset="1" stop-color="#1a1230"/>
+    </radialGradient>
+    <radialGradient id="eye" cx="50%" cy="40%" r="60%">
+      <stop offset="0" stop-color="#fff59d"/>
+      <stop offset="1" stop-color="#ffc107"/>
+    </radialGradient>
+  </defs>
+  <!-- background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <!-- stars -->
+  <g fill="#fff59d">
+    <circle cx="70" cy="80" r="4"/><circle cx="440" cy="64" r="5"/><circle cx="470" cy="190" r="3"/>
+    <circle cx="48" cy="210" r="3"/><circle cx="400" cy="120" r="3"/><circle cx="120" cy="40" r="3"/>
+  </g>
+  <!-- moon -->
+  <path d="M96 400a170 170 0 0 0 320 0a150 150 0 0 1-320 0z" fill="#ffe082"/>
+  <!-- tail -->
+  <path d="M372 400c46-6 80-34 70-84c-4-20-24-24-28-8c8 30-14 52-52 60z" fill="#0d0b14"/>
+  <!-- body -->
+  <ellipse cx="256" cy="372" rx="108" ry="82" fill="#0d0b14"/>
+  <!-- paws -->
+  <ellipse cx="206" cy="440" rx="30" ry="18" fill="#0d0b14"/>
+  <ellipse cx="306" cy="440" rx="30" ry="18" fill="#0d0b14"/>
+  <path d="M190 440h32M290 440h32" stroke="#2a2440" stroke-width="3" stroke-linecap="round"/>
+  <!-- ears -->
+  <path d="M148 190L132 88l86 52z" fill="#0d0b14"/>
+  <path d="M364 190l16-102l-86 52z" fill="#0d0b14"/>
+  <path d="M152 160l-6-42l36 22z" fill="#e8799b"/>
+  <path d="M360 160l6-42l-36 22z" fill="#e8799b"/>
+  <!-- head -->
+  <ellipse cx="256" cy="236" rx="130" ry="112" fill="#0d0b14"/>
+  <!-- eyes -->
+  <ellipse cx="204" cy="226" rx="34" ry="40" fill="url(#eye)"/>
+  <ellipse cx="308" cy="226" rx="34" ry="40" fill="url(#eye)"/>
+  <ellipse cx="208" cy="230" rx="11" ry="26" fill="#0d0b14"/>
+  <ellipse cx="304" cy="230" rx="11" ry="26" fill="#0d0b14"/>
+  <circle cx="196" cy="212" r="9" fill="#fff"/><circle cx="296" cy="212" r="9" fill="#fff"/>
+  <circle cx="216" cy="244" r="4" fill="#fff" opacity=".8"/><circle cx="316" cy="244" r="4" fill="#fff" opacity=".8"/>
+  <!-- cheeks -->
+  <ellipse cx="158" cy="274" rx="20" ry="11" fill="#e8799b" opacity=".45"/>
+  <ellipse cx="354" cy="274" rx="20" ry="11" fill="#e8799b" opacity=".45"/>
+  <!-- nose + mouth -->
+  <path d="M244 268h24l-12 14z" fill="#e8799b"/>
+  <path d="M256 282v8c-8 12-22 12-30 4M256 290c8 12 22 12 30 4" fill="none" stroke="#e8799b" stroke-width="4" stroke-linecap="round"/>
+  <!-- whiskers -->
+  <g stroke="#cfc8e8" stroke-width="3" stroke-linecap="round" opacity=".85">
+    <path d="M150 282l-56-10M150 296l-58 8M362 282l56-10M362 296l58 8"/>
+  </g>
+  <!-- quill pen held in paw -->
+  <path d="M396 340l-70 100l10 10l66-98z" fill="#f5f0ff"/>
+  <path d="M326 440l-14 34l32-18z" fill="#f5f0ff"/>
+  <path d="M312 474l4-8l8 4z" fill="#0d0b14"/>
+  <ellipse cx="330" cy="436" rx="18" ry="14" fill="#0d0b14"/>
+</svg>
