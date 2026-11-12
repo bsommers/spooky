@@ -33,3 +33,7 @@ See [`.planning/ROADMAP.md`](.planning/ROADMAP.md), [`REQUIREMENTS.md`](.plannin
 ## Origin
 
 Seeded from a design chat export in [`docs/source/`](docs/source/dual-axis-ghostwriter.md); the plan documents known defects in that code and how they are avoided.
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
