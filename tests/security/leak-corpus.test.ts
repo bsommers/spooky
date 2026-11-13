@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { ConfidentialityFilter } from '../../src/filters/confidentiality.js';
 import { FilterPipeline } from '../../src/filters/pipeline.js';
 import type { PipelineContext } from '../../src/models/types.js';
+import { ConfigError } from '../../src/models/errors.js';
+import { KNOWN_OVER_REDACTIONS, MUST_NOT_CHANGE } from '../fixtures/leaks/benign.js';
 import { BLOCKLIST, buildLeakCorpus } from '../fixtures/leaks/samples.js';
+import { makeSecrets } from '../fixtures/leaks/secrets.js';
 
 // Independent residue detectors (deliberately NOT the filter's own regexes).
 const RESIDUE: [string, RegExp][] = [
@@ -28,8 +31,12 @@ const ctx = (stage: 'pre' | 'post'): PipelineContext => ({ authorId: 'a', person
 const corpus = buildLeakCorpus();
 
 describe('leak corpus (security tier)', () => {
-  it('has at least 40 samples', () => {
-    expect(corpus.length).toBeGreaterThanOrEqual(40);
+  it('has at least 100 samples covering every boundary / provider / header case', () => {
+    expect(corpus.length).toBeGreaterThanOrEqual(100);
+    const ids = new Set(corpus.map((s) => s.id));
+    for (const id of ['boundary/quoted-300', 'boundary/quoted-10000', 'boundary/json-newline-after-colon', 'boundary/url-password-at', 'header/basic', 'prose/password-is', 'stripeLive/plain', 'google/plain', 'gitlab/plain', 'npm/plain', 'huggingface/plain', 'sendgrid/plain']) {
+      expect(ids.has(id), id).toBe(true);
+    }
     expect(new Set(corpus.map((s) => s.id)).size).toBe(corpus.length);
   });
 
@@ -51,5 +58,53 @@ describe('leak corpus (security tier)', () => {
       expect(pre.trace[0]?.modified).toBe(true);
       expect(post.trace[0]?.modified).toBe(false);
     });
+  });
+});
+
+describe('false-positive corpus (security tier)', () => {
+  const f = () => new ConfidentialityFilter({ blocklist: BLOCKLIST });
+
+  it.each(MUST_NOT_CHANGE.map((t) => [t] as const))('ordinary text is returned byte for byte: %s', async (text) => {
+    const r = await f().process(text, ctx('pre'));
+    expect(r.content).toBe(text);
+    expect(r.modified).toBe(false);
+  });
+
+  it.each(KNOWN_OVER_REDACTIONS.map((e) => [e[0], e[1]] as const))('known over-redaction is exactly as documented: %j', async (input, expected) => {
+    expect((await f().process(input, ctx('pre'))).content).toBe(expected);
+  });
+});
+
+describe('custom-rule coverage (security tier)', () => {
+  const rules = [
+    { name: 'ticket', pattern: 'TKT-[0-9]{1,40}' },
+    { name: 'blob', pattern: 'BEGINBLOB[a-z]{500}ENDBLOB' }, // 518 characters: over the limit
+  ];
+
+  it('a rule that could match more than the guaranteed length is refused, never silently truncated', () => {
+    expect(() => new ConfidentialityFilter({ customRules: [rules[1] as (typeof rules)[number]] })).toThrow(ConfigError);
+    expect(() => new ConfidentialityFilter({ customRules: [{ name: 'blob', pattern: 'BEGIN[\\s\\S]{0,2000}END' }] })).toThrow(ConfigError);
+    expect(() => new ConfidentialityFilter({ customRules: [{ name: 'blob', pattern: 'BEGIN[\\s\\S]+END' }] })).toThrow(ConfigError);
+  });
+
+  it('hostile rules (chained bounded quantifiers) are refused at construction', () => {
+    for (const pattern of ['a{1,500}a{1,500}a{1,500}a{1,500}b', 'a{0,200}a{0,200}a{0,200}c', '(a+)+$', 'a+a+b']) {
+      expect(() => new ConfidentialityFilter({ customRules: [{ name: 'r', pattern }] }), pattern).toThrow(ConfigError);
+    }
+  });
+
+  it('a maximum-length custom match and every provider secret are redacted at every window alignment', async () => {
+    const f = new ConfidentialityFilter({ customRules: [{ name: 'maxlen', pattern: 'M[a-z]{510}E' }, rules[0] as (typeof rules)[number]] });
+    const gens = makeSecrets(4242);
+    const longMatch = 'M' + 'k'.repeat(510) + 'E';
+    for (let at = 0; at < 1300; at += 11) {
+      const secrets = Object.keys(gens).map((k) => (gens[k] as () => { text: string })().text).filter((t) => !t.includes('\n'));
+      const filler = '-'.repeat(at);
+      const text = `${filler}${longMatch} TKT-12345 ${secrets.join(' | ')}${filler}`;
+      const out = (await f.process(text, ctx('pre'))).content;
+      expect(out, `at ${at}`).not.toContain('kkkkkkkk');
+      expect(out).not.toContain('TKT-12345');
+      for (const sec of secrets) expect(out).not.toContain(sec);
+    }
   });
 });

@@ -114,4 +114,34 @@ describe('torture: filters', () => {
       expect(protectedTotal).toBeGreaterThan(RUNS * 10);
     })();
   }, 120_000);
+
+  it('benign unicode soup without a secret passes pre+post byte for byte (no normalization side effects)', async () => {
+    const rnd = mulberry32(0xbeef);
+    const cfg = loadConfig({ llm: { model: 'm' } });
+    const factories = defaultFactories({ confidentiality: { blocklist: [] } });
+    const soup = ['ﬁ', '…', '™', '½', '\u00a0', '❤\ufe0f', '👨\u200d👩\u200d👧', 'سلام\u200cدنیا', 'Ａ', 'é', 'e\u0301', ' ', 'word ', '한국어', '\u200b', '\u00ad'];
+    for (let n = 0; n < 100; n++) {
+      let text = '';
+      while (text.length < 2000) text += pick(rnd, soup);
+      const pre = await buildPipeline(cfg, 'pre', factories).run(text, ctx('pre', false));
+      expect(pre.text).toBe(text);
+      expect(pre.trace[0]?.modified).toBe(false);
+    }
+  });
+
+  it('a hostile custom rule cannot hang the process: it is refused at construction, and every accepted rule is fast', async () => {
+    const hostile = ['a{1,500}a{1,500}a{1,500}a{1,500}b', 'a{0,200}a{0,200}a{0,200}c', 'a+a+b', '(a+)+b', '(?:a|aa)+b'];
+    for (const pattern of hostile) {
+      expect(() => new ConfidentialityFilter({ customRules: [{ name: 'r', pattern }] }), pattern).toThrow();
+    }
+    const accepted = ['a{1,64}b', 'a{1,3}a{1,3}a{1,3}a{1,3}b', 'a{1,64}a{1,3}b', 'a{1,16}a{1,16}b'];
+    for (const pattern of accepted) {
+      const f = new ConfidentialityFilter({ customRules: [{ name: 'r', pattern }] });
+      for (const text of ['a'.repeat(200_000), 'ab'.repeat(100_000)]) {
+        const t = performance.now();
+        f.redact(text);
+        expect(performance.now() - t, `${pattern}`).toBeLessThan(5000);
+      }
+    }
+  }, 120_000);
 });

@@ -87,6 +87,36 @@ export function buildLeakCorpus(seed = 20260101): LeakSample[] {
     text: 'https://app.example.invalid/auth#access_token=ya29.a0AfH6SMBx9d8e7f6a5b4c&token_type=bearer',
     secrets: ['ya29.a0AfH6SMBx9d8e7f6a5b4c'],
   });
+  // Value-boundary cases (CR-05): long quoted values, values on the next line, passwords containing @ / , ;
+  {
+    const long = 'Zq7-'.repeat(75); // 300 characters
+    samples.push({ id: 'boundary/quoted-300', text: `{"password": "${long}", "user": "bob"}`, secrets: [long] });
+    const huge = 'Mn4_'.repeat(2500); // 10000 characters
+    samples.push({ id: 'boundary/quoted-10000', text: `api_key = '${huge}'\nnext`, secrets: [huge] });
+  }
+  samples.push({
+    id: 'boundary/json-newline-after-colon',
+    text: '{\n  "client_secret":\n    "sp1t-acr0ss-l1nes-9d8e7f",\n  "id": 7\n}',
+    secrets: ['sp1t-acr0ss-l1nes-9d8e7f'],
+  });
+  samples.push({
+    id: 'boundary/yaml-block-value',
+    text: 'db:\n  password:\n    Ye11ow-Submar1ne-77\n  host: x.invalid',
+    secrets: ['Ye11ow-Submar1ne-77'],
+  });
+  samples.push({ id: 'boundary/url-password-at', text: 'postgres://svc:Tr0ub@dor&3-xx@db.internal.invalid/prod', secrets: ['Tr0ub@dor&3-xx', 'dor&3-xx'] });
+  samples.push({ id: 'boundary/url-password-slash', text: 'redis://default:pa/ss-w0rd-9@cache.internal.invalid:6379/0', secrets: ['pa/ss-w0rd-9', 'ss-w0rd-9'] });
+  samples.push({ id: 'boundary/url-password-long', text: `ftp://admin:${'Kp3x'.repeat(100)}@ftp.internal.invalid/pub`, secrets: ['Kp3x'.repeat(10)] });
+  samples.push({ id: 'boundary/password-comma-semicolon', text: 'DB_PASSWORD=abc1,def2;ghi3-jkl4\nDB_HOST=x', secrets: ['def2', 'ghi3-jkl4'] });
+  // Auth headers and natural language (CR-06).
+  samples.push({
+    id: 'header/basic',
+    text: 'curl -H "Authorization: Basic ' + Buffer.from('svc_user:Pa55w0rd-of-svc').toString('base64') + '" https://api.invalid/v1',
+    secrets: [Buffer.from('svc_user:Pa55w0rd-of-svc').toString('base64')],
+  });
+  samples.push({ id: 'header/token', text: 'Authorization: Token 0123456789abcdef0123', secrets: ['0123456789abcdef0123'] });
+  samples.push({ id: 'prose/password-is', text: 'ok so my password is hunter2-and-more, dont share', secrets: ['hunter2-and-more'] });
+  samples.push({ id: 'prose/short-pass-key', text: 'login with pass=Zx9qLm27Wq now', secrets: ['Zx9qLm27Wq'] });
   // Evasion.
   {
     const a = mk('aws');
