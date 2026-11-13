@@ -313,6 +313,7 @@ describe('InMemoryVectorStore: save / load', () => {
       ['dim absurdly large', variant((o) => (o.collections[0].dim = 1e9))],
       ['vector too short', variant((o) => (o.collections[0].items[0].vector = [1]))],
       ['vector with null (NaN)', variant((o) => (o.collections[0].items[0].vector = [1, null]))],
+      ['vector with an overflowing literal (Infinity)', '{"format":"ghostwriter-vector-store","version":1,"collections":[{"name":"c","dim":2,"items":[{"id":"a","vector":[1,1e999],"chunk":{"id":"a","authorId":"x","text":"t","index":0}}]}]}'],
       ['vector with string', variant((o) => (o.collections[0].items[0].vector = [1, '0']))],
       ['vector not an array', variant((o) => (o.collections[0].items[0].vector = 'abc'))],
       ['chunk missing', variant((o) => delete o.collections[0].items[0].chunk)],
@@ -414,5 +415,66 @@ describe('InMemoryVectorStore.replaceCollection', () => {
     await s.upsert('c', [item('a', [1, 0])]);
     await s.replaceCollection('c', []);
     expect(await s.query('c', [1, 0], 10)).toEqual([]);
+  });
+});
+
+describe('InMemoryVectorStore: extreme magnitudes (CR-02)', () => {
+  it.each([1e200, 1e308, 1e-200, 5e-324, 1e-320])('a vector of scale %s scores 1 against itself and against any rescaling of it', async (m) => {
+    const s = new InMemoryVectorStore();
+    await s.upsert('c', [item('a', [m, m])]);
+    for (const q of [[m, m], [1, 1], [1e200, 1e200], [1e-200, 1e-200], [5e-324, 5e-324]]) {
+      const [hit] = await s.query('c', q, 1);
+      expect(hit?.score).toBeCloseTo(1, 12);
+    }
+    const [opp] = await s.query('c', [-1, -1], 1);
+    expect(opp?.score).toBeCloseTo(-1, 12);
+    const [orth] = await s.query('c', [1, -1], 1);
+    expect(orth?.score).toBeCloseTo(0, 12);
+  });
+
+  it('never returns NaN or an out-of-range score, and the order does not depend on insertion order', async () => {
+    const vectors: Array<[string, number[]]> = [
+      ['big', [1e200, 1e200]],
+      ['tiny', [1e-200, 1e-200]],
+      ['norm', [1, 1]],
+      ['zero', [0, 0]],
+      ['x', [1e308, 0]],
+      ['y', [0, 1e-300]],
+    ];
+    const run = async (order: Array<[string, number[]]>) => {
+      const s = new InMemoryVectorStore();
+      await s.upsert('c', order.map(([id, v]) => item(id, v)));
+      return s.query('c', [1e200, 1e200], 10);
+    };
+    const a = await run(vectors);
+    const b = await run([...vectors].reverse());
+    const c = await run([vectors[3], vectors[5], vectors[1], vectors[4], vectors[0], vectors[2]] as Array<[string, number[]]>);
+    for (const h of a) {
+      expect(Number.isNaN(h.score)).toBe(false);
+      expect(h.score).toBeGreaterThanOrEqual(-1);
+      expect(h.score).toBeLessThanOrEqual(1);
+    }
+    expect(b).toEqual(a);
+    expect(c).toEqual(a);
+    // 'big', 'tiny' and 'norm' point the same way, so they tie at the top and fall back to id order.
+    expect(a.slice(0, 3).map((h) => h.id)).toEqual(['big', 'norm', 'tiny']);
+  });
+
+  it('a huge query against ordinary stored vectors scores the same as a unit query', async () => {
+    const s = new InMemoryVectorStore();
+    await s.upsert('c', [item('a', [3, 4]), item('b', [4, -3])]);
+    const small = await s.query('c', [0.6, 0.8], 2);
+    const huge = await s.query('c', [6e300, 8e300], 2);
+    expect(huge.map((h) => h.id)).toEqual(small.map((h) => h.id));
+    expect(huge[0]?.score).toBeCloseTo(1, 12);
+  });
+
+  it('rejects non-finite components in upsert, query and replaceCollection', async () => {
+    const s = new InMemoryVectorStore();
+    for (const bad of [Number.NaN, Infinity, -Infinity]) {
+      await expect(s.upsert('c', [item('a', [1, bad])])).rejects.toThrow(TypeError);
+      await expect(s.replaceCollection('c', [item('a', [1, bad])])).rejects.toThrow(TypeError);
+      await expect(s.query('c', [1, bad], 1)).rejects.toThrow(TypeError);
+    }
   });
 });

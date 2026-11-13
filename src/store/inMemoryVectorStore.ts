@@ -28,7 +28,9 @@ export interface InMemoryVectorStoreOptions {
 
 interface Entry {
   vector: Float64Array;
-  norm: number;
+  /** Largest absolute component and the norm of `vector / max`; (0, 0) for an all-zero vector. See `scale`. */
+  max: number;
+  snorm: number;
   chunk: Chunk;
 }
 interface Collection {
@@ -38,10 +40,33 @@ interface Collection {
 
 const compareIds = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
-function norm(v: ArrayLike<number>): number {
+/**
+ * Overflow/underflow-safe magnitude of a finite vector: `max` is the largest absolute component and `snorm` the
+ * Euclidean norm of `v / max` (so in [1, sqrt(dim)]). The true norm is `max * snorm`, which is never formed because it
+ * can overflow; scores use the two factors separately. An all-zero vector is (0, 0).
+ */
+function scale(v: ArrayLike<number>): { max: number; snorm: number } {
+  let max = 0;
+  for (let i = 0; i < v.length; i++) {
+    const a = Math.abs(v[i] as number);
+    if (a > max) max = a;
+  }
+  if (max === 0) return { max: 0, snorm: 0 };
   let s = 0;
-  for (let i = 0; i < v.length; i++) s += (v[i] as number) * (v[i] as number);
-  return Math.sqrt(s);
+  for (let i = 0; i < v.length; i++) {
+    const y = (v[i] as number) / max;
+    s += y * y;
+  }
+  return { max, snorm: Math.sqrt(s) };
+}
+
+/** Cosine similarity from two scaled vectors: always finite and within [-1, 1]; 0 when either is all zeros. */
+function cosine(a: ArrayLike<number>, am: number, as: number, b: ArrayLike<number>, bm: number, bs: number): number {
+  if (am === 0 || bm === 0) return 0;
+  let dot = 0;
+  for (let i = 0; i < a.length; i++) dot += ((a[i] as number) / am) * ((b[i] as number) / bm);
+  const score = dot / (as * bs);
+  return Number.isFinite(score) ? Math.max(-1, Math.min(1, score)) : 0;
 }
 
 function toVector(raw: unknown, what: string): Float64Array {
@@ -79,7 +104,7 @@ export class InMemoryVectorStore implements VectorStore {
       if (vector.length < 1 || vector.length > MAX_DIM) throw new TypeError(`upsert: vector dimension must be in [1, ${MAX_DIM}]`);
       if (dim === undefined) dim = vector.length;
       else if (vector.length !== dim) throw new TypeError(`upsert: vector has ${vector.length} dimensions; collection has ${dim}`);
-      staged.push([it.id, { vector, norm: norm(vector), chunk: copyChunk(it.chunk) }]);
+      staged.push([it.id, { vector, ...scale(vector), chunk: copyChunk(it.chunk) }]);
     }
     return { staged, dim };
   }
@@ -131,18 +156,13 @@ export class InMemoryVectorStore implements VectorStore {
     if (col === undefined) return [];
     if (q.length !== col.dim) throw new TypeError(`query: vector has ${q.length} dimensions; collection has ${col.dim}`);
     if (k === 0) return [];
-    const qn = norm(q);
+    const qs = scale(q);
     const scored: Array<{ id: string; score: number; entry: Entry }> = [];
     for (const [id, entry] of col.items) {
-      let score = 0;
-      if (qn !== 0 && entry.norm !== 0) {
-        let dot = 0;
-        for (let i = 0; i < q.length; i++) dot += (q[i] as number) * (entry.vector[i] as number);
-        score = dot / (qn * entry.norm);
-      }
-      scored.push({ id, score, entry });
+      scored.push({ id, score: cosine(q, qs.max, qs.snorm, entry.vector, entry.max, entry.snorm), entry });
     }
-    scored.sort((a, b) => b.score - a.score || compareIds(a.id, b.id));
+    // Scores are always finite (see `cosine`), so this comparator is a strict weak order.
+    scored.sort((a, b) => (a.score > b.score ? -1 : a.score < b.score ? 1 : compareIds(a.id, b.id)));
     return scored.slice(0, k).map(({ score, entry }) => ({ ...copyChunk(entry.chunk), score }));
   }
 
@@ -254,7 +274,7 @@ export class InMemoryVectorStore implements VectorStore {
         }
         col.items.set(id, {
           vector: v,
-          norm: norm(v),
+          ...scale(v),
           chunk: { id, authorId: chunk.authorId, text: chunk.text, index: chunk.index },
         });
       });
