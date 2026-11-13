@@ -18,11 +18,11 @@ const VERSION = 1;
 const MAX_DIM = 65_536;
 
 export interface InMemoryVectorStoreOptions {
-  /** Largest store file `load` will read. Default 256 MiB. */
+  /** Largest store file `save` will write and `load` will read. Default 256 MiB. */
   maxFileBytes?: number;
   /** Most vectors held at once (across collections), enforced on `upsert` and `load`. Default 200,000. */
   maxItems?: number;
-  /** Most collections in a loaded file. Default 10,000. */
+  /** Most collections `save` will write and a loaded file may hold. Default 10,000. */
   maxCollections?: number;
 }
 
@@ -185,6 +185,10 @@ export class InMemoryVectorStore implements VectorStore {
 
   /** Write the store to `path` (parents created), atomically, with mode 0600. Output is byte-deterministic. */
   async save(path: string): Promise<void> {
+    // Enforce the limits `load` enforces, before anything is written: a file this store could write but not read back
+    // would turn a working store into unrecoverable data.
+    if (this.#collections.size > this.#maxCollections) throw new InputTooLargeError(this.#collections.size, this.#maxCollections, 'collections');
+    if (this.#size() > this.#maxItems) throw new InputTooLargeError(this.#size(), this.#maxItems, 'vectors');
     const collections = [...this.#collections.entries()]
       .sort(([a], [b]) => compareIds(a, b))
       .map(([name, col]) => ({
@@ -194,7 +198,15 @@ export class InMemoryVectorStore implements VectorStore {
           .sort(([a], [b]) => compareIds(a, b))
           .map(([id, e]) => ({ id, vector: Array.from(e.vector), chunk: e.chunk })),
       }));
-    const data = JSON.stringify({ format: FORMAT, version: VERSION, collections });
+    let data: string;
+    try {
+      data = JSON.stringify({ format: FORMAT, version: VERSION, collections });
+    } catch (err) {
+      if (err instanceof RangeError) throw new InputTooLargeError(Number.POSITIVE_INFINITY, this.#maxFileBytes, 'bytes'); // beyond the engine's string limit
+      throw err;
+    }
+    const bytes = Buffer.byteLength(data, 'utf8');
+    if (bytes > this.#maxFileBytes) throw new InputTooLargeError(bytes, this.#maxFileBytes, 'bytes');
 
     await mkdir(dirname(path), { recursive: true, mode: 0o700 });
     const tmp = `${path}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`;

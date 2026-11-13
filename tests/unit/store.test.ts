@@ -519,3 +519,59 @@ describe('InMemoryVectorStore: chunk shape is validated on write as on load (CR-
     }
   });
 });
+
+describe('InMemoryVectorStore: save enforces the limits load enforces (WR-05)', () => {
+  let dir: string;
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'gw-store-'));
+  });
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+  const fill = async (s: InMemoryVectorStore, collections = 1): Promise<void> => {
+    for (let c = 0; c < collections; c++) {
+      await s.upsert(`c${c}`, Array.from({ length: 20 }, (_, i) => item(`i${i}`, [1, i + 1], { text: 'x'.repeat(50), index: i })));
+    }
+  };
+
+  it('refuses to write a file larger than maxFileBytes, writes nothing and keeps an existing file intact', async () => {
+    const big = new InMemoryVectorStore();
+    await fill(big);
+    const file = join(dir, 'store.json');
+    await big.save(file);
+    const bytes = (await stat(file)).size;
+    const before = await readFile(file);
+
+    const small = new InMemoryVectorStore({ maxFileBytes: bytes - 1 });
+    await fill(small);
+    await expect(small.save(file)).rejects.toBeInstanceOf(InputTooLargeError);
+    await expect(small.save(join(dir, 'new', 'other.json'))).rejects.toBeInstanceOf(InputTooLargeError);
+    expect(await readFile(file)).toEqual(before);
+    expect((await readdir(dir)).sort()).toEqual(['store.json']); // no temp file, no created directory
+  });
+
+  it('a file written at exactly maxFileBytes loads back under the same limit', async () => {
+    const probe = new InMemoryVectorStore();
+    await fill(probe);
+    await probe.save(join(dir, 'probe.json'));
+    const bytes = (await stat(join(dir, 'probe.json'))).size;
+
+    const s = new InMemoryVectorStore({ maxFileBytes: bytes });
+    await fill(s);
+    await s.save(join(dir, 'exact.json'));
+    const t = new InMemoryVectorStore({ maxFileBytes: bytes });
+    await t.load(join(dir, 'exact.json'));
+    expect(await t.query('c0', [1, 1], 100)).toEqual(await s.query('c0', [1, 1], 100));
+  });
+
+  it('refuses to write more collections than maxCollections (the limit load applies)', async () => {
+    const s = new InMemoryVectorStore({ maxCollections: 2 });
+    await fill(s, 3);
+    await expect(s.save(join(dir, 'store.json'))).rejects.toBeInstanceOf(InputTooLargeError);
+    expect(await readdir(dir)).toEqual([]);
+    const ok = new InMemoryVectorStore({ maxCollections: 3 });
+    await fill(ok, 3);
+    await ok.save(join(dir, 'store.json'));
+    await new InMemoryVectorStore({ maxCollections: 3 }).load(join(dir, 'store.json'));
+  });
+});
