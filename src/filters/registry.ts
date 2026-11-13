@@ -64,7 +64,7 @@ export function buildPipeline(
     ]);
   }
 
-  const pipeline = new FilterPipeline();
+  const pipeline = new FilterPipeline({ stage, requireConfidentiality: true });
   specs.forEach((spec, i) => {
     if (!spec.enabled || !appliesAt(spec, stage)) return;
     const factory = Object.hasOwn(factories, spec.name) ? factories[spec.name] : undefined;

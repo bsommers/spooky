@@ -187,4 +187,41 @@ describe('FilterPipeline', () => {
     const out = await new FilterPipeline().use(noop).run('same', ctx());
     expect(out.trace[0]?.modified).toBe(false);
   });
+
+  describe('fail closed on a bad stage (CR-02)', () => {
+    const secretText = 'AKIA' + 'ABCDEFGHIJKLMNOP';
+    it.each([
+      ['unknown stage', { stage: 'prE' }],
+      ['missing stage', {}],
+      ['null stage', { stage: null }],
+      ['non-string stage', { stage: 1 }],
+    ])('a plain pipeline rejects %s instead of passing the text through', async (_n, bad) => {
+      const p = new FilterPipeline().use(appender('A'));
+      await expect(p.run(secretText, bad as unknown as PipelineContext)).rejects.toThrow(ConfigError);
+    });
+
+    it('rejects an undefined context', async () => {
+      await expect(new FilterPipeline().run('x', undefined as unknown as PipelineContext)).rejects.toThrow(ConfigError);
+    });
+
+    it('a pipeline built for a stage rejects a context for the other stage', async () => {
+      const p = new FilterPipeline({ stage: 'pre' }).use(appender('A'));
+      await expect(p.run('x', ctx('post'))).rejects.toThrow(ConfigError);
+      expect((await p.run('x', ctx('pre'))).text).toBe('x-A');
+    });
+
+    it('requireConfidentiality refuses to run when no fail-closed confidentiality filter is active', async () => {
+      const guarded = (f?: Filter) => {
+        const p = new FilterPipeline({ requireConfidentiality: true });
+        return f ? p.use(f) : p;
+      };
+      await expect(guarded().run('x', ctx())).rejects.toThrow(ConfigError);
+      await expect(guarded(appender('style')).run('x', ctx())).rejects.toThrow(ConfigError);
+      await expect(guarded(appender('confidentiality', { onError: 'skip' })).run('x', ctx())).rejects.toThrow(ConfigError);
+      await expect(guarded(appender('confidentiality', { onError: 'fail-closed', stages: ['pre'] })).run('x', ctx('post'))).rejects.toThrow(
+        ConfigError,
+      );
+      expect((await guarded(appender('confidentiality', { onError: 'fail-closed' })).run('x', ctx())).text).toBe('x-confidentiality');
+    });
+  });
 });

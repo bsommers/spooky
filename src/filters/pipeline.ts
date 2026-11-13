@@ -1,6 +1,6 @@
 // Async, ordered filter pipeline (FLT-01..03). Filters run in registration order; each sees the previous output.
 import { ConfigError, FilterFailedError } from '../models/errors.js';
-import type { Filter, PipelineContext, PipelineOutput, TraceEntry } from '../models/types.js';
+import type { Filter, PipelineContext, PipelineOutput, Stage, TraceEntry } from '../models/types.js';
 import { describeInvalidResult } from './base.js';
 
 const STAGES = new Set(['pre', 'post']);
@@ -23,8 +23,20 @@ function traceError(err: unknown): string {
   return 'non-Error value thrown';
 }
 
+export interface FilterPipelineOptions {
+  /** The stage this pipeline was built for; `run` rejects a context for any other stage. */
+  stage?: Stage;
+  /** When true, `run` refuses to proceed unless a fail-closed `confidentiality` filter is active for the stage. */
+  requireConfidentiality?: boolean;
+}
+
 export class FilterPipeline {
   private readonly filters: Filter[] = [];
+  private readonly options: FilterPipelineOptions;
+
+  constructor(options: FilterPipelineOptions = {}) {
+    this.options = { ...options };
+  }
 
   /** Names of the registered filters, in execution order. */
   get names(): string[] {
@@ -61,9 +73,23 @@ export class FilterPipeline {
    * Run every filter whose `stages` include `ctx.stage`, in order. A `fail-closed` filter that throws (or returns
    * an invalid result) aborts the run with `FilterFailedError` and nothing is returned; a `skip` filter's failure is
    * recorded in the trace and the previous text carries on to the next filter.
+   *
+   * Fails closed before any text is processed (`ConfigError`) when `ctx.stage` is not `pre` or `post`, when it is not
+   * the stage this pipeline was built for, or when the pipeline requires confidentiality and none is active: a bad
+   * stage must never degrade into an empty, pass-through run.
    */
   async run(text: string, ctx: PipelineContext): Promise<PipelineOutput> {
-    const active = this.filters.filter((f) => f.stages.includes(ctx.stage)); // snapshot: later register() calls do not affect this run
+    const stage: unknown = (ctx as Partial<PipelineContext> | null | undefined)?.stage;
+    if (typeof stage !== 'string' || !STAGES.has(stage)) {
+      throw new ConfigError(`pipeline run: ctx.stage must be "pre" or "post" (got ${JSON.stringify(String(stage).slice(0, 20))})`);
+    }
+    if (this.options.stage !== undefined && stage !== this.options.stage) {
+      throw new ConfigError(`pipeline built for stage "${this.options.stage}" was run with ctx.stage "${stage}"`);
+    }
+    const active = this.filters.filter((f) => f.stages.includes(stage as Stage)); // snapshot: later register() calls do not affect this run
+    if (this.options.requireConfidentiality && !active.some((f) => f.name === 'confidentiality' && f.onError === 'fail-closed')) {
+      throw new ConfigError(`pipeline run: no fail-closed confidentiality filter is active at stage "${stage}"`);
+    }
     const trace: TraceEntry[] = [];
     let current = text;
     for (const filter of active) {

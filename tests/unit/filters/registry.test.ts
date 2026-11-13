@@ -140,4 +140,13 @@ describe('buildPipeline (registry)', () => {
     const f: FilterFactories = { confidentiality: () => appender('other', { onError: 'fail-closed' }) };
     expect(() => buildPipeline(cfgWith([spec('confidentiality', 'both')]), 'pre', f)).toThrow(ConfigError);
   });
+
+  it('a built pipeline refuses a wrong or missing ctx.stage instead of passing text through (CR-02)', async () => {
+    const pre = buildPipeline(base(), 'pre');
+    const key = 'AKIA' + 'ABCDEFGHIJKLMNOP';
+    await expect(pre.run(key, ctx('post'))).rejects.toThrow(ConfigError);
+    await expect(pre.run(key, { ...ctx('pre'), stage: 'prE' } as unknown as PipelineContext)).rejects.toThrow(ConfigError);
+    await expect(pre.run(key, {} as unknown as PipelineContext)).rejects.toThrow(ConfigError);
+    expect((await pre.run(key, ctx('pre'))).text).toBe('[REDACTED:aws_key]');
+  });
 });
