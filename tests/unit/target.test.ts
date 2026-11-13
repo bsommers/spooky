@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ConfigError, UnknownPersonaError } from '../../src/models/errors.js';
 import type { TargetPersonaConfig } from '../../src/models/types.js';
-import { TargetManager } from '../../src/registry/targetManager.js';
+import { TargetManager, findBannedPhrases } from '../../src/registry/targetManager.js';
 
 const persona = (key: string, extra: Partial<TargetPersonaConfig> = {}): TargetPersonaConfig => ({
   key,
@@ -113,5 +113,64 @@ describe('TargetManager construction', () => {
     got.name = 'changed';
     expect(tm.get('exec').bannedPhrases).toEqual(['delve']);
     expect(tm.get('exec').name).toBe('Persona exec');
+  });
+});
+
+describe('findBannedPhrases', () => {
+  const withBanned = (...bannedPhrases: string[]): TargetPersonaConfig => persona('p', { bannedPhrases });
+
+  it('returns [] when nothing matches, and for an empty banned list or empty text', () => {
+    expect(findBannedPhrases('a clean sentence', withBanned('delve', 'synergy'))).toEqual([]);
+    expect(findBannedPhrases('delve', withBanned())).toEqual([]);
+    expect(findBannedPhrases('', withBanned('delve'))).toEqual([]);
+  });
+
+  it('is case-insensitive and reports the phrase as configured, not as found', () => {
+    expect(findBannedPhrases('We DELVE into Synergy.', withBanned('delve', 'Synergy'))).toEqual(['delve', 'Synergy']);
+  });
+
+  it('treats regex metacharacters literally', () => {
+    const p = withBanned('a.c', 'what?', '(x+)+', '[draft]', 'cost $5', 'a|b', '^start', 'end$', 'back\\slash', '*');
+    expect(findBannedPhrases('abc', p)).toEqual([]); // "a.c" must not match "abc"
+    expect(findBannedPhrases('what', p)).toEqual([]);
+    expect(findBannedPhrases('xxxx', p)).toEqual([]);
+    expect(findBannedPhrases('a', p)).toEqual([]);
+    expect(findBannedPhrases('a.c what? (x+)+ [draft] cost $5 a|b ^start end$ back\\slash *', p)).toEqual([
+      'a.c',
+      'what?',
+      '(x+)+',
+      '[draft]',
+      'cost $5',
+      'a|b',
+      '^start',
+      'end$',
+      'back\\slash',
+      '*',
+    ]);
+  });
+
+  it('reports each configured phrase once, in configured order, however often it occurs', () => {
+    const p = withBanned('beta', 'alpha', 'beta');
+    expect(findBannedPhrases('alpha beta beta alpha', p)).toEqual(['beta', 'alpha']);
+  });
+
+  it('matches multi-word phrases and phrases inside longer words (literal substring)', () => {
+    expect(findBannedPhrases('Let us circle back later', withBanned('circle back'))).toEqual(['circle back']);
+    expect(findBannedPhrases('it delves deep', withBanned('delve'))).toEqual(['delve']);
+  });
+
+  it('ignores empty and whitespace-only phrases rather than matching everything', () => {
+    expect(findBannedPhrases('anything', withBanned('', 'zzz'))).toEqual([]);
+    expect(findBannedPhrases('anything', withBanned('   '))).toEqual([]);
+  });
+
+  it('matches non-ASCII phrases case-insensitively', () => {
+    expect(findBannedPhrases('STRASSE and Éclair', withBanned('éclair'))).toEqual(['éclair']);
+  });
+
+  it('does not backtrack catastrophically on a pathological phrase and long text', () => {
+    const started = Date.now();
+    expect(findBannedPhrases('a'.repeat(50_000) + '!', withBanned('(a+)+$'))).toEqual([]);
+    expect(Date.now() - started).toBeLessThan(1000);
   });
 });

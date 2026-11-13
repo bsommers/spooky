@@ -52,3 +52,20 @@ export class TargetManager {
 function compareCodeUnits(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
+
+const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * The persona's banned phrases that occur in `text`: literal (never a pattern), case-insensitive substring matches.
+ * Each configured phrase is reported at most once, as configured, in configured order. Blank phrases are ignored
+ * (an empty needle would match everything). Reports which phrases matched, never where, so the result is safe to
+ * surface in trace metadata (Phase 5: trace entry `persona-banned`).
+ */
+export function findBannedPhrases(text: string, persona: Pick<TargetPersonaConfig, 'bannedPhrases'>): string[] {
+  const found: string[] = [];
+  for (const phrase of persona.bannedPhrases) {
+    if (phrase.trim() === '' || found.includes(phrase)) continue;
+    if (new RegExp(escapeRegExp(phrase), 'iu').test(text)) found.push(phrase);
+  }
+  return found;
+}
