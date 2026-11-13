@@ -53,11 +53,14 @@ export class UnknownAuthorError extends GhostwriterError {
 export class InputTooLargeError extends GhostwriterError {
   readonly size: number;
   readonly limit: number;
+  readonly unit: string;
 
-  constructor(size: number, limit: number) {
-    super('INPUT_TOO_LARGE', `input is ${size} characters; limit is ${limit}`);
+  /** `unit` names what `size` and `limit` count (default characters; the corpus guards also count chunks). */
+  constructor(size: number, limit: number, unit = 'characters') {
+    super('INPUT_TOO_LARGE', `input is ${size} ${unit}; limit is ${limit}`);
     this.size = size;
     this.limit = limit;
+    this.unit = unit;
   }
 }
 

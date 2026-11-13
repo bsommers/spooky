@@ -84,4 +84,12 @@ describe('GhostwriterError hierarchy', () => {
     expect(err.size).toBe(10);
     expect(err.limit).toBe(5);
   });
+
+  it('InputTooLargeError counts characters by default and names another unit when given one', () => {
+    expect(new InputTooLargeError(10, 5).message).toBe('input is 10 characters; limit is 5');
+    const chunks = new InputTooLargeError(11, 10, 'chunks');
+    expect(chunks.unit).toBe('chunks');
+    expect(chunks.message).toBe('input is 11 chunks; limit is 10');
+    expect(chunks.code).toBe('INPUT_TOO_LARGE');
+  });
 });
