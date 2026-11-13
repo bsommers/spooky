@@ -2,7 +2,7 @@
 
 | # | Phase | Goal | Requirements | Depends |
 |---|---|---|---|---|
-| 1 | Foundation & contracts | Buildable TS skeleton, all shared types/interfaces, config schema, verify script | FND-01..03 | - |
+| 1 | Foundation & contracts ✓ (2026-11-12) | Buildable TS skeleton, all shared types/interfaces, config schema, verify script | FND-01..03 | - |
 | 2 | Filter pipeline + filters | Async pipeline, confidentiality filter, style filter, fully tested | FLT-*, CNF-*, STY-* | 1 |
 | 3 | Target axis | Personas, prompt builder, banned-phrase enforcement | TGT-* | 1 |
 | 4 | Source axis | Chunker, stylometry, embedder, vector store, source manager | SRC-* | 1, 2 (CNF for SRC-04) |
