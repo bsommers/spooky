@@ -39,9 +39,9 @@
 
 ### Target axis (audience)
 
-- [ ] **TGT-01**: `TargetManager` loads/validates personas; unknown key -> `UnknownPersonaError` listing valid keys.
-- [ ] **TGT-02**: `PromptBuilder` assembles system+user prompt from profile + exemplars + persona + input; snapshot-tested.
-- [ ] **TGT-03**: Persona `bannedPhrases` enforced post-generation (reported in trace if still present).
+- [x] **TGT-01**: `TargetManager` loads/validates personas; unknown key -> `UnknownPersonaError` listing valid keys.
+- [x] **TGT-02**: `PromptBuilder` assembles system+user prompt from profile + exemplars + persona + input; snapshot-tested.
+- [x] **TGT-03**: Persona `bannedPhrases` enforced post-generation (reported in trace if still present).
 
 ### Orchestration + surfaces
 

@@ -1,6 +1,6 @@
 # Checkpoint (2026-11-13, autonomous run mid-flight; refreshed after idle)
 
-**Status:** IN PROGRESS. `/gsd-autonomous` running. Phase 1 COMPLETE. Phase 2 EXECUTED, reviewed, fixed (CR-01..08, HEAD 373fd8e, verify PASS: unit 311, security 221, torture 3); verifier (gsd-verifier sonnet) dispatched; then phase.complete 02, ROADMAP edit, commit 02-REVIEW.md/02-REVIEW-FIX.md/02-VERIFICATION.md. Open low/info: CR-09..12, IN-01..03. Custom rules now need bounded quantifiers (CR-03). Phases 3-8 pending.
+**Status:** IN PROGRESS. `/gsd-autonomous` running. Phases 1-3 COMPLETE (Phase 3 verified, review CR-01..05,07 fixed; open CR-06, IN-01, IN-02). Next: Phase 4 (pause first for D1-D7 in .planning/PROJECT.md). Phases 5-8 pending. No push/PR/merge.
 
 ## Goal (user's words)
 "/gsd-execute-phase 1 - be sure to launch parallel subagents using the best and cheapest model for the jobs preserving quality", then "/gsd-autonomous" (all remaining phases: discuss -> plan -> execute).

@@ -4,7 +4,7 @@
 |---|---|---|---|---|
 | 1 | Foundation & contracts ✓ (2026-11-12) | Buildable TS skeleton, all shared types/interfaces, config schema, verify script | FND-01..03 | - |
 | 2 | Filter pipeline + filters ✓ (2026-11-13) | Async pipeline, confidentiality filter, style filter, fully tested | FLT-*, CNF-*, STY-* | 1 |
-| 3 | Target axis | Personas, prompt builder, banned-phrase enforcement | TGT-* | 1 |
+| 3 | Target axis ✓ (2026-11-13) | Personas, prompt builder, banned-phrase enforcement | TGT-* | 1 |
 | 4 | Source axis | Chunker, stylometry, embedder, vector store, source manager | SRC-* | 1, 2 (CNF for SRC-04) |
 | 5 | Orchestration, LLM, CLI | End-to-end generate, Anthropic + OpenAI-compatible adapters, retries, CLI | LLM-*, ORC-* | 2, 3, 4 |
 | 6 | Hardening & docs | Torture/security suites, e2e, README, as-built doc | all | 5 |
