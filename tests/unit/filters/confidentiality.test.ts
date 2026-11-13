@@ -394,6 +394,59 @@ describe('ConfidentialityFilter: contextual value boundaries (CR-05)', () => {
   });
 });
 
+describe('ConfidentialityFilter: provider formats and auth headers (CR-06)', () => {
+  it.each([
+    ['stripeLive', 'stripe_key'],
+    ['stripeRestricted', 'stripe_key'],
+    ['google', 'google_api_key'],
+    ['gitlab', 'gitlab_token'],
+    ['npm', 'npm_token'],
+    ['huggingface', 'hf_token'],
+    ['sendgrid', 'sendgrid_key'],
+  ])('%s is redacted by shape with no keyword in front, labelled %s', async (kind, type) => {
+    const k = secret(kind);
+    expect(k.type).toBe(type);
+    for (const wrap of [(x: string) => x, (x: string) => `here: ${x}.`, (x: string) => `"${x}"`, (x: string) => `value=${x}&n=1`]) {
+      const r = await run(wrap(k.text));
+      expect(r.content).not.toContain(k.text.slice(8));
+      expect(r.metadata[type]).toBe(1);
+    }
+  });
+
+  it('short provider prefixes need a left boundary: ordinary words are not secrets', async () => {
+    for (const t of ['task_live_tester_account_name', 'xhf_' + 'a'.repeat(40), 'mask_live_' + 'a'.repeat(30)]) {
+      expect((await run(t)).content, t).toBe(t);
+    }
+  });
+
+  it.each([
+    ['Authorization: Basic dXNlcjpwYXNzd29yZDEyMw==', 'Authorization: [REDACTED:auth_header]'],
+    ['authorization: token abcdef0123456789', 'authorization: [REDACTED:auth_header]'],
+    ['"Authorization":"Basic dXNlcjpwYXNzd29yZDEyMw=="', '"Authorization":"[REDACTED:auth_header]"'],
+    ['Authorization = Digest username="bob", realm="x", response="deadbeefdeadbeef"', 'Authorization = [REDACTED:auth_header]'],
+    ['curl -H "Authorization: Basic dXNlcjpwYXNzd29yZDEyMw==" https://x.invalid', 'curl -H "Authorization: [REDACTED:auth_header]" https://x.invalid'],
+  ])('auth header credentials are redacted: %s', async (input, expected) => {
+    expect((await run(input)).content).toBe(expected);
+  });
+
+  it.each([
+    ['my password is hunter2', 'my password is [REDACTED:secret_assignment]'],
+    ['The passphrase is "correct horse battery"', 'The passphrase is "[REDACTED:secret_assignment]"'],
+    ['pass=hunter22', 'pass=[REDACTED:secret_assignment]'],
+    ['pass: s3cr3tvalue', 'pass: [REDACTED:secret_assignment]'],
+    ['PASSPHRASE=abc123xyz', 'PASSPHRASE=[REDACTED:secret_assignment]'],
+    ['passcode: 482913', 'passcode: [REDACTED:secret_assignment]'],
+  ])('natural-language and short password forms: %s', async (input, expected) => {
+    expect((await run(input)).content).toBe(expected);
+  });
+
+  it('pass / password words without a separator, and passport-like words, are left alone', async () => {
+    for (const t of ['you shall not pass', 'passport: valid', 'the password was reset', 'passenger: Alice Smith']) {
+      expect((await run(t)).content, t).toBe(t);
+    }
+  });
+});
+
 describe('ConfidentialityFilter: normalization (unicode evasion)', () => {
   it('zero-width characters inside a key are stripped, then the key is redacted', async () => {
     const k = secret('aws').text;

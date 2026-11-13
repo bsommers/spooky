@@ -165,6 +165,13 @@ const BUILTIN_RULES: readonly Rule[] = [
   },
   { type: 'api_key', rx: new RegExp(`${B}sk-[A-Za-z0-9_-]{20,}`, 'gu') },
   { type: 'slack_token', rx: /(?:xox[abprs]|xapp)-[A-Za-z0-9-]{10,}/gu },
+  // Provider formats (CR-06). Short prefixes get a left boundary so `mask_...` / `pdf_...` words are not hit.
+  { type: 'stripe_key', rx: new RegExp(`${B}(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]{16,}`, 'gu') },
+  { type: 'google_api_key', rx: /AIza[0-9A-Za-z_-]{35}/gu },
+  { type: 'gitlab_token', rx: /glpat-[A-Za-z0-9_-]{20,}/gu },
+  { type: 'npm_token', rx: new RegExp(`${B}npm_[A-Za-z0-9]{36}`, 'gu') },
+  { type: 'hf_token', rx: new RegExp(`${B}hf_[A-Za-z0-9]{30,}`, 'gu') },
+  { type: 'sendgrid_key', rx: new RegExp(`${B}SG\\.[A-Za-z0-9_-]{16,}\\.[A-Za-z0-9_-]{16,}`, 'gu') },
   { type: 'jwt', rx: /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]*/gu },
   { type: 'bearer_token', rx: new RegExp(`${B}bearer[ \\t]{1,20}[A-Za-z0-9._~+/=-]{6,}`, 'giu') },
 ];
@@ -186,10 +193,25 @@ const CONTEXT_RULES: readonly Rule[] = [
   {
     type: 'secret_assignment',
     rx: new RegExp(
-      `(?:(?:password|passwd|pwd|secret|api[_-]?key|apikey|private[_-]?key|credentials?)[A-Za-z0-9_.-]{0,30}|token)["']?[ \\t]{0,5}[:=]\\s{0,40}${VALUE_QUOTED_OR_BARE}`,
+      `(?:(?:password|passwd|passphrase|passcode|pwd|secret|api[_-]?key|apikey|private[_-]?key|credentials?)[A-Za-z0-9_.-]{0,30}|pass(?![A-Za-z0-9])|token)["']?[ \\t]{0,5}[:=]\\s{0,40}${VALUE_QUOTED_OR_BARE}`,
       'giud',
     ),
     valueGroups: [1, 2, 3],
+  },
+  {
+    // "my password is hunter2": only the password words, not `secret`/`token`, to limit prose over-redaction.
+    type: 'secret_assignment',
+    rx: new RegExp(`${B}(?:password|passwd|passphrase|passcode|pwd)[ \\t]+is[ \\t]+${VALUE_QUOTED_OR_BARE}`, 'giud'),
+    valueGroups: [1, 2, 3],
+  },
+  {
+    // `Authorization: Basic <b64>` / `Token <tok>` / `Digest ...` (Bearer is a shaped rule above).
+    type: 'auth_header',
+    rx: new RegExp(
+      `${B}authorization["']?[ \\t]*[:=][ \\t]*["']?((?:basic|token|negotiate|apikey)[ \\t]+[^\\s"',]{6,}|digest[ \\t]+[^\\r\\n]{6,})`,
+      'giud',
+    ),
+    valueGroups: [1],
   },
 ];
 

@@ -15,6 +15,12 @@ const RESIDUE: [string, RegExp][] = [
   ['pem', /-----BEGIN [A-Z ]*PRIVATE KEY-----/],
   ['pem body', /[A-Za-z0-9+/]{64}/],
   ['bearer', /bearer\s+[A-Za-z0-9._~+/=-]{20}/i],
+  ['stripe key', /[sr]k_(?:live|test)_[A-Za-z0-9]{16}/],
+  ['google key', /AIza[0-9A-Za-z_-]{20}/],
+  ['gitlab token', /glpat-[A-Za-z0-9_-]{16}/],
+  ['npm token', /npm_[A-Za-z0-9]{30}/],
+  ['hf token', /hf_[A-Za-z0-9]{30}/],
+  ['sendgrid key', /SG\.[A-Za-z0-9_-]{16}\./],
 ];
 
 const make = () => new ConfidentialityFilter({ blocklist: BLOCKLIST, customRules: [] });

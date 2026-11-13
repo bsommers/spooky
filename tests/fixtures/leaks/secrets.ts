@@ -51,6 +51,13 @@ export function makeSecrets(seed = 1): Record<string, () => FakeSecret> {
       const tok = chars(rnd, B64URL, 40);
       return { type: 'bearer_token', values: [tok], text: `Bearer ${tok}` };
     },
+    stripeLive: () => one('stripe_key', 'sk' + '_live_' + chars(rnd, ALNUM, 24)),
+    stripeRestricted: () => one('stripe_key', 'rk' + '_test_' + chars(rnd, ALNUM, 24)),
+    google: () => one('google_api_key', 'AI' + 'za' + chars(rnd, B64URL, 35)),
+    gitlab: () => one('gitlab_token', 'gl' + 'pat-' + chars(rnd, B64URL, 20)),
+    npm: () => one('npm_token', 'np' + 'm_' + chars(rnd, ALNUM, 36)),
+    huggingface: () => one('hf_token', 'h' + 'f_' + chars(rnd, ALNUM, 34)),
+    sendgrid: () => one('sendgrid_key', 'S' + 'G.' + chars(rnd, B64URL, 22) + '.' + chars(rnd, B64URL, 43)),
     pemRsa: () => pem('RSA PRIVATE KEY'),
     pemEc: () => pem('EC PRIVATE KEY'),
     pemOpenssh: () => pem('OPENSSH PRIVATE KEY'),
