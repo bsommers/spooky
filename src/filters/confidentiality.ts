@@ -38,7 +38,17 @@ export const PLACEHOLDER_PREFIX = '[REDACTED:';
 const PLACEHOLDER_RE = /\[REDACTED:[a-z0-9_]{1,40}\]/g;
 
 const MAX_CUSTOM_PATTERN_LENGTH = 256;
-const MAX_UNBOUNDED_QUANTIFIERS = 2;
+/**
+ * ReDoS budget for custom rules. A "variable" quantifier is one whose count can differ (`+ * ? {n,m}`); fixed counts
+ * (`{8}`) cannot backtrack. A variable quantifier with a max above SMALL_REPEAT_MAX (or no max) is "large"; a rule may
+ * have at most MAX_LARGE_QUANTIFIERS of them. Chained large quantifiers are the polynomial blow-up (`a{1,500}` x4 is
+ * O(n^4); even `a+a+b` costs ~0.2 s per 1 KiB window). On top of that, the product of every variable quantifier's
+ * choice count (large counts as LARGE_QUANTIFIER_COST, a small one as max-min+1) may not exceed MAX_VARIABLE_COST.
+ */
+const SMALL_REPEAT_MAX = 16;
+const MAX_LARGE_QUANTIFIERS = 1;
+const LARGE_QUANTIFIER_COST = 64;
+const MAX_VARIABLE_COST = 256;
 /**
  * Custom rules scan the text in windows of this many UTF-16 units, advancing by half a window, which bounds a
  * quadratic-prone pattern to O(window^2) per window. Consequence: a custom-rule match is only guaranteed to be
@@ -145,35 +155,50 @@ function assertSafePattern(name: string, pattern: string): void {
   }
   const stack: Group[] = [{ hasAlt: false, hasQuant: false }];
   const top = (): Group => stack[stack.length - 1] as Group;
-  let unbounded = 0;
 
-  /** Parse a quantifier at `i`; returns [nextIndex, repeating, isUnbounded] or null if none. */
-  const quantifierAt = (i: number): [number, boolean, boolean] | null => {
+  let largeCount = 0;
+  let cost = 1;
+  /** Charge a quantifier against the ReDoS budget. */
+  const charge = (q: Quant): void => {
+    if (q.max <= q.min) return; // fixed count: no choice, no backtracking
+    const large = q.max > SMALL_REPEAT_MAX;
+    if (large && ++largeCount > MAX_LARGE_QUANTIFIERS) {
+      fail(`more than ${MAX_LARGE_QUANTIFIERS} unbounded or large (max > ${SMALL_REPEAT_MAX}) quantifier`);
+    }
+    cost *= large ? LARGE_QUANTIFIER_COST : q.max - q.min + 1;
+    if (cost > MAX_VARIABLE_COST) fail('quantifiers are too ambiguous together (backtracking budget exceeded)');
+  };
+
+  interface Quant {
+    next: number;
+    min: number;
+    max: number;
+  }
+  /** Parse a quantifier at `i`; null if none. */
+  const quantifierAt = (i: number): Quant | null => {
     const ch = pattern[i];
     let next: number;
-    let repeating: boolean;
-    let isUnbounded: boolean;
+    let min: number;
+    let max: number;
     if (ch === '*' || ch === '+') {
       next = i + 1;
-      repeating = true;
-      isUnbounded = true;
+      min = ch === '*' ? 0 : 1;
+      max = Infinity;
     } else if (ch === '?') {
       next = i + 1;
-      repeating = false;
-      isUnbounded = false;
+      min = 0;
+      max = 1;
     } else if (ch === '{') {
       const m = /^\{(\d+)(?:(,)(\d*))?\}/.exec(pattern.slice(i, i + 24));
       if (!m) return null;
-      const min = Number(m[1]);
-      const max = m[2] === undefined ? min : m[3] === '' ? Infinity : Number(m[3]);
+      min = Number(m[1]);
+      max = m[2] === undefined ? min : m[3] === '' ? Infinity : Number(m[3]);
       next = i + m[0].length;
-      isUnbounded = max === Infinity;
-      repeating = max > 1;
     } else {
       return null;
     }
     if (pattern[next] === '?') next++; // lazy suffix
-    return [next, repeating, isUnbounded];
+    return { next, min, max };
   };
 
   for (let i = 0; i < pattern.length; ) {
@@ -187,8 +212,8 @@ function assertSafePattern(name: string, pattern: string): void {
       const q = quantifierAt(i);
       if (q) {
         top().hasQuant = true;
-        if (q[2]) unbounded++;
-        i = q[0];
+        charge(q);
+        i = q.next;
       }
       continue;
     }
@@ -201,8 +226,8 @@ function assertSafePattern(name: string, pattern: string): void {
       const q = quantifierAt(i);
       if (q) {
         top().hasQuant = true;
-        if (q[2]) unbounded++;
-        i = q[0];
+        charge(q);
+        i = q.next;
       }
       continue;
     }
@@ -226,9 +251,9 @@ function assertSafePattern(name: string, pattern: string): void {
       i++;
       const q = quantifierAt(i);
       if (q) {
-        if (q[1] && (g.hasAlt || g.hasQuant)) fail('a repeated group may not contain alternation or another quantifier');
-        if (q[2]) unbounded++;
-        i = q[0];
+        if (q.max > 1 && (g.hasAlt || g.hasQuant)) fail('a repeated group may not contain alternation or another quantifier');
+        charge(q);
+        i = q.next;
         top().hasQuant = true;
       }
       top().hasAlt = top().hasAlt || g.hasAlt;
@@ -244,12 +269,11 @@ function assertSafePattern(name: string, pattern: string): void {
     const q = quantifierAt(i); // quantifier directly after this atom
     if (q) {
       top().hasQuant = true;
-      if (q[2]) unbounded++;
-      i = q[0];
+      charge(q);
+      i = q.next;
     }
   }
   if (stack.length !== 1) fail('unbalanced parenthesis');
-  if (unbounded > MAX_UNBOUNDED_QUANTIFIERS) fail(`more than ${MAX_UNBOUNDED_QUANTIFIERS} unbounded quantifiers`);
 }
 
 function compileCustom(rule: CustomRule): Rule {

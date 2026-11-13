@@ -209,12 +209,39 @@ describe('ConfidentialityFilter: custom rules (CNF-03)', () => {
     ['star of star (a*)*', '(a*)*b'],
     ['quantified alternation (a|aa)+', '(a|aa)+$'],
     ['quantified group with unbounded inner (x.*)+', '(x.*)+y'],
+    ['chained bounded quantifiers a{1,500} x4 (CR-01)', 'a{1,500}a{1,500}a{1,500}a{1,500}b'],
+    ['chained bounded quantifiers a{0,200} x3 (CR-01)', 'a{0,200}a{0,200}a{0,200}c'],
+    ['two large quantifiers (a+a+b)', 'a+a+b'],
+    ['one large quantifier next to several small ambiguous ones', 'a+a{1,8}a{1,8}b'],
+    ['many small ambiguous quantifiers over budget', 'a{1,16}a{1,16}a{1,16}b'],
     ['backreference', '(a)\\1'],
     ['matches the empty string', 'a*'],
     ['too long', 'a'.repeat(400)],
   ])('rejects a catastrophic or unbounded pattern at construction: %s', (_n, pattern) => {
     expect(() => new ConfidentialityFilter({ customRules: [{ name: 'r', pattern }] })).toThrow(ConfigError);
   });
+
+  it.each([
+    ['fixed counts never backtrack', '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}'],
+    ['IPv4-shaped', '\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}'],
+    ['one large quantifier', 'internal-\\d+'],
+    ['two small variable quantifiers', '[A-Z]{2,4}-\\d{4,8}'],
+  ])('still accepts a legitimate rule: %s', (_n, pattern) => {
+    expect(() => new ConfidentialityFilter({ customRules: [{ name: 'r', pattern }] })).not.toThrow();
+  });
+
+  it('every accepted pattern finishes quickly on worst-case inputs (budget is real, not nominal)', async () => {
+    const accepted = ['a+b', 'a{1,3}a{1,3}a{1,3}a{1,3}b', 'a+a{1,3}b', 'a{1,16}a{1,16}b', 'x?x?x?x?x?x?x?x?b'];
+    const inputs = ['a'.repeat(100_000), 'ab'.repeat(50_000), 'x'.repeat(100_000)];
+    for (const pattern of accepted) {
+      const f = new ConfidentialityFilter({ customRules: [{ name: 'r', pattern }] });
+      for (const text of inputs) {
+        const t = performance.now();
+        await run(text, f);
+        expect(performance.now() - t, `${pattern} on ${text.slice(0, 4)}...`).toBeLessThan(2000);
+      }
+    }
+  }, 60_000);
 
   it('rejects bad names and names colliding with built-in types', () => {
     expect(() => new ConfidentialityFilter({ customRules: [{ name: '', pattern: 'x' }] })).toThrow(ConfigError);
