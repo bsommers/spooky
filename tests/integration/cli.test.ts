@@ -287,3 +287,57 @@ describe('cli: real client selection and secrets', () => {
     expect(r.err).not.toContain('AKIA');
   });
 });
+
+describe('cli: --json emits exactly one JSON document (WR-09)', () => {
+  const oneDoc = (r: { out: string }): Record<string, unknown> => {
+    expect(r.out.endsWith('\n')).toBe(true);
+    expect(r.out.trim().split('\n')).toHaveLength(1);
+    return JSON.parse(r.out) as Record<string, unknown>;
+  };
+
+  it('--help --json, command --help --json and --json before the command are one document, help text inside, stdout otherwise empty', async () => {
+    for (const argv of [['--help', '--json'], ['--json', '--help'], ['ingest', '--help', '--json'], ['personas', '--json', '--help']]) {
+      const r = await runCli(argv);
+      expect(r.code, argv.join(' ')).toBe(0);
+      const d = oneDoc(r);
+      expect(d.ok, argv.join(' ')).toBe(true);
+      expect(String(d.help), argv.join(' ')).toContain('Usage:');
+      expect(r.err, argv.join(' ')).toBe('');
+    }
+  });
+
+  it('usage errors are one document and nothing on stderr: no command, unknown command, unknown option, missing option', async () => {
+    for (const argv of [['--json'], ['bogus', '--json'], ['--json', 'bogus'], ['personas', '--nope', '--json'], ['ingest', '--json']]) {
+      const r = await runCli(argv);
+      expect(r.code, argv.join(' ')).toBe(2);
+      expect(oneDoc(r), argv.join(' ')).toMatchObject({ ok: false, error: { code: 'USAGE' } });
+      expect(r.err, argv.join(' ')).toBe('');
+    }
+  });
+
+  it('--json before the command applies to the command', async () => {
+    const r = await runCli(['--json', 'personas', ...common()]);
+    expect(r.code).toBe(0);
+    expect(oneDoc(r)).toMatchObject({ ok: true });
+  });
+
+  it('a "--json" that is the value of another option is not JSON mode', async () => {
+    const r = await runCli(['ingest', '--author', 'bad id!', '--name', '--json', corpusPath, ...common()]);
+    expect(r.code).toBe(2);
+    expect(r.out).toBe(''); // the error is prose on stderr
+    expect(r.err).toContain('error:');
+  });
+
+  it('a "--json" after "--" is not JSON mode', async () => {
+    const r = await runCli(['profile', 'ghost', ...common(), '--', '--json']);
+    expect(r.code).toBe(3);
+    expect(r.out).toBe('');
+    expect(r.err).toContain('error:');
+  });
+
+  it('text mode help is unchanged: prose on stdout', async () => {
+    const r = await runCli(['--help']);
+    expect(r.out).toContain('Usage:');
+    expect(() => JSON.parse(r.out)).toThrow();
+  });
+});

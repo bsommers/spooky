@@ -96,7 +96,7 @@ Rules: `loadConfig` throws `ConfigError` with one `ConfigIssue` per problem (pat
 ## CLI exit codes
 0 ok · 1 unexpected/file-system error (reported by class name or errno only) · 2 usage/config/input (`CONFIG_INVALID`, `PROFILE_INVALID`, commander usage errors, unreadable input file, no API key for the selected provider) · 3 unknown persona/author · 4 filter failed (fail-closed) · 5 LLM failed · 6 input too large · 7 persisted state corrupt (`STORE_CORRUPT`) · 8 state directory locked by another process (`STATE_LOCKED`).
 
-`--json` prints exactly one document on stdout: `{ ok: true, ...data }` or `{ ok: false, error: { code, message } }` (code = the error's `code`, `USAGE` for usage errors, `IO_ERROR`/`INTERNAL` for exit 1). Without `--json`: result on stdout, `error: <message>` on stderr. Logs and warnings never go to stdout.
+`--json` (detected by commander while parsing: a value of another option or anything after `--` does not count; `--help`/usage errors included, help text rides in `{ok:true, help}`) prints exactly one document on stdout: `{ ok: true, ...data }` or `{ ok: false, error: { code, message } }` (code = the error's `code`, `USAGE` for usage errors, `IO_ERROR`/`INTERNAL` for exit 1). Without `--json`: result on stdout, `error: <message>` on stderr. Logs and warnings never go to stdout.
 
 ## Surface parity (uniform surfaces)
 | Capability | Library | CLI |

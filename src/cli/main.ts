@@ -158,24 +158,45 @@ async function resolveConfig(io: CliIo, opts: CommonOpts & LlmOpts, needsModel: 
 const out = (io: CliIo, text: string): void => io.stdout(text.endsWith('\n') ? text : `${text}\n`);
 const printJson = (io: CliIo, doc: Record<string, unknown>): void => io.stdout(`${JSON.stringify({ ok: true, ...doc })}\n`);
 
+/**
+ * Mutable per-run state shared by `buildProgram` and `main`. `json` is set by commander itself when it parses a
+ * `--json` option (so a `--json` that is the VALUE of another option, or follows `--`, does not count); `text` collects
+ * help output in JSON mode; `dispatched` records that a subcommand was reached.
+ */
+export interface CliSettings {
+  json?: boolean;
+  text?: string[];
+  dispatched?: boolean;
+}
+
 /** Build the commander program. Exported so the parity test can enumerate the commands without running anything. */
-export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: { json?: boolean } = {}): Command {
+export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSettings = {}): Command {
   const program = new Command('ghostwriter')
     .description('Dual-axis ghostwriter: an author\'s voice for a target audience persona, behind a confidentiality-first filter pipeline.')
     .exitOverride()
+    // Program options (only --json) are recognised before the subcommand name; after it every option belongs to the subcommand.
+    .enablePositionalOptions()
+    .option('--json', 'print one JSON document {ok, ...} on stdout (also for --help and usage errors)')
+    .hook('preSubcommand', () => void (settings.dispatched = true))
     .configureOutput({
-      writeOut: (s) => io.stdout(s),
+      // In --json mode help text is collected and returned inside the one JSON document (see `main`).
+      writeOut: (s) => {
+        if (settings.json === true) (settings.text ??= []).push(s);
+        else io.stdout(s);
+      },
       // In --json mode the usage error is reported as a JSON document on stdout instead.
       writeErr: (s) => {
         if (settings.json !== true) io.stderr(s);
       },
     });
+  program.on('option:json', () => void (settings.json = true));
 
   const common = (cmd: Command): Command =>
     cmd
       .option('--config <path>', 'JSON config file (default: $GHOSTWRITER_CONFIG, else built-in defaults)')
       .option('--state-dir <dir>', 'where ingests are stored (default: $GHOSTWRITER_STATE_DIR or ~/.local/state/ghostwriter)')
-      .option('--json', 'print one JSON document {ok, ...} on stdout');
+      .option('--json', 'print one JSON document {ok, ...} on stdout')
+      .on('option:json', () => void (settings.json = true));
 
   /** Resolve the config, then build the engine; `persisted` also restores (and later saves) the state directory. */
   const start = async (opts: CommonOpts & LlmOpts, needsModel: boolean, persisted: boolean) => {
@@ -200,7 +221,7 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: { json?: b
     const text = await readInput(io, file, opts.file, MAX_CORPUS_CHARS * 4);
     const engine = await engineFor(config, opts, true);
     const profile = await engine.ingest(opts.author, opts.name, text);
-    if (opts.json) printJson(io, { profile });
+    if (settings.json === true) printJson(io, { profile });
     else out(io, `ingested ${profile.authorId}: ${profile.corpusWordCount} words`);
   });
 
@@ -234,7 +255,7 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: { json?: b
       });
       const banned = result.trace.find((t) => t.filter === 'persona-banned');
       if (banned) io.stderr(`warning: the output still contains ${String(banned.metadata.count)} phrase(s) banned for persona "${opts.persona}"\n`);
-      if (opts.json) printJson(io, { text: result.text, trace: result.trace, promptTokensEstimate: result.promptTokensEstimate });
+      if (settings.json === true) printJson(io, { text: result.text, trace: result.trace, promptTokensEstimate: result.promptTokensEstimate });
       else out(io, result.text);
     },
   );
@@ -242,14 +263,14 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: { json?: b
   common(program.command('personas').description('list the configured target personas')).action(async (opts: CommonOpts) => {
     const { engine } = await start(opts, false, false);
     const personas = engine.listPersonas();
-    if (opts.json) printJson(io, { personas });
+    if (settings.json === true) printJson(io, { personas });
     else out(io, personas.map((p) => `${p.key}\t${p.name}`).join('\n'));
   });
 
   common(program.command('filters').description('list the configured filter pipeline, in execution order')).action(async (opts: CommonOpts) => {
     const { engine } = await start(opts, false, false);
     const filters = engine.listFilters();
-    if (opts.json) printJson(io, { filters });
+    if (settings.json === true) printJson(io, { filters });
     else out(io, filters.map((f) => `${f.name}\t${f.stage}\t${f.onError}\t${f.enabled ? 'enabled' : 'disabled'}`).join('\n'));
   });
 
@@ -257,7 +278,7 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: { json?: b
     async (id: string, opts: CommonOpts) => {
       const { engine } = await start(opts, false, true);
       const profile = engine.getProfile(id);
-      if (opts.json) printJson(io, { profile });
+      if (settings.json === true) printJson(io, { profile });
       else {
         out(
           io,
@@ -293,8 +314,8 @@ function describeError(err: unknown): { code: string; message: string; exit: num
  */
 export async function main(argv: readonly string[], ioOverrides: Partial<CliIo> = {}, deps: CliDeps = {}): Promise<number> {
   const io: CliIo = { ...defaultIo(), ...ioOverrides };
-  const json = argv.includes('--json');
-  const program = buildProgram(io, deps, { json });
+  const settings: CliSettings = {};
+  const program = buildProgram(io, deps, settings);
   try {
     if (argv.length === 0) {
       io.stderr(program.helpInformation());
@@ -304,12 +325,28 @@ export async function main(argv: readonly string[], ioOverrides: Partial<CliIo> 
     return 0;
   } catch (err) {
     if (err instanceof CommanderError) {
-      if (err.code === 'commander.helpDisplayed' || err.code === 'commander.version' || err.code === 'commander.help') return err.exitCode === 0 ? 0 : (EXIT_CODES.USAGE as number);
-      if (json) io.stdout(`${JSON.stringify({ ok: false, error: { code: 'USAGE', message: err.message.replace(/^error: /, '') } })}\n`);
+      // Rejected before any subcommand was reached (unknown command, bad top-level option): commander has no
+      // subcommand to ask, so this one failure path looks for the flag itself, up to `--`. A false positive only
+      // turns a prose error into the JSON document.
+      if (settings.json !== true && settings.dispatched !== true) {
+        const end = argv.indexOf('--');
+        if ((end === -1 ? argv : argv.slice(0, end)).includes('--json')) settings.json = true;
+      }
+      const shown = err.code === 'commander.helpDisplayed' || err.code === 'commander.version' || err.code === 'commander.help';
+      if (shown && err.exitCode === 0) {
+        if (settings.json === true) {
+          io.stdout(`${JSON.stringify({ ok: true, [err.code === 'commander.version' ? 'version' : 'help']: (settings.text ?? []).join('') })}\n`);
+        }
+        return 0;
+      }
+      if (settings.json === true) {
+        const message = shown ? 'missing command or arguments; run with --help for usage' : err.message.replace(/^error: /, '');
+        io.stdout(`${JSON.stringify({ ok: false, error: { code: 'USAGE', message } })}\n`);
+      }
       return EXIT_CODES.USAGE as number; // commander already wrote the message to stderr (text mode)
     }
     const d = describeError(err);
-    if (json) io.stdout(`${JSON.stringify({ ok: false, error: { code: d.code, message: d.message } })}\n`);
+    if (settings.json === true) io.stdout(`${JSON.stringify({ ok: false, error: { code: d.code, message: d.message } })}\n`);
     else io.stderr(`error: ${d.message}\n`);
     return d.exit;
   }
