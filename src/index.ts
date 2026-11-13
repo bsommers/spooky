@@ -32,3 +32,8 @@ export { OpenAICompatClient } from './llm/openaiCompatClient.js';
 export type { OpenAICompatOptions } from './llm/openaiCompatClient.js';
 export { createLlmClient } from './llm/factory.js';
 export type { CreateLlmClientOptions } from './llm/factory.js';
+export { Orchestrator, DEFAULT_EXEMPLAR_COUNT, MAX_LLM_OUTPUT_CHARS, MAX_RETRIEVAL_QUERY_CHARS } from './orchestration/orchestrator.js';
+export type { OrchestratorDeps } from './orchestration/orchestrator.js';
+export { Engine, defaultStateDir, providerConfig, STORE_FILE, PROFILES_FILE } from './engine.js';
+export type { EngineOptions } from './engine.js';
+export { validateProfile, loadProfiles, saveProfiles } from './registry/profileFile.js';
