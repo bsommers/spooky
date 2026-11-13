@@ -45,6 +45,8 @@ const MAX_UNBOUNDED_QUANTIFIERS = 2;
  */
 const CUSTOM_WINDOW = 1024;
 const CUSTOM_STEP = 512;
+/** Backstop for the redact() fixed-point loop; real inputs converge in 2 passes. */
+const MAX_PASSES = 8;
 const CUSTOM_NAME_RE = /^[a-z][a-z0-9_]{0,31}$/;
 
 // Characters that render as nothing (or reorder text) and are used to split a secret so that a pattern misses it.
@@ -81,10 +83,10 @@ const BUILTIN_RULES: readonly Rule[] = [
   { type: 'aws_key', rx: /(?:AKIA|ASIA|AGPA|AIDA|AIPA|ANPA|ANVA|AROA)[A-Z0-9]{16}/gu },
   {
     type: 'github_token',
-    rx: new RegExp(`${B}(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,})`, 'gu'),
+    rx: /(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,})/gu, // distinctive prefix: no left boundary, so `x<ZWSP>ghp_...` is still caught
   },
   { type: 'api_key', rx: new RegExp(`${B}sk-[A-Za-z0-9_-]{20,}`, 'gu') },
-  { type: 'slack_token', rx: new RegExp(`${B}(?:xox[abprs]|xapp)-[A-Za-z0-9-]{10,}`, 'gu') },
+  { type: 'slack_token', rx: /(?:xox[abprs]|xapp)-[A-Za-z0-9-]{10,}/gu },
   { type: 'jwt', rx: /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]*/gu },
   { type: 'bearer_token', rx: new RegExp(`${B}bearer[ \\t]{1,20}[A-Za-z0-9._~+/=-]{6,}`, 'giu') },
 ];
@@ -316,10 +318,29 @@ export class ConfidentialityFilter implements Filter {
     this.rules = rules;
   }
 
-  /** Pure, synchronous core. Returns the redacted (and normalized) text plus per-type redaction counts. */
+  /**
+   * Pure, synchronous core. Returns the redacted (and normalized) text plus per-type redaction counts.
+   *
+   * Redaction is iterated to a fixed point: replacing a secret with a placeholder can change where a contextual rule
+   * (`token: <value>`) sees a value end, so a single pass is not always stable. Each changing pass removes at least one
+   * non-placeholder character, so this terminates; the cap is a backstop that fails closed instead of looping.
+   * `redact(redact(x).text).text === redact(x).text` therefore holds by construction (CNF-05).
+   */
   redact(text: string): { text: string; counts: Record<string, number> } {
     if (typeof text !== 'string') throw new TypeError('confidentiality: input must be a string');
-    const norm = normalizeForMatching(text);
+    let current = normalizeForMatching(text);
+    const totals = new Map<string, number>();
+    for (let pass = 0; pass < MAX_PASSES; pass++) {
+      const r = this.pass(current);
+      if (r.text === current) return { text: current, counts: Object.fromEntries(totals) };
+      for (const [type, n] of Object.entries(r.counts)) totals.set(type, (totals.get(type) ?? 0) + n);
+      current = r.text;
+    }
+    throw new Error('confidentiality: redaction did not reach a fixed point');
+  }
+
+  /** One redaction pass over already-normalized text. */
+  private pass(norm: string): { text: string; counts: Record<string, number> } {
     const spans: Span[] = [];
     const hasPlaceholder = norm.includes(PLACEHOLDER_PREFIX);
 
@@ -347,18 +368,22 @@ export class ConfidentialityFilter implements Filter {
       let end = first.end;
       // Label = the most specific (lowest priority number) real rule in the group, so `token: <jwt>` is a `jwt`.
       let label: Span | null = first.prio === 0 ? null : first;
-      let keepPlaceholder = first.prio === 0 ? first : null;
+      // How far existing placeholders cover the group contiguously from its start.
+      let coveredTo = first.prio === 0 ? first.end : first.start;
       let j = i + 1;
       while (j < spans.length && (spans[j] as Span).start < end) {
         const s = spans[j] as Span;
-        if (s.prio === 0 && s.start === first.start && s.end === first.end) keepPlaceholder = s; // identical to a placeholder
-        if (s.prio !== 0 && (label === null || s.prio < label.prio)) label = s;
+        if (s.prio === 0) {
+          if (s.start <= coveredTo) coveredTo = Math.max(coveredTo, s.end);
+        } else if (label === null || s.prio < label.prio) {
+          label = s;
+        }
         end = Math.max(end, s.end);
         j++;
       }
       out.push(norm.slice(pos, first.start));
-      // The group is left alone only when it IS an existing placeholder (other members lie inside it).
-      if (keepPlaceholder !== null && keepPlaceholder.start === first.start && end === keepPlaceholder.end) {
+      if (coveredTo === end) {
+        // The group is nothing but existing placeholder(s) (other rules matched inside or across them): leave it.
         out.push(norm.slice(first.start, end));
       } else {
         const type = (label ?? first).type;

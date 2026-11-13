@@ -290,6 +290,19 @@ describe('ConfidentialityFilter: idempotence (CNF-05) and statelessness', () => 
     for (let i = 0; i < 5; i++) expect(await run(text, f)).toEqual(first);
   });
 
+  it('adjacent placeholders under a contextual rule are left alone (regression: torture seed found a relabel on pass 2)', async () => {
+    const t = 'token: [REDACTED:secret_assignment][REDACTED:url_credential] Utilize';
+    expect((await run(t)).content).toBe(t);
+  });
+
+  it('replacing a secret with a placeholder can move a contextual value boundary; the result is still a fixed point', async () => {
+    const pem = secret('pemPkcs8').text;
+    const t = `token: ${pem}\u0001it's worth noting`;
+    const once = (await run(t)).content;
+    expect(once).not.toContain('BEGIN');
+    expect((await run(once)).content).toBe(once);
+  });
+
   it('already-present placeholders are left exactly as they are', async () => {
     const t = 'a [REDACTED:aws_key] b [REDACTED:custom_thing] c';
     expect((await run(t)).content).toBe(t);
