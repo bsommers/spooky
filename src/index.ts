@@ -9,5 +9,6 @@ export { ConfidentialityFilter } from './filters/confidentiality.js';
 export type { ConfidentialityOptions, CustomRule } from './filters/confidentiality.js';
 export { StyleFilter } from './filters/style.js';
 export type { PhraseEntry, RhythmSettings, StyleOptions } from './filters/style.js';
+export { TargetManager } from './registry/targetManager.js';
 export { splitProtected, join as joinSegments } from './filters/protectedSpans.js';
 export type { Segment } from './filters/protectedSpans.js';
