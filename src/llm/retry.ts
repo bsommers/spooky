@@ -1,14 +1,14 @@
 // Bounded retry for LLM calls (LLM-02).
 //
 //  * Retries only transient failures: HTTP 429, HTTP 5xx, network errors and request timeouts. Any other failure
-//    (4xx, malformed or empty response, a failure that is already an `LlmError`) is final on the first attempt.
+//    (4xx, malformed, empty or truncated response, a failure that is already an `LlmError`) is final on the first attempt.
 //  * Delay before retry n is baseMs * 2^(n-1), raised to a server-supplied Retry-After when that is larger, and always
 //    clamped to maxDelayMs so a hostile or buggy server cannot park the caller.
 //  * The terminal error is an `LlmError(attempts)` whose `cause` is a `LlmTransportError` carrying only a failure kind
 //    and an HTTP status: never a response body, a header or a URL, so an API key cannot ride out in a message or log.
 import { LlmError } from '../models/errors.js';
 
-export type LlmFailureKind = 'http' | 'network' | 'timeout' | 'invalid-response' | 'empty-response' | 'too-large';
+export type LlmFailureKind = 'http' | 'network' | 'timeout' | 'invalid-response' | 'empty-response' | 'too-large' | 'truncated';
 
 /** A single failed provider attempt. The message is built from `kind` and `status` only. */
 export class LlmTransportError extends Error {

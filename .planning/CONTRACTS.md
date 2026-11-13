@@ -117,7 +117,7 @@ Rules: `loadConfig` throws `ConfigError` with one `ConfigIssue` per problem (pat
 Engine.create(options: EngineOptions): Promise<Engine>     // new Engine(options) = no disk access
 engine.generate(authorId, personaKey, input, options?: GenerateOptions): Promise<GenerateResult>
 ```
-Flow: size cap (`config.limits.maxInputChars`) -> persona lookup -> author lookup -> (lazy) LLM client -> PRE pipeline -> retrieve with the redacted query -> `buildPrompt` -> `withRetry(llm.complete)` -> empty/non-string/oversized answer = `LlmError` -> POST pipeline -> `findBannedPhrases` -> trace entry `persona-banned` (`{found:true,count}`) only when a banned phrase survives. Trace order: pre filters, `llm` (`{attempts, exemplars, chars}`), post filters, `persona-banned`. A pipeline whose trace has no successful `confidentiality` entry is `FilterFailedError`.
+Flow: size cap (`config.limits.maxInputChars`) -> persona lookup -> author lookup -> (lazy) LLM client -> PRE pipeline -> retrieve with the redacted query -> `buildPrompt` -> `withRetry(llm.complete)` -> empty/non-string/oversized answer, or one cut off at the token limit (`stop_reason: max_tokens` / `finish_reason: length`, `LlmTransportError("truncated")`, not retried) = `LlmError` -> POST pipeline -> `findBannedPhrases` -> trace entry `persona-banned` (`{found:true,count}`) only when a banned phrase survives. Trace order: pre filters, `llm` (`{attempts, exemplars, chars}`), post filters, `persona-banned`. A pipeline whose trace has no successful `confidentiality` entry is `FilterFailedError`.
 
 ## Pipeline semantics
 - Pre stage runs Confidentiality (and any `pre`/`both` filter). Post stage runs Style then Confidentiality again (`both`).

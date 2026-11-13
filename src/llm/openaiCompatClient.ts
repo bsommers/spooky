@@ -5,7 +5,7 @@
 //    and only over https or to a loopback host (`./endpoint.ts`); a key with plain http to another host is a ConfigError.
 //    The key is held in a private field, never serialized, and never appears in an error message or cause.
 //  * Every request has a timeout (AbortSignal), `redirect: 'error'` (a redirect cannot carry the key elsewhere), and
-//    a response size cap. The response JSON is validated; missing `choices`, non-string content or empty content is a
+//    a response size cap. The response JSON is validated; missing `choices`, non-string content, empty content or `finish_reason: "length"` (truncated) is a
 //    typed `LlmError`, never an empty success.
 //  * `complete` retries transient failures (429/5xx/network/timeout) with `withRetry` and ends in `LlmError`.
 import { ConfigError } from '../models/errors.js';
@@ -114,6 +114,8 @@ function extractContent(bytes: Uint8Array): string {
   }
   const choices = (json as { choices?: unknown } | null)?.choices;
   if (!Array.isArray(choices) || choices.length === 0) throw new LlmTransportError('invalid-response');
+  // finish_reason "length" = the model hit max_tokens: the text is cut off mid-thought, so it is a failure, never a success.
+  if ((choices[0] as { finish_reason?: unknown } | null)?.finish_reason === 'length') throw new LlmTransportError('truncated');
   const content = (choices[0] as { message?: { content?: unknown } } | null)?.message?.content;
   if (typeof content !== 'string') throw new LlmTransportError('invalid-response');
   if (content.trim() === '') throw new LlmTransportError('empty-response');

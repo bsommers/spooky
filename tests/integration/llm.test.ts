@@ -109,6 +109,22 @@ describe.each(adapters)('$name against a local stub', ({ make, ok, path }) => {
     }
   });
 
+  it('output cut off at max_tokens / finish_reason length -> LlmError "truncated", not retried, no text (WR-08)', async () => {
+    const truncated = path === '/v1/messages' ? { ...(ok('cut off mid-sent') as object), stop_reason: 'max_tokens' } : { choices: [{ index: 0, message: { role: 'assistant', content: 'cut off mid-sent' }, finish_reason: 'length' }] };
+    stub.setHandler((_r, res) => json(res, 200, truncated));
+    const e = await fail(make(stub.origin).complete(REQ));
+    expect(kindOf(e)).toBe('truncated');
+    expect(e.attempts).toBe(1);
+    expect(stub.requests).toHaveLength(1);
+    expect(dump(e)).not.toContain('cut off');
+  });
+
+  it('a normal stop reason is still a success', async () => {
+    const done = path === '/v1/messages' ? { ...(ok('whole answer') as object), stop_reason: 'end_turn' } : { choices: [{ index: 0, message: { role: 'assistant', content: 'whole answer' }, finish_reason: 'stop' }] };
+    stub.setHandler((_r, res) => json(res, 200, done));
+    expect(await make(stub.origin).complete(REQ)).toBe('whole answer');
+  });
+
   it('connection refused is a retried network failure', async () => {
     const e = await fail(make(await closedOrigin()).complete(REQ));
     expect(e.attempts).toBe(3);

@@ -65,6 +65,8 @@ export class AnthropicClient implements LlmClient {
     } catch (err) {
       throw mapSdkError(err);
     }
+    // stop_reason "max_tokens" = the answer was cut off at the token limit: a failure, never a success.
+    if ((message as { stop_reason?: unknown } | null)?.stop_reason === 'max_tokens') throw new LlmTransportError('truncated');
     const content: unknown = (message as { content?: unknown } | null)?.content;
     if (!Array.isArray(content)) throw new LlmTransportError('invalid-response');
     let text = '';
