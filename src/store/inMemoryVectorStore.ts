@@ -80,6 +80,17 @@ function toVector(raw: unknown, what: string): Float64Array {
   return v;
 }
 
+/** The one chunk-shape check shared by `upsert` and `load`: `[field, problem]` for the first violation, else undefined. */
+function chunkProblem(chunk: unknown, id: string): [string, string] | undefined {
+  if (chunk === null || typeof chunk !== 'object' || Array.isArray(chunk)) return ['chunk', 'not an object'];
+  const c = chunk as Record<string, unknown>;
+  if (c.id !== id) return ['chunk.id', 'differs from item id'];
+  if (typeof c.authorId !== 'string') return ['chunk.authorId', 'not a string'];
+  if (typeof c.text !== 'string') return ['chunk.text', 'not a string'];
+  if (typeof c.index !== 'number' || !Number.isInteger(c.index) || c.index < 0) return ['chunk.index', 'not a non-negative integer'];
+  return undefined;
+}
+
 const copyChunk = (c: Chunk): Chunk => ({ id: c.id, authorId: c.authorId, text: c.text, index: c.index });
 
 export class InMemoryVectorStore implements VectorStore {
@@ -101,6 +112,8 @@ export class InMemoryVectorStore implements VectorStore {
     for (const it of items) {
       const vector = toVector(it.vector, `vector for "${String(it.id).slice(0, 40)}"`);
       if (typeof it.id !== 'string' || it.chunk?.id !== it.id) throw new TypeError('upsert: item.id must equal item.chunk.id');
+      const problem = chunkProblem(it.chunk, it.id);
+      if (problem !== undefined) throw new TypeError(`upsert: ${problem[0]} is invalid (${problem[1]})`);
       if (vector.length < 1 || vector.length > MAX_DIM) throw new TypeError(`upsert: vector dimension must be in [1, ${MAX_DIM}]`);
       if (dim === undefined) dim = vector.length;
       else if (vector.length !== dim) throw new TypeError(`upsert: vector has ${vector.length} dimensions; collection has ${dim}`);
@@ -265,17 +278,13 @@ export class InMemoryVectorStore implements VectorStore {
           if (typeof x !== 'number' || !Number.isFinite(x)) return bad(`${where}.vector[${i}]`, 'not a finite number');
           v[i] = x;
         }
-        if (!isObj(chunk)) return bad(`${where}.chunk`, 'not an object');
-        if (chunk.id !== id) return bad(`${where}.chunk.id`, 'differs from item id');
-        if (typeof chunk.authorId !== 'string') return bad(`${where}.chunk.authorId`, 'not a string');
-        if (typeof chunk.text !== 'string') return bad(`${where}.chunk.text`, 'not a string');
-        if (typeof chunk.index !== 'number' || !Number.isInteger(chunk.index) || chunk.index < 0) {
-          return bad(`${where}.chunk.index`, 'not a non-negative integer');
-        }
+        const problem = chunkProblem(chunk, id);
+        if (problem !== undefined) return bad(`${where}.${problem[0]}`, problem[1]);
+        const c = chunk as unknown as Chunk;
         col.items.set(id, {
           vector: v,
           ...scale(v),
-          chunk: { id, authorId: chunk.authorId, text: chunk.text, index: chunk.index },
+          chunk: { id, authorId: c.authorId, text: c.text, index: c.index },
         });
       });
       out.set(name, col);

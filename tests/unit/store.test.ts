@@ -478,3 +478,44 @@ describe('InMemoryVectorStore: extreme magnitudes (CR-02)', () => {
     }
   });
 });
+
+describe('InMemoryVectorStore: chunk shape is validated on write as on load (CR-04)', () => {
+  const bad = (id: string, chunk: unknown) => ({ id, vector: [1, 0], chunk: chunk as Chunk });
+  const cases: Array<[string, (id: string) => unknown]> = [
+    ['missing text', (id) => ({ id, authorId: 'a', index: 0 })],
+    ['text not a string', (id) => ({ id, authorId: 'a', text: 5, index: 0 })],
+    ['missing authorId', (id) => ({ id, text: 't', index: 0 })],
+    ['authorId not a string', (id) => ({ id, authorId: 7, text: 't', index: 0 })],
+    ['index missing', (id) => ({ id, authorId: 'a', text: 't' })],
+    ['index negative', (id) => ({ id, authorId: 'a', text: 't', index: -1 })],
+    ['index fractional', (id) => ({ id, authorId: 'a', text: 't', index: 0.5 })],
+    ['index NaN', (id) => ({ id, authorId: 'a', text: 't', index: Number.NaN })],
+    ['chunk is a string', () => 'chunk'],
+    ['chunk is an array', () => []],
+    ['chunk is null', () => null],
+  ];
+
+  it.each(cases)('upsert and replaceCollection reject a chunk with %s and store nothing', async (_n, make) => {
+    const s = new InMemoryVectorStore();
+    await s.upsert('c', [item('keep', [1, 0])]);
+    await expect(s.upsert('c', [item('ok', [1, 0]), bad('x', make('x'))])).rejects.toThrow(TypeError);
+    await expect(s.replaceCollection('c', [bad('x', make('x'))])).rejects.toThrow(TypeError);
+    expect((await s.query('c', [1, 0], 10)).map((h) => h.id)).toEqual(['keep']);
+  });
+
+  it('whatever upsert accepts survives save then load (a bad item can no longer poison the whole file)', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'gw-store-'));
+    try {
+      const s = new InMemoryVectorStore();
+      await expect(s.upsert('c', [bad('x', { id: 'x', authorId: 'a' })])).rejects.toThrow(TypeError);
+      await s.upsert('c', [item('good', [1, 0], { text: '', index: 0 })]);
+      const file = join(dir, 'store.json');
+      await s.save(file);
+      const t = new InMemoryVectorStore();
+      await t.load(file);
+      expect(await t.query('c', [1, 0], 5)).toEqual(await s.query('c', [1, 0], 5));
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
