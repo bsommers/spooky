@@ -150,6 +150,7 @@ export class SourceManager {
     }
 
     const collection = profile.vectorCollectionName;
+    const before = new Map(this.#profiles);
     if (typeof this.#store.replaceCollection === 'function') {
       // Atomic: on any rejection (capacity, dimensions, I/O) the previous chunks and profile are untouched.
       await this.#store.replaceCollection(collection, items);
@@ -166,7 +167,7 @@ export class SourceManager {
       }
     }
     this.#profiles.set(authorId, profile);
-    await this.#persist('store-first');
+    await this.#persistOrRollback('store-first', authorId, before);
     return copyProfile(profile);
   }
 
@@ -209,9 +210,10 @@ export class SourceManager {
   remove(authorId: string): Promise<void> {
     return this.#serial(async () => {
       if (!this.#profiles.has(authorId)) throw new UnknownAuthorError(authorId);
+      const before = new Map(this.#profiles);
       await this.#store.deleteCollection(vectorCollectionName(authorId));
       this.#profiles.delete(authorId);
-      await this.#persist('profiles-first');
+      await this.#persistOrRollback('profiles-first', authorId, before);
     });
   }
 
@@ -272,6 +274,44 @@ export class SourceManager {
     }
     this.#profiles.clear();
     for (const profile of profiles) this.#profiles.set(profile.authorId, profile);
+  }
+
+  /**
+   * Persist, and when that fails put the in-memory state back to what a restart would load, then rethrow. Without this
+   * a failed `remove` would leave the author gone in memory but back on disk, and a failed `ingest` would keep serving
+   * an author that was never stored. The disk is the truth: the files are re-read (a half-finished persist leaves
+   * whatever the write order allows). If they cannot be re-read the touched author is dropped from memory (fail
+   * closed) and the other authors are restored from the pre-operation snapshot.
+   */
+  async #persistOrRollback(order: 'store-first' | 'profiles-first', authorId: string, before: ReadonlyMap<string, StylometricProfile>): Promise<void> {
+    try {
+      await this.#persist(order);
+    } catch (err) {
+      await this.#resync(authorId, before);
+      throw err;
+    }
+  }
+
+  async #resync(authorId: string, before: ReadonlyMap<string, StylometricProfile>): Promise<void> {
+    const p = this.#persistence;
+    let reloaded = false;
+    if (p !== undefined) {
+      try {
+        const [haveStore, haveProfiles] = await Promise.all([exists(p.storePath), exists(p.profilesPath)]);
+        if (haveStore || haveProfiles) {
+          await this.#load();
+          reloaded = true;
+        }
+      } catch {
+        // fall through to the snapshot
+      }
+    }
+    if (!reloaded) {
+      this.#profiles.clear();
+      for (const [id, profile] of before) if (id !== authorId) this.#profiles.set(id, profile);
+    }
+    // Chunks of an author with no profile (never persisted, or removed on disk) must not linger in memory or in the next save.
+    if (!this.#profiles.has(authorId)) await this.#store.deleteCollection(vectorCollectionName(authorId)).catch(() => undefined);
   }
 
   /** `load()` rejects a profile without chunks, so the file that may be stale after a crash must be the store when adding and the profiles when removing. */

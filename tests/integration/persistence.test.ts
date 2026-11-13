@@ -1,5 +1,5 @@
 // Carry-over from Phase 4: ingest-then-generate across processes needs profiles (and chunks) on disk.
-import { mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -258,5 +258,88 @@ describe('SourceManager crash consistency (CR-02)', () => {
     await b.load();
     expect(b.listAuthors().map((p) => p.authorId)).toEqual(['terse']);
     expect((await b.retrieve('terse', 'deploy rollback', 2)).length).toBeGreaterThan(0);
+  });
+});
+
+describe('SourceManager rolls back memory when persist fails (CR-03)', () => {
+  const stateDir = () => join(dir, 'state');
+  const lock = () => chmod(stateDir(), 0o500); // temp files can no longer be created: every save fails with EACCES
+  const unlock = () => chmod(stateDir(), 0o700);
+
+  it('a failed remove keeps the author (memory matches what a restart loads)', async () => {
+    const a = make();
+    await a.ingest('terse', 'T', corpus());
+    const hits = await a.retrieve('terse', 'deploy rollback', 3);
+    await lock();
+    try {
+      await expect(a.remove('terse')).rejects.toThrow();
+    } finally {
+      await unlock();
+    }
+    expect(a.listAuthors().map((p) => p.authorId)).toEqual(['terse']);
+    expect(await a.retrieve('terse', 'deploy rollback', 3)).toEqual(hits);
+    const b = make();
+    await b.load();
+    expect(b.listAuthors().map((p) => p.authorId)).toEqual(['terse']);
+  });
+
+  it('a failed first ingest of an author leaves no profile and no chunks behind', async () => {
+    const store = new InMemoryVectorStore();
+    const a = make(store);
+    await a.ingest('terse', 'T', corpus());
+    await lock();
+    try {
+      await expect(a.ingest('other', 'O', corpus('verbose-hedging.txt'))).rejects.toThrow();
+    } finally {
+      await unlock();
+    }
+    expect(a.listAuthors().map((p) => p.authorId)).toEqual(['terse']);
+    expect(() => a.getProfile('other')).toThrow(UnknownAuthorError);
+    await expect(a.retrieve('other', 'x', 1)).rejects.toBeInstanceOf(UnknownAuthorError);
+    // The next successful save must not resurrect the failed author's chunks.
+    await a.save();
+    const b = make();
+    await b.load();
+    expect(b.listAuthors().map((p) => p.authorId)).toEqual(['terse']);
+  });
+
+  it('a failed re-ingest restores the previous profile and chunks', async () => {
+    const a = make();
+    const first = await a.ingest('terse', 'T', corpus());
+    const hits = await a.retrieve('terse', 'deploy rollback', 3);
+    await lock();
+    try {
+      await expect(a.ingest('terse', 'T2', corpus('verbose-hedging.txt'))).rejects.toThrow();
+    } finally {
+      await unlock();
+    }
+    expect(a.getProfile('terse')).toEqual(first);
+    expect(await a.retrieve('terse', 'deploy rollback', 3)).toEqual(hits);
+  });
+
+  it('a first save that fails leaves an empty manager, not an unpersisted author', async () => {
+    const a = make(new InMemoryVectorStore(), 256, { storePath: join(dir, 'ro', 'store.json'), profilesPath: join(dir, 'ro', 'profiles.json') });
+    await mkdir(join(dir, 'ro'));
+    await chmod(join(dir, 'ro'), 0o500);
+    try {
+      await expect(a.ingest('terse', 'T', corpus())).rejects.toThrow();
+    } finally {
+      await chmod(join(dir, 'ro'), 0o700);
+    }
+    expect(a.listAuthors()).toEqual([]);
+    await expect(a.retrieve('terse', 'x', 1)).rejects.toBeInstanceOf(UnknownAuthorError);
+  });
+
+  it('a crash after the store write (profiles never written) does not keep serving the new author', async () => {
+    class CrashAfterSave extends InMemoryVectorStore {
+      override async save(path: string): Promise<void> {
+        await super.save(path);
+        throw new Error('simulated crash after store write');
+      }
+    }
+    const a = make(new CrashAfterSave());
+    await expect(a.ingest('terse', 'T', corpus())).rejects.toThrow('simulated crash');
+    expect(a.listAuthors()).toEqual([]);
+    await expect(a.retrieve('terse', 'x', 1)).rejects.toBeInstanceOf(UnknownAuthorError);
   });
 });
