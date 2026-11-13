@@ -94,3 +94,13 @@ export class StoreCorruptError extends GhostwriterError {
     super('STORE_CORRUPT', message, options);
   }
 }
+
+/** The state directory is held by another live writer and did not become free within the bounded wait. Carries no path. */
+export class StateLockedError extends GhostwriterError {
+  readonly waitedMs: number;
+
+  constructor(waitedMs: number, options?: { cause?: unknown }) {
+    super('STATE_LOCKED', `the state directory is locked by another ghostwriter process (waited ${waitedMs} ms); retry later`, options);
+    this.waitedMs = waitedMs;
+  }
+}

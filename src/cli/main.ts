@@ -32,6 +32,7 @@ export const EXIT_CODES: Readonly<Record<string, number>> = {
   LLM_FAILED: 5,
   INPUT_TOO_LARGE: 6,
   STORE_CORRUPT: 7,
+  STATE_LOCKED: 8,
 };
 
 export interface CliIo {
@@ -47,7 +48,7 @@ export interface CliIo {
 }
 
 /** Test/embedding hooks; the real binary passes none. */
-export type CliDeps = Pick<EngineOptions, 'llm' | 'retry' | 'llmClientOptions' | 'factories'>;
+export type CliDeps = Pick<EngineOptions, 'llm' | 'retry' | 'llmClientOptions' | 'factories' | 'stateLock'>;
 
 function defaultIo(): CliIo {
   return {

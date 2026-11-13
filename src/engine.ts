@@ -25,6 +25,8 @@ import { ConfigError } from './models/errors.js';
 import type { Config, Embedder, FilterSpec, GenerateOptions, GenerateResult, LlmClient, ProviderConfig, StylometricProfile, TargetPersonaConfig, VectorStore } from './models/types.js';
 import { Orchestrator } from './orchestration/orchestrator.js';
 import { SourceManager } from './registry/sourceManager.js';
+import { withStateLock } from './registry/stateLock.js';
+import type { StateLockOptions } from './registry/stateLock.js';
 import type { SourceLimits } from './registry/sourceManager.js';
 import { TargetManager } from './registry/targetManager.js';
 import { InMemoryVectorStore } from './store/inMemoryVectorStore.js';
@@ -52,6 +54,8 @@ export interface EngineOptions {
   /** Vector store; needs save()/load() when `stateDir` is set. Default `InMemoryVectorStore`. */
   store?: VectorStore;
   sourceLimits?: SourceLimits;
+  /** Wait / stale / poll tuning for the cross-process state-directory lock taken by `ingest` (only with `stateDir`). */
+  stateLock?: StateLockOptions;
 }
 
 /** `$GHOSTWRITER_STATE_DIR`, else `$XDG_STATE_HOME/ghostwriter`, else `~/.local/state/ghostwriter`. */
@@ -68,6 +72,8 @@ export class Engine {
   readonly #targets: TargetManager;
   readonly #orchestrator: Orchestrator;
   readonly #hasState: boolean;
+  readonly #stateDir: string | undefined;
+  readonly #stateLock: StateLockOptions;
 
   /** Builds the engine without touching the disk. Prefer `Engine.create`, which also restores persisted state. */
   constructor(options: EngineOptions) {
@@ -79,6 +85,8 @@ export class Engine {
     const dir = options.stateDir;
     if (dir !== undefined && (typeof dir !== 'string' || dir === '')) throw new ConfigError('stateDir must be a non-empty path');
     this.#hasState = dir !== undefined;
+    this.#stateDir = dir;
+    this.#stateLock = { ...options.stateLock };
     this.#sources = new SourceManager({
       store: options.store ?? new InMemoryVectorStore(),
       embedder: options.embedder ?? new HashEmbedder(),
@@ -118,9 +126,23 @@ export class Engine {
     if (this.#hasState) await this.#sources.load();
   }
 
-  /** Redact, profile, chunk, embed and store a corpus (and persist it when `stateDir` is set). Returns the profile. */
+  /**
+   * Redact, profile, chunk, embed and store a corpus (and persist it when `stateDir` is set). Returns the profile.
+   * With a `stateDir` the whole read-modify-write runs under the state-directory lock and starts from a fresh read of
+   * the files, so overlapping ingests from other processes are merged instead of overwritten (`StateLockedError` if the
+   * lock is not free within `stateLock.waitMs`).
+   */
   ingest(authorId: string, displayName: string, text: string): Promise<StylometricProfile> {
-    return this.#sources.ingest(authorId, displayName, text);
+    const dir = this.#stateDir;
+    if (dir === undefined) return this.#sources.ingest(authorId, displayName, text);
+    return withStateLock(
+      dir,
+      async () => {
+        await this.#sources.load();
+        return this.#sources.ingest(authorId, displayName, text);
+      },
+      this.#stateLock,
+    );
   }
 
   /** The stored profile of `authorId`. `UnknownAuthorError` if it was never ingested. */
