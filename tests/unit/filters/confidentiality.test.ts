@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ConfidentialityFilter } from '../../../src/filters/confidentiality.js';
+import { ConfidentialityFilter, normalizeForMatching } from '../../../src/filters/confidentiality.js';
 import { FilterPipeline } from '../../../src/filters/pipeline.js';
 import { ConfigError } from '../../../src/models/errors.js';
 import type { PipelineContext } from '../../../src/models/types.js';
@@ -347,10 +347,52 @@ describe('ConfidentialityFilter: normalization (unicode evasion)', () => {
     expect((await run(wide)).content).toBe('[REDACTED:aws_key]');
   });
 
-  it('redaction applies to the NORMALIZED text: compatibility characters are folded in the output (documented)', async () => {
-    const r = await run('ﬁle ０１');
-    expect(r.content).toBe('file 01');
+  it('text with no secret is returned byte for byte: no folding, no stripping (CR-04)', async () => {
+    const benign = [
+      '…', '™', '½', 'ﬁle', 'a\u00a0b', // compatibility characters and NBSP
+      '❤\ufe0f', '👨\u200d👩\u200d👧', // emoji presentation selector and ZWJ sequence
+      'سلام\u200cدنیا', // Persian ZWNJ is orthographically required
+      '\uff21\uff22\uff23 full-width', 'e\u0301 combining', '한국어 \u1112\u1161\u11ab', 'ＫＥＹ ０１',
+    ];
+    for (const text of benign) {
+      const r = await run(text);
+      expect(r.content, JSON.stringify(text)).toBe(text);
+      expect(r.modified).toBe(false);
+    }
+  });
+
+  it('only the secret is replaced; non-secret text around and between secrets keeps its characters (CR-04)', async () => {
+    const k = secret('aws').text;
+    const evaded = k.slice(0, 4) + '\u200b' + k.slice(4); // ZWSP inside the key is part of the redacted span
+    const r = await run(`ﬁle … ${evaded} ❤\ufe0f سلام\u200cدنیا ${k} ½`);
+    expect(r.content).toBe('ﬁle … [REDACTED:aws_key] ❤\ufe0f سلام\u200cدنیا [REDACTED:aws_key] ½');
     expect(r.modified).toBe(true);
+  });
+
+  it('a full-width secret is detected on the normalized text and the original characters are replaced (CR-04)', async () => {
+    const k = secret('aws').text;
+    const wide = k.replace(/[A-Z0-9]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0xfee0));
+    expect((await run(`ＫＥＹ: ${wide} ﬁne`)).content).toBe('ＫＥＹ: [REDACTED:aws_key] ﬁne');
+    const lig = '…' + secret('ghp').text + '…ﬁ';
+    expect((await run(lig)).content).toBe('…[REDACTED:github_token]…ﬁ');
+  });
+
+  it('a secret right next to a ligature or emoji does not swallow more than the segment it touches (CR-04)', async () => {
+    const k = secret('aws').text;
+    expect((await run(`😀${k}😀`)).content).toBe('😀[REDACTED:aws_key]😀');
+    expect((await run(`é${k}é`)).content).toBe('é[REDACTED:aws_key]é');
+  });
+
+  it('segment-wise normalization agrees with whole-string NFKC on random unicode soup (detection is not weakened)', () => {
+    const atoms = ['a', 'Z', '7', ' ', 'e', '\u0301', '\u0308', '\u200b', '\ufe0f', '\u200d', 'ﬁ', '…', 'Ａ', '１', '\u1112', '\u1161', '\u11ab', '한', '😀', 'é', '\u00ad', '\u2160', '\u0e33', 'ǆ', '\u0f73'];
+    const ref = (t: string) => t.replace(/[\u00ad\u034f\u061c\u115f\u1160\u17b4\u17b5\u180b-\u180f\u200b-\u200f\u202a-\u202e\u2060-\u206f\u3164\ufe00-\ufe0f\ufeff\uffa0\ufff9-\ufffb\u{e0000}-\u{e007f}\u{e0100}-\u{e01ef}]/gu, '');
+    let seed = 12345;
+    const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32);
+    for (let n = 0; n < 3000; n++) {
+      let t = '';
+      for (let k = rnd() * 12; k > 0; k--) t += atoms[Math.floor(rnd() * atoms.length)];
+      expect(normalizeForMatching(t), JSON.stringify(t)).toBe(ref(ref(t).normalize('NFKC')));
+    }
   });
 
   it('zero-width characters inside a blocklist term are also seen through', async () => {

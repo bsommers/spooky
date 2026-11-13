@@ -1,10 +1,11 @@
 // Confidentiality filter (CNF-01..05): typed, deterministic, idempotent redaction of secrets and blocklisted terms.
 //
 // Design decisions (see also .planning/phases/02-filters/02-01-SUMMARY.md):
-//  * Redaction is applied to the NORMALIZED text (NFKC + invisible characters stripped), not mapped back onto the
-//    original. The output therefore has compatibility characters folded (e.g. U+FB01 -> "fi", full-width -> ASCII) and
-//    invisible characters removed. This keeps evasion by `AK<ZWSP>IA...` or full-width letters from working, and is
-//    what makes the filter idempotent.
+//  * DETECTION runs on a normalized copy of the text (NFKC + invisible characters stripped) so that evasion by
+//    `AK<ZWSP>IA...` or full-width letters does not work, but REDACTION is applied to the ORIGINAL text through an
+//    index map: text outside a redacted span is returned byte for byte (ligatures, NBSP, emoji variation selectors,
+//    ZWJ/ZWNJ, ... are untouched). A redacted span covers every original character that produced a matched normalized
+//    character, including the invisible ones hidden inside it.
 //  * Every rule is collected as a [start,end) span over the normalized text; overlapping spans are UNIONED (never
 //    partially redacted), so a blocklist term inside a PEM block or `Acme` vs `Acme Corp` leave no remnant.
 //  * Placeholders already present in the input are a pseudo-rule: a group made only of placeholders is left as is, and
@@ -79,10 +80,57 @@ const INVISIBLE_RE =
 // eslint-disable-next-line no-control-regex
 const ASCII_ONLY_RE = /^[\u0000-\u007f]*$/;
 
+/**
+ * Code points that attach to the previous one when normalizing: combining marks, conjoining Hangul jamo and the
+ * invisible characters (which are stripped). Normalizing segment by segment, with a boundary before every other code
+ * point, gives the same result as normalizing the whole string for everything that matters to detection while keeping a
+ * map back to the original indices.
+ */
+const CONTINUATION_RE = /^[\p{M}ᄀ-ᇿꥠ-꥿ힰ-퟿]$/u;
+const INVISIBLE_ONE_RE = new RegExp(`^${INVISIBLE_RE.source}$`, 'u');
+
+interface Normalized {
+  norm: string;
+  /** For each UTF-16 index of `norm`, the original [start, end) of the segment it came from; null = identity map. */
+  starts: number[] | null;
+  ends: number[] | null;
+}
+
+function normalizeSegment(raw: string): string {
+  return raw.replace(INVISIBLE_RE, '').normalize('NFKC').replace(INVISIBLE_RE, '');
+}
+
+/** NFKC + strip invisibles, segment by segment, remembering where every normalized character came from. */
+function normalizeWithMap(text: string): Normalized {
+  if (ASCII_ONLY_RE.test(text)) return { norm: text, starts: null, ends: null };
+  const parts: string[] = [];
+  const starts: number[] = [];
+  const ends: number[] = [];
+  let segStart = 0;
+  const flush = (segEnd: number): void => {
+    if (segEnd <= segStart) return;
+    const n = normalizeSegment(text.slice(segStart, segEnd));
+    parts.push(n);
+    for (let k = 0; k < n.length; k++) {
+      starts.push(segStart);
+      ends.push(segEnd);
+    }
+    segStart = segEnd;
+  };
+  let i = 0;
+  while (i < text.length) {
+    const cp = text.codePointAt(i) as number;
+    const ch = String.fromCodePoint(cp);
+    if (i > segStart && !(CONTINUATION_RE.test(ch) || INVISIBLE_ONE_RE.test(ch))) flush(i);
+    i += ch.length;
+  }
+  flush(text.length);
+  return { norm: parts.join(''), starts, ends };
+}
+
 /** NFKC + strip invisibles, in an order that is stable under repetition (idempotent). */
 export function normalizeForMatching(text: string): string {
-  if (ASCII_ONLY_RE.test(text)) return text;
-  return text.replace(INVISIBLE_RE, '').normalize('NFKC').replace(INVISIBLE_RE, '');
+  return normalizeWithMap(text).norm;
 }
 
 interface Rule {
@@ -403,7 +451,8 @@ export class ConfidentialityFilter implements Filter {
   }
 
   /**
-   * Pure, synchronous core. Returns the redacted (and normalized) text plus per-type redaction counts.
+   * Pure, synchronous core. Returns the redacted text plus per-type redaction counts. Text outside a redacted span is
+   * returned unchanged; detection (not output) uses the normalized form.
    *
    * Redaction is iterated to a fixed point: replacing a secret with a placeholder can change where a contextual rule
    * (`token: <value>`) sees a value end, so a single pass is not always stable. Each changing pass removes at least one
@@ -412,7 +461,7 @@ export class ConfidentialityFilter implements Filter {
    */
   redact(text: string): { text: string; counts: Record<string, number> } {
     if (typeof text !== 'string') throw new TypeError('confidentiality: input must be a string');
-    let current = normalizeForMatching(text);
+    let current = text;
     const totals = new Map<string, number>();
     for (let pass = 0; pass < MAX_PASSES; pass++) {
       const r = this.pass(current);
@@ -423,8 +472,9 @@ export class ConfidentialityFilter implements Filter {
     throw new Error('confidentiality: redaction did not reach a fixed point');
   }
 
-  /** One redaction pass over already-normalized text. */
-  private pass(norm: string): { text: string; counts: Record<string, number> } {
+  /** One redaction pass: detect on the normalized text, replace the matching spans of the original text. */
+  private pass(orig: string): { text: string; counts: Record<string, number> } {
+    const { norm, starts, ends } = normalizeWithMap(orig);
     const spans: Span[] = [];
     const hasPlaceholder = norm.includes(PLACEHOLDER_PREFIX);
 
@@ -441,12 +491,16 @@ export class ConfidentialityFilter implements Filter {
       }
     });
 
-    if (spans.length === 0) return { text: norm, counts: {} };
+    if (spans.length === 0) return { text: orig, counts: {} };
+
+    // normalized [start,end) -> original [start,end): the whole segment a normalized character came from
+    const origStart = (n: number): number => (starts === null ? n : (starts[n] as number));
+    const origEnd = (n: number): number => (ends === null ? n : (ends[n - 1] as number));
 
     spans.sort((a, b) => a.start - b.start || b.end - a.end || a.prio - b.prio);
     const counts = new Map<string, number>();
     const out: string[] = [];
-    let pos = 0;
+    let pos = 0; // position in the ORIGINAL text
     let i = 0;
     while (i < spans.length) {
       const first = spans[i] as Span;
@@ -466,19 +520,23 @@ export class ConfidentialityFilter implements Filter {
         end = Math.max(end, s.end);
         j++;
       }
-      out.push(norm.slice(pos, first.start));
+      i = j;
+      // Two groups can touch the same original segment (e.g. a ligature); the part already consumed is not redone.
+      const os = Math.max(pos, origStart(first.start));
+      const oe = origEnd(end);
+      if (oe <= os) continue;
+      out.push(orig.slice(pos, os));
       if (coveredTo === end) {
         // The group is nothing but existing placeholder(s) (other rules matched inside or across them): leave it.
-        out.push(norm.slice(first.start, end));
+        out.push(orig.slice(os, oe));
       } else {
         const type = (label ?? first).type;
         out.push(`${PLACEHOLDER_PREFIX}${type}]`);
         counts.set(type, (counts.get(type) ?? 0) + 1);
       }
-      pos = end;
-      i = j;
+      pos = oe;
     }
-    out.push(norm.slice(pos));
+    out.push(orig.slice(pos));
     return { text: out.join(''), counts: Object.fromEntries(counts) };
   }
 
