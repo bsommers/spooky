@@ -14,13 +14,23 @@ function formatPath(path: readonly PropertyKey[]): string {
   return out === '' ? '<root>' : out;
 }
 
-function toIssues(issues: readonly ZodIssue[]): ConfigIssue[] {
+/** True when `path` does not resolve to a defined value in `raw` (structural check, independent of zod's message text). */
+function isMissing(raw: unknown, path: readonly PropertyKey[]): boolean {
+  let cur: unknown = raw;
+  for (const seg of path) {
+    if (cur === null || typeof cur !== 'object') return true;
+    cur = (cur as Record<PropertyKey, unknown>)[seg];
+  }
+  return cur === undefined;
+}
+
+function toIssues(issues: readonly ZodIssue[], raw: unknown): ConfigIssue[] {
   const out: ConfigIssue[] = [];
   for (const issue of issues) {
     const base = issue.path;
     if (issue.code === 'unrecognized_keys') {
       for (const key of issue.keys) out.push({ path: formatPath([...base, key]), message: 'unknown key' });
-    } else if (issue.code === 'invalid_type' && issue.message.endsWith('received undefined')) {
+    } else if (issue.code === 'invalid_type' && isMissing(raw, base)) {
       out.push({ path: formatPath(base), message: 'is required' });
     } else {
       out.push({ path: formatPath(base), message: issue.message });
@@ -35,9 +45,10 @@ function toIssues(issues: readonly ZodIssue[]): ConfigIssue[] {
  * with the input or with module-level defaults.
  */
 export function loadConfig(raw?: unknown): Config {
-  const parsed = configSchema.safeParse(raw === undefined ? {} : raw);
+  const input = raw === undefined ? {} : raw;
+  const parsed = configSchema.safeParse(input);
   if (!parsed.success) {
-    const issues = toIssues(parsed.error.issues);
+    const issues = toIssues(parsed.error.issues, input);
     throw new ConfigError(
       `invalid config: ${issues.map((i) => `${i.path}: ${i.message}`).join('; ')}`,
       issues,

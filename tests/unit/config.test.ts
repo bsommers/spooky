@@ -129,6 +129,19 @@ describe('loadConfig: invalid input fails fast with path-qualified errors', () =
     expect(failure({ llm: { model: '' } }).message).toContain('llm.model');
   });
 
+  it('missing required key is reported as exactly "is required" at its path', () => {
+    expect(failure({ llm: {} }).issues).toContainEqual({ path: 'llm.model', message: 'is required' });
+    expect(failure({}).issues).toContainEqual({ path: 'llm', message: 'is required' });
+  });
+
+  it('present-but-wrong-type value is not reported as "is required"', () => {
+    const issue = failure({ llm: { model: 5 } }).issues.find((i) => i.path === 'llm.model');
+    expect(issue).toBeDefined();
+    expect(issue?.message).not.toBe('is required');
+    const nul = failure({ llm: { model: null } }).issues.find((i) => i.path === 'llm.model');
+    expect(nul?.message).not.toBe('is required');
+  });
+
   it('whitespace-only llm.model is rejected', () => {
     expect(failure({ llm: { model: '   ' } }).issues.map((i) => i.path)).toContain('llm.model');
   });
