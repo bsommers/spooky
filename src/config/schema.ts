@@ -80,7 +80,8 @@ export const configSchema = z.strictObject({
   llm: z.strictObject({
     model: nonBlank,
     maxTokens: positiveInt.default(DEFAULT_LLM.maxTokens),
-    temperature: z.number().min(0).max(2).default(DEFAULT_LLM.temperature),
+    // capped at 1: the default provider (Anthropic) rejects higher values, so fail at startup, not at first request
+    temperature: z.number().min(0).max(1).default(DEFAULT_LLM.temperature),
     maxRetries: z.number().int().min(0).max(MAX_LLM_RETRIES).default(DEFAULT_LLM.maxRetries),
   }),
   filters: z

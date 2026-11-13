@@ -201,9 +201,16 @@ describe('loadConfig: invalid input fails fast with path-qualified errors', () =
     expect(failure({ llm: { model: 'm', maxRetries: -1 } }).message).toContain('llm.maxRetries');
   });
 
-  it('llm.temperature outside [0,2] is rejected', () => {
+  it('llm.temperature outside [0,1] is rejected (provider cap)', () => {
     expect(failure({ llm: { model: 'm', temperature: 3 } }).message).toContain('llm.temperature');
+    expect(failure({ llm: { model: 'm', temperature: 1.5 } }).message).toContain('llm.temperature');
+    expect(failure({ llm: { model: 'm', temperature: 1.01 } }).message).toContain('llm.temperature');
     expect(failure({ llm: { model: 'm', temperature: -0.1 } }).message).toContain('llm.temperature');
+  });
+
+  it('llm.temperature boundaries 0 and 1 are accepted', () => {
+    expect(loadConfig({ llm: { model: 'm', temperature: 0 } }).llm.temperature).toBe(0);
+    expect(loadConfig({ llm: { model: 'm', temperature: 1 } }).llm.temperature).toBe(1);
   });
 
   it('unknown filter name is rejected with the exact path-qualified message', () => {
