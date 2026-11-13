@@ -46,11 +46,24 @@ describe('buildPipeline (registry)', () => {
   it('reorder via config: execution order follows the config list', () => {
     const cfg = base();
     cfg.filters.pipeline = [
+      spec('style', 'post', 'skip'),
       spec('confidentiality', 'pre'),
       spec('confidentiality', 'post'),
-      spec('style', 'post', 'skip'),
     ];
-    expect(buildPipeline(cfg, 'post').names).toEqual(['confidentiality', 'style']);
+    expect(buildPipeline(cfg, 'post').names).toEqual(['style', 'confidentiality']);
+    expect(buildPipeline(cfg, 'pre').names).toEqual(['confidentiality']);
+  });
+
+  it('confidentiality must be last at post: a filter ordered after it is a config error (CR-07)', () => {
+    const late = cfgWith([spec('confidentiality', 'pre'), spec('confidentiality', 'post'), spec('style', 'post', 'skip')]);
+    expect(() => buildPipeline(late, 'post')).toThrow(/last enabled filter/);
+    expect(() => buildPipeline(late, 'post')).toThrow(ConfigError);
+    // the pre pipeline is unaffected, and a disabled trailing filter is fine
+    expect(buildPipeline(late, 'pre').names).toEqual(['confidentiality']);
+    const disabledTail = cfgWith([spec('confidentiality', 'both'), spec('style', 'post', 'skip', false)]);
+    expect(buildPipeline(disabledTail, 'post').names).toEqual(['confidentiality']);
+    // a stage "both" filter after confidentiality also counts
+    expect(() => buildPipeline(cfgWith([spec('confidentiality', 'both'), spec('style', 'both', 'skip')]), 'post')).toThrow(ConfigError);
   });
 
   it('a stage "both" filter is built for pre and for post', () => {
@@ -110,7 +123,7 @@ describe('buildPipeline (registry)', () => {
         return appender('style', { onError: s.onError });
       },
     };
-    buildPipeline(cfgWith([spec('confidentiality', 'both'), spec('style', 'both', 'fail-closed')]), 'post', f);
+    buildPipeline(cfgWith([spec('style', 'both', 'fail-closed'), spec('confidentiality', 'both')]), 'post', f);
     expect(seen).toEqual({ c: 'fail-closed', s: 'fail-closed' });
   });
 

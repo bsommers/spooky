@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { DEFAULT_CHUNK, DEFAULT_LIMITS, DEFAULT_LLM, MAX_LLM_RETRIES } from '../../config/settings.js';
 import { DEFAULT_PERSONAS } from '../../config/targetPersonas.js';
-import { DEFAULT_PIPELINE, KNOWN_FILTER_NAMES } from '../../config/filters.js';
+import { DEFAULT_PIPELINE, KNOWN_FILTER_NAMES, firstFilterAfterFinalConfidentiality } from '../../config/filters.js';
 
 const positiveInt = z.number().int().positive();
 /** Trimmed, non-empty string: whitespace-only values are rejected. */
@@ -36,6 +36,15 @@ const pipelineSchema = z.array(filterSpecSchema).superRefine((pipeline, ctx) => 
         message: `confidentiality must be enabled and fail-closed at stage "${stage}"`,
       });
     }
+  }
+  // Confidentiality must be the LAST filter at post: anything after it edits redacted text that is never re-checked.
+  const late = firstFilterAfterFinalConfidentiality(pipeline);
+  if (late !== -1) {
+    ctx.addIssue({
+      code: 'custom',
+      path: [late],
+      message: `confidentiality must be the last enabled filter at stage "post"; "${pipeline[late]?.name}" runs after it`,
+    });
   }
   pipeline.forEach((f, i) => {
     if (f.name === 'confidentiality' && f.onError !== 'fail-closed') {

@@ -1,5 +1,6 @@
 // Config -> pipeline wiring (FLT-04): the ordered `filters.pipeline` list decides which filters run, in what order,
 // at which stage, and with which error policy. No code changes are needed to enable, disable or reorder a filter.
+import { firstFilterAfterFinalConfidentiality } from '../../config/filters.js';
 import { DEFAULT_PHRASES } from '../../config/phrases.js';
 import { ConfigError } from '../models/errors.js';
 import type { Filter, FilterSpec, Stage } from '../models/types.js';
@@ -47,7 +48,7 @@ const appliesAt = (spec: FilterSpec, stage: Stage): boolean => spec.stage === st
  *
  * Throws `ConfigError` for an unknown filter name, an entry whose filter cannot run at the stage it names, two entries
  * with the same name at one stage, or (defence in depth for hand-built configs) a stage with no enabled fail-closed
- * confidentiality filter.
+ * confidentiality filter, or at `post` any enabled filter ordered after the final confidentiality filter.
  */
 export function buildPipeline(
   cfg: { filters: { pipeline: readonly FilterSpec[] } },
@@ -62,6 +63,14 @@ export function buildPipeline(
     throw new ConfigError(`confidentiality must be enabled and fail-closed at stage "${stage}"`, [
       { path: 'filters.pipeline', message: `no enabled fail-closed confidentiality filter at stage "${stage}"` },
     ]);
+  }
+  if (stage === 'post') {
+    const late = firstFilterAfterFinalConfidentiality(specs);
+    if (late !== -1) {
+      throw new ConfigError(`confidentiality must be the last enabled filter at stage "post"; "${specs[late]?.name}" runs after it`, [
+        { path: `filters.pipeline[${late}]`, message: 'runs after the final confidentiality filter at stage "post"' },
+      ]);
+    }
   }
 
   const pipeline = new FilterPipeline({ stage, requireConfidentiality: true });

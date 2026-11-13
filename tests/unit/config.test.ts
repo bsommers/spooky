@@ -266,6 +266,20 @@ describe('loadConfig: invalid input fails fast with path-qualified errors', () =
       expect(failure(withPipeline([{ name: 'style', stage: 'post' }])).message).toContain('confidentiality');
     });
 
+    it('rejects a filter ordered after the final post-stage confidentiality entry, naming it (CR-07)', () => {
+      const err = failure(withPipeline([conf({ stage: 'pre' }), conf({ stage: 'post' }), { name: 'style', stage: 'post' }]));
+      expect(err.issues).toContainEqual({
+        path: 'filters.pipeline[2]',
+        message: 'confidentiality must be the last enabled filter at stage "post"; "style" runs after it',
+      });
+      expect(() => loadConfig(withPipeline([conf(), { name: 'style', stage: 'both' }]))).toThrow(ConfigError);
+    });
+
+    it('accepts style before confidentiality, and a disabled filter after it', () => {
+      expect(() => loadConfig(withPipeline([{ name: 'style', stage: 'post' }, conf()]))).not.toThrow();
+      expect(() => loadConfig(withPipeline([conf(), { name: 'style', stage: 'post', enabled: false }]))).not.toThrow();
+    });
+
     it('accepts separate pre and post entries, and a single "both" entry', () => {
       expect(() => loadConfig(withPipeline([conf({ stage: 'pre' }), conf({ stage: 'post' })]))).not.toThrow();
       expect(() => loadConfig(withPipeline([conf()]))).not.toThrow();
