@@ -11,13 +11,18 @@
 // ConfigError) before the expensive work. Mutating operations (and retrieval) are serialized so a concurrent
 // re-ingest can never interleave with a delete/upsert or a read of the same collection.
 //
-// Profiles live in memory only; persisting them across processes is the caller's job (the vector store persists
-// chunks, not profiles).
+// Persistence (optional, `options.persistence`): the vector store file and a profiles file are written after every
+// successful ingest / remove, INSIDE the same serialized task, and `load()` restores both. Because store.save and
+// store.load run on the manager's queue they can never interleave with an ingest, a delete or a retrieval. The two
+// files are written store first; a crash between the writes leaves new chunks next to the old profile, never a profile
+// without chunks. Single writer: two processes saving to one state directory race last-writer-wins.
 import { chunk } from '../ingestion/chunker.js';
 import { extractProfile, vectorCollectionName } from '../ingestion/stylometry.js';
-import { ConfigError, FilterFailedError, InputTooLargeError, UnknownAuthorError } from '../models/errors.js';
+import { ConfigError, FilterFailedError, InputTooLargeError, ProfileError, StoreCorruptError, UnknownAuthorError } from '../models/errors.js';
 import type { Embedder, ScoredChunk, StylometricProfile, VectorStore } from '../models/types.js';
 import type { FilterPipeline } from '../filters/pipeline.js';
+import { AUTHOR_ID, MAX_DISPLAY_NAME, loadProfiles, saveProfiles, validateProfile } from './profileFile.js';
+import { access } from 'node:fs/promises';
 
 export interface SourceLimits {
   /** Longest corpus (characters) `ingest` accepts. Default 10,000,000. */
@@ -37,10 +42,10 @@ export interface SourceManagerOptions {
   confidentiality: FilterPipeline;
   chunkCfg: { size: number; overlap: number };
   limits?: SourceLimits;
+  /** Where `load()` / `save()` (and the automatic save after ingest / remove) read and write. Needs a store with save/load. */
+  persistence?: { storePath: string; profilesPath: string };
 }
 
-const AUTHOR_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
-const MAX_DISPLAY_NAME = 200;
 const MAX_K = 100;
 const EMBED_BATCH = 128;
 
@@ -50,6 +55,14 @@ const copyProfile = (p: StylometricProfile): StylometricProfile => ({
   preferredPunctuation: [...p.preferredPunctuation],
   commonTransitionWords: [...p.commonTransitionWords],
 });
+const exists = (path: string): Promise<boolean> =>
+  access(path).then(
+    () => true,
+    (err: NodeJS.ErrnoException) => {
+      if (err.code === 'ENOENT') return false;
+      throw err;
+    },
+  );
 const yieldToEventLoop = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
 export class SourceManager {
@@ -58,6 +71,7 @@ export class SourceManager {
   readonly #confidentiality: FilterPipeline;
   readonly #chunkCfg: { size: number; overlap: number };
   readonly #limits: Required<SourceLimits>;
+  readonly #persistence: { storePath: string; profilesPath: string } | undefined;
   readonly #profiles = new Map<string, StylometricProfile>();
   #queue: Promise<unknown> = Promise.resolve();
 
@@ -75,6 +89,16 @@ export class SourceManager {
     };
     for (const [name, v] of Object.entries(this.#limits)) {
       if (!Number.isInteger(v) || v < 1) throw new ConfigError(`SourceManager: limits.${name} must be an integer >= 1`);
+    }
+    if (options.persistence !== undefined) {
+      const { storePath, profilesPath } = options.persistence;
+      if (typeof storePath !== 'string' || storePath === '' || typeof profilesPath !== 'string' || profilesPath === '' || storePath === profilesPath) {
+        throw new ConfigError('SourceManager: persistence needs two distinct, non-empty file paths');
+      }
+      if (typeof options.store.save !== 'function' || typeof options.store.load !== 'function') {
+        throw new ConfigError('SourceManager: persistence needs a vector store with save() and load()');
+      }
+      this.#persistence = { storePath, profilesPath };
     }
     this.#store = options.store;
     this.#embedder = options.embedder;
@@ -141,6 +165,7 @@ export class SourceManager {
       }
     }
     this.#profiles.set(authorId, profile);
+    await this.#persist();
     return copyProfile(profile);
   }
 
@@ -185,7 +210,74 @@ export class SourceManager {
       if (!this.#profiles.has(authorId)) throw new UnknownAuthorError(authorId);
       await this.#store.deleteCollection(vectorCollectionName(authorId));
       this.#profiles.delete(authorId);
+      await this.#persist();
     });
+  }
+
+  /**
+   * Replace every held profile with `profiles` (all-or-nothing; each record is validated, `ProfileError` names the
+   * field). For callers that persist profiles themselves; the chunks must already be in the store. Serialized.
+   */
+  restoreProfiles(profiles: readonly unknown[]): Promise<void> {
+    return this.#serial(async () => {
+      if (!Array.isArray(profiles)) throw new TypeError('restoreProfiles: profiles must be an array');
+      if (profiles.length > this.#limits.maxAuthors) throw new InputTooLargeError(profiles.length, this.#limits.maxAuthors, 'authors');
+      const next = new Map<string, StylometricProfile>();
+      profiles.forEach((raw, i) => {
+        const p = validateProfile(raw, `profiles[${i}]`);
+        if (next.has(p.authorId)) throw new ProfileError(`invalid profiles[${i}].authorId: duplicate`);
+        next.set(p.authorId, p);
+      });
+      this.#profiles.clear();
+      for (const [id, p] of next) this.#profiles.set(id, p);
+    });
+  }
+
+  /**
+   * Restore the persisted state: the vector store file, then the profiles file. Neither file present = a fresh, empty
+   * state (first run). Exactly one present, a corrupt file, a profile without stored chunks, or a store whose vector
+   * dimension differs from the embedder's = `StoreCorruptError`. The held profiles are unchanged on any rejection; the
+   * store's contents are replaced as soon as its file validated (a later rejection leaves the loaded chunks next to
+   * the old profiles, so treat a rejected `load()` as fatal for this manager).
+   */
+  load(): Promise<void> {
+    return this.#serial(() => this.#load());
+  }
+
+  /** Write the store and profiles files now (also happens automatically after every ingest / remove). */
+  save(): Promise<void> {
+    return this.#serial(() => this.#persist());
+  }
+
+  async #load(): Promise<void> {
+    const p = this.#persistence;
+    if (p === undefined) throw new ConfigError('SourceManager: no persistence configured');
+    const [haveStore, haveProfiles] = await Promise.all([exists(p.storePath), exists(p.profilesPath)]);
+    if (!haveStore && !haveProfiles) return;
+    if (haveStore !== haveProfiles) {
+      throw new StoreCorruptError(`persisted state is incomplete: the ${haveStore ? 'profiles' : 'vector store'} file is missing`);
+    }
+    const profiles = await loadProfiles(p.profilesPath, this.#limits.maxAuthors);
+    await this.#store.load!(p.storePath); // atomic: unchanged on rejection
+    const zero = new Array<number>(this.#embedder.dim).fill(0);
+    for (const profile of profiles) {
+      let probe: ScoredChunk[];
+      try {
+        probe = await this.#store.query(profile.vectorCollectionName, zero, 1);
+      } catch (err) {
+        throw new StoreCorruptError('persisted vectors do not match the embedder (dimension mismatch)', { cause: err });
+      }
+      if (probe.length === 0) throw new StoreCorruptError('persisted state is inconsistent: a profile has no stored chunks');
+    }
+    this.#profiles.clear();
+    for (const profile of profiles) this.#profiles.set(profile.authorId, profile);
+  }
+
+  async #persist(): Promise<void> {
+    const p = this.#persistence;
+    if (p === undefined) return;
+    await this.#store.save!(p.storePath);
+    await saveProfiles(p.profilesPath, this.listAuthors());
   }
 
   #checkAuthorId(authorId: unknown): void {
