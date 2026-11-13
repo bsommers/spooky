@@ -75,6 +75,51 @@ const personasSchema = z
     });
   });
 
+const customRuleSchema = z.strictObject({
+  name: z.string().regex(/^[a-z0-9_]{1,40}$/, 'must be 1-40 characters: lowercase letters, digits or "_"'),
+  pattern: z.string().min(1, 'must not be empty').max(256, 'must be at most 256 characters'),
+  caseInsensitive: z.boolean().optional(),
+});
+
+const confidentialitySchema = z.strictObject({
+  blocklist: z.array(z.string().trim().min(1, 'must not be blank').max(1000, 'must be at most 1000 characters')).max(10_000, 'at most 10000 entries').default(() => []),
+  caseInsensitive: z.boolean().default(false),
+  customRules: z.array(customRuleSchema).max(100, 'at most 100 rules').default(() => []),
+});
+
+const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/** http(s) URL only: `file:`, `data:` and friends are never an LLM endpoint. */
+const httpUrl = z.string().refine((v) => {
+  try {
+    const u = new URL(v);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}, 'must be an http(s) URL');
+
+const llmSchema = z
+  .strictObject({
+    model: nonBlank,
+    maxTokens: positiveInt.default(DEFAULT_LLM.maxTokens),
+    // capped at 1: the default provider (Anthropic) rejects higher values, so fail at startup, not at first request
+    temperature: z.number().min(0).max(1).default(DEFAULT_LLM.temperature),
+    maxRetries: z.number().int().min(0).max(MAX_LLM_RETRIES).default(DEFAULT_LLM.maxRetries),
+    provider: z.enum(['anthropic', 'openai-compat']).optional(),
+    baseUrl: httpUrl.optional(),
+    // The message must not echo the value: someone may have pasted the key itself here.
+    apiKeyEnv: z.string().regex(ENV_NAME, 'must be an environment variable name, not a key').optional(),
+  })
+  .superRefine((llm, ctx) => {
+    if (llm.provider === 'openai-compat' && llm.baseUrl === undefined) {
+      ctx.addIssue({ code: 'custom', path: ['baseUrl'], message: 'is required for provider "openai-compat"' });
+    }
+    if (llm.provider !== 'openai-compat' && llm.baseUrl !== undefined) {
+      ctx.addIssue({ code: 'custom', path: ['baseUrl'], message: 'only applies to provider "openai-compat"' });
+    }
+  });
+
 export const configSchema = z.strictObject({
   limits: z
     .strictObject({ maxInputChars: positiveInt.default(DEFAULT_LIMITS.maxInputChars) })
@@ -86,17 +131,12 @@ export const configSchema = z.strictObject({
     })
     .refine((c) => c.overlap < c.size, { path: ['overlap'], error: 'must be smaller than chunk.size' })
     .default(() => ({ ...DEFAULT_CHUNK })),
-  llm: z.strictObject({
-    model: nonBlank,
-    maxTokens: positiveInt.default(DEFAULT_LLM.maxTokens),
-    // capped at 1: the default provider (Anthropic) rejects higher values, so fail at startup, not at first request
-    temperature: z.number().min(0).max(1).default(DEFAULT_LLM.temperature),
-    maxRetries: z.number().int().min(0).max(MAX_LLM_RETRIES).default(DEFAULT_LLM.maxRetries),
-  }),
+  llm: llmSchema,
   filters: z
     .strictObject({
       pipeline: pipelineSchema.default(() => DEFAULT_PIPELINE.map((f) => ({ ...f }))),
     })
     .default(() => ({ pipeline: DEFAULT_PIPELINE.map((f) => ({ ...f })) })),
   personas: personasSchema.default(() => DEFAULT_PERSONAS.map((p) => structuredClone(p))),
+  confidentiality: confidentialitySchema.optional(),
 });

@@ -140,12 +140,42 @@ export interface FilterSpec {
   enabled: boolean;
 }
 
+/** A user-defined redaction rule. Same shape as the confidentiality filter's `CustomRule`; validated when the config loads. */
+export interface CustomRuleConfig {
+  /** Becomes the placeholder type `[REDACTED:<name>]`; lowercase letters, digits, underscore. */
+  name: string;
+  /** Regex source with bounded quantifiers only (see the confidentiality filter's ReDoS budget). */
+  pattern: string;
+  caseInsensitive?: boolean;
+}
+
+/** Confidentiality filter options carried by the config (Phase 2 IN-01). Absent section = built-in rules only. */
+export interface ConfidentialityConfig {
+  /** Literal terms to redact (never regex). */
+  blocklist: string[];
+  /** Applies to the blocklist only. */
+  caseInsensitive: boolean;
+  customRules: CustomRuleConfig[];
+}
+
 export interface Config {
   limits: { maxInputChars: number };
   chunk: { size: number; overlap: number };
-  llm: { model: string; maxTokens: number; temperature: number; maxRetries: number };
+  llm: {
+    model: string;
+    maxTokens: number;
+    temperature: number;
+    maxRetries: number;
+    /** Provider selection; absent = `anthropic`. The API key is never configured, only the env var NAME that holds it. */
+    provider?: 'anthropic' | 'openai-compat';
+    /** Required for `openai-compat` (http/https origin + path), rejected otherwise. */
+    baseUrl?: string;
+    /** Environment variable that holds the key. Anthropic default: ANTHROPIC_API_KEY. Optional for openai-compat. */
+    apiKeyEnv?: string;
+  };
   filters: { pipeline: FilterSpec[] };
   personas: TargetPersonaConfig[];
+  confidentiality?: ConfidentialityConfig;
 }
 
 /** One path-qualified config problem, e.g. `{ path: 'llm.model', message: 'required' }`. */

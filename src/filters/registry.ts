@@ -46,14 +46,17 @@ const appliesAt = (spec: FilterSpec, stage: Stage): boolean => spec.stage === st
  * Build the pipeline for one stage from `cfg.filters.pipeline`: disabled entries are dropped, entries for other
  * stages are dropped, the rest are built in list order.
  *
+ * `cfg.confidentiality` (when present) configures the built-in confidentiality filter unless `factories` is given.
+ *
  * Throws `ConfigError` for an unknown filter name, an entry whose filter cannot run at the stage it names, two entries
  * with the same name at one stage, or (defence in depth for hand-built configs) a stage with no enabled fail-closed
  * confidentiality filter, or at `post` any enabled filter ordered after the final confidentiality filter.
  */
 export function buildPipeline(
-  cfg: { filters: { pipeline: readonly FilterSpec[] } },
+  cfg: { filters: { pipeline: readonly FilterSpec[] }; confidentiality?: ConfidentialityOptions },
   stage: Stage,
-  factories: FilterFactories = defaultFactories(),
+  // Default: the built-ins configured from the config's own `confidentiality` section (blocklist, custom rules).
+  factories: FilterFactories = defaultFactories(cfg.confidentiality === undefined ? {} : { confidentiality: cfg.confidentiality }),
 ): FilterPipeline {
   const specs = cfg.filters.pipeline;
   const guarded = specs.some(
