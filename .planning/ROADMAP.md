@@ -6,7 +6,7 @@
 | 2 | Filter pipeline + filters ✓ (2026-11-13) | Async pipeline, confidentiality filter, style filter, fully tested | FLT-*, CNF-*, STY-* | 1 |
 | 3 | Target axis ✓ (2026-11-13) | Personas, prompt builder, banned-phrase enforcement | TGT-* | 1 |
 | 4 | Source axis ✓ (2026-11-13) | Chunker, stylometry, embedder, vector store, source manager | SRC-* | 1, 2 (CNF for SRC-04) |
-| 5 | Orchestration, LLM, CLI | End-to-end generate, Anthropic + OpenAI-compatible adapters, retries, CLI | LLM-*, ORC-* | 2, 3, 4 |
+| 5 | Orchestration, LLM, CLI ✓ (2026-11-13) | End-to-end generate, Anthropic + OpenAI-compatible adapters, retries, CLI | LLM-*, ORC-* | 2, 3, 4 |
 | 6 | Hardening & docs | Torture/security suites, e2e, README, as-built doc | all | 5 |
 
 ## Milestone v2: scoring and humanizing (after v1 ships)

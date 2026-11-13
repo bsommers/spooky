@@ -45,13 +45,13 @@
 
 ### Orchestration + surfaces
 
-- [ ] **ORC-01**: `generate(input, authorId, personaKey)` runs pre-filters -> prompt -> LLM -> post-filters; returns `{text, trace}`.
-- [ ] **ORC-02**: LLM failure -> typed `LlmError`; no partial text returned; retries bounded (max 2, exponential, injectable sleep).
-- [ ] **ORC-03**: CLI `ghostwriter generate|ingest|profile|personas|filters` with `--json`; exit codes documented.
-- [ ] **ORC-04**: Library exports the same operations as the CLI (uniform surfaces).
-- [ ] **LLM-01**: `OpenAICompatClient` posts to `{baseUrl}/chat/completions`, maps `LlmRequest` to messages, parses `choices[0].message.content`; key from env var named in config; works with a local server and no key when `apiKeyEnv` is unset.
-- [ ] **LLM-02**: Provider selected by config/CLI `--provider anthropic|openai-compat`; unknown provider -> `ConfigError`. Both adapters share the retry policy and return identical typed errors.
-- [ ] **ORC-05**: Input size cap (default 200k chars) enforced before any filter or LLM work.
+- [x] **ORC-01**: `generate(input, authorId, personaKey)` runs pre-filters -> prompt -> LLM -> post-filters; returns `{text, trace}`.
+- [x] **ORC-02**: LLM failure -> typed `LlmError`; no partial text returned; retries bounded (max 2, exponential, injectable sleep).
+- [x] **ORC-03**: CLI `ghostwriter generate|ingest|profile|personas|filters` with `--json`; exit codes documented.
+- [x] **ORC-04**: Library exports the same operations as the CLI (uniform surfaces).
+- [x] **LLM-01**: `OpenAICompatClient` posts to `{baseUrl}/chat/completions`, maps `LlmRequest` to messages, parses `choices[0].message.content`; key from env var named in config; works with a local server and no key when `apiKeyEnv` is unset.
+- [x] **LLM-02**: Provider selected by config/CLI `--provider anthropic|openai-compat`; unknown provider -> `ConfigError`. Both adapters share the retry policy and return identical typed errors.
+- [x] **ORC-05**: Input size cap (default 200k chars) enforced before any filter or LLM work.
 
 ## v2: Detector scoring and humanizing (later milestone)
 
