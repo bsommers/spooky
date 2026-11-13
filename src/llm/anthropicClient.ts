@@ -1,6 +1,6 @@
 // Anthropic Messages adapter on the official SDK, configured so this module owns retry, timeout and size policy:
 //  * SDK retries are off (`maxRetries: 0`); `withRetry` is the single retry layer, same as the OpenAI-compat adapter.
-//  * A wrapped fetch enforces the response size cap and discards error-response bodies, so neither a hostile server
+//  * A wrapped fetch refuses redirects (the key cannot be forwarded), enforces the response size cap and discards error-response bodies, so neither a hostile server
 //    nor an SDK error message can carry response text (or anything that echoes the key) into our errors.
 //  * Failures are mapped to `LlmTransportError(kind, status)`; the SDK's own error objects are never kept as a cause.
 //  * The API key is held in a private field and is not part of `toJSON`.
@@ -83,10 +83,11 @@ export class AnthropicClient implements LlmClient {
   }
 }
 
-/** fetch wrapper: success bodies are read under the size cap; error bodies are dropped (status and headers kept). */
+/** fetch wrapper: redirects are refused (`redirect: 'error'`); success bodies are read under the size cap; error bodies are dropped (status and headers kept). */
 function boundedFetch(inner: FetchLike, maxBytes: number): FetchLike {
   return async (input, init) => {
-    const res = await inner(input, init);
+    // A redirect must never carry the key (x-api-key is a custom header, so fetch does not strip it cross-origin).
+    const res = await inner(input, { ...init, redirect: 'error' });
     const headers = new Headers(res.headers);
     headers.delete('content-encoding');
     headers.delete('content-length');

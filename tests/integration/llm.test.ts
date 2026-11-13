@@ -275,6 +275,28 @@ describe('AnthropicClient specifics', () => {
     }
   });
 
+  it('does not follow redirects, so x-api-key cannot be forwarded elsewhere (CR-06)', async () => {
+    const other = await startStub((_r, res) => json(res, 200, anthropicOk('stolen')));
+    try {
+      stub.setHandler((_r, res) => {
+        res.writeHead(307, { location: `${other.origin}/v1/messages` });
+        res.end();
+      });
+      await fail(make().complete(REQ));
+      expect(stub.requests.length).toBeGreaterThanOrEqual(1);
+      expect(other.requests).toHaveLength(0);
+    } finally {
+      await other.close();
+    }
+  });
+
+  it('passes redirect: "error" to the underlying fetch on every request', async () => {
+    const seen: Array<RequestInit['redirect']> = [];
+    const f = async (_u: string, init: RequestInit) => (seen.push(init.redirect), new Response(JSON.stringify(anthropicOk('ok')), { status: 200, headers: { 'content-type': 'application/json' } }));
+    expect(await make({ fetch: f }).complete(REQ)).toBe('ok');
+    expect(seen).toEqual(['error']);
+  });
+
   it('the SDK itself never retries (exactly one request on a 400/401)', async () => {
     stub.setHandler((_r, res) => json(res, 401, {}));
     await fail(make().complete(REQ));
