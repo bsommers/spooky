@@ -7,6 +7,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { ConfigError } from '../models/errors.js';
 import type { LlmClient, LlmRequest } from '../models/types.js';
+import { ENDPOINT_MESSAGES, endpointProblem } from './endpoint.js';
 import { DEFAULT_MAX_RESPONSE_BYTES, DEFAULT_TIMEOUT_MS, positive, readCapped, type FetchLike } from './http.js';
 import { API_KEY_PATTERN } from './openaiCompatClient.js';
 import { LlmTransportError, parseRetryAfter, withRetry, type RetryOptions } from './retry.js';
@@ -33,15 +34,8 @@ export class AnthropicClient implements LlmClient {
     if (!API_KEY_PATTERN.test(options.apiKey)) throw new ConfigError('API key contains characters that are not allowed in an HTTP header');
     if (typeof options.model !== 'string' || options.model.trim() === '') throw new ConfigError('anthropic model must be a non-empty string');
     if (options.baseUrl !== undefined) {
-      let u: URL;
-      try {
-        u = new URL(options.baseUrl);
-      } catch {
-        throw new ConfigError('anthropic baseUrl is not a valid URL');
-      }
-      if ((u.protocol !== 'http:' && u.protocol !== 'https:') || u.username !== '' || u.password !== '') {
-        throw new ConfigError('anthropic baseUrl must be http(s) without embedded credentials');
-      }
+      const problem = endpointProblem(options.baseUrl, true); // a key is always sent
+      if (problem !== undefined) throw new ConfigError(`anthropic baseUrl ${ENDPOINT_MESSAGES[problem]}`);
     }
     this.#model = options.model;
     this.#timeoutMs = positive(options.timeoutMs, DEFAULT_TIMEOUT_MS);

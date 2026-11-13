@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { DEFAULT_CHUNK, DEFAULT_LIMITS, DEFAULT_LLM, MAX_LLM_RETRIES } from '../../config/settings.js';
 import { DEFAULT_PERSONAS } from '../../config/targetPersonas.js';
+import { ENDPOINT_MESSAGES, endpointProblem } from '../llm/endpoint.js';
 import { DEFAULT_PIPELINE, KNOWN_FILTER_NAMES, firstFilterAfterFinalConfidentiality } from '../../config/filters.js';
 
 const positiveInt = z.number().int().positive();
@@ -89,15 +90,11 @@ const confidentialitySchema = z.strictObject({
 
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
-/** http(s) URL only: `file:`, `data:` and friends are never an LLM endpoint. */
-const httpUrl = z.string().refine((v) => {
-  try {
-    const u = new URL(v);
-    return u.protocol === 'http:' || u.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}, 'must be an http(s) URL');
+/** http(s) URL without embedded credentials: `file:`, `data:` and friends are never an LLM endpoint. The message never echoes the value. */
+const httpUrl = z.string().superRefine((v, ctx) => {
+  const problem = endpointProblem(v, false);
+  if (problem !== undefined) ctx.addIssue({ code: 'custom', message: problem === 'invalid' ? 'must be an http(s) URL' : ENDPOINT_MESSAGES[problem] });
+});
 
 const llmSchema = z
   .strictObject({
@@ -114,6 +111,10 @@ const llmSchema = z
   .superRefine((llm, ctx) => {
     if (llm.provider === 'openai-compat' && llm.baseUrl === undefined) {
       ctx.addIssue({ code: 'custom', path: ['baseUrl'], message: 'is required for provider "openai-compat"' });
+    }
+    // An API key never travels over cleartext http to a non-loopback host (the key's presence is known here: apiKeyEnv).
+    if (llm.provider === 'openai-compat' && llm.baseUrl !== undefined && llm.apiKeyEnv !== undefined && endpointProblem(llm.baseUrl, true) === 'cleartext-key') {
+      ctx.addIssue({ code: 'custom', path: ['baseUrl'], message: ENDPOINT_MESSAGES['cleartext-key'] });
     }
     if (llm.provider !== 'openai-compat' && llm.baseUrl !== undefined) {
       ctx.addIssue({ code: 'custom', path: ['baseUrl'], message: 'only applies to provider "openai-compat"' });

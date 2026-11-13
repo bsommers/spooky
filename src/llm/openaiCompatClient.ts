@@ -1,13 +1,15 @@
 // OpenAI-compatible chat-completions adapter on the built-in fetch (no SDK): works against OpenAI, Ollama, vLLM,
 // llama.cpp servers and the like.
 //
-//  * The API key is optional (local servers need none). `Authorization` is sent only when a non-empty key was given.
+//  * The API key is optional (local servers need none). `Authorization` is sent only when a non-empty key was given,
+//    and only over https or to a loopback host (`./endpoint.ts`); a key with plain http to another host is a ConfigError.
 //    The key is held in a private field, never serialized, and never appears in an error message or cause.
 //  * Every request has a timeout (AbortSignal), `redirect: 'error'` (a redirect cannot carry the key elsewhere), and
 //    a response size cap. The response JSON is validated; missing `choices`, non-string content or empty content is a
 //    typed `LlmError`, never an empty success.
 //  * `complete` retries transient failures (429/5xx/network/timeout) with `withRetry` and ends in `LlmError`.
 import { ConfigError } from '../models/errors.js';
+import { ENDPOINT_MESSAGES, endpointProblem } from './endpoint.js';
 import type { LlmClient, LlmRequest } from '../models/types.js';
 import {
   DEFAULT_MAX_RESPONSE_BYTES,
@@ -22,7 +24,7 @@ import { LlmTransportError, withRetry, type RetryOptions } from './retry.js';
 
 export interface OpenAICompatOptions {
   model: string;
-  /** e.g. http://localhost:11434/v1 ; `/chat/completions` is appended. Must be http(s) and carry no credentials. */
+  /** e.g. http://localhost:11434/v1 ; `/chat/completions` is appended. Must be http(s), carry no credentials, and be https (or loopback) when `apiKey` is set. */
   baseUrl: string;
   /** Bearer token. Omit or leave empty for keyless local servers. */
   apiKey?: string;
@@ -48,17 +50,13 @@ export class OpenAICompatClient implements LlmClient {
   readonly #fetch: FetchLike;
 
   constructor(options: OpenAICompatOptions) {
-    let url: URL;
-    try {
-      url = new URL(options.baseUrl);
-    } catch {
-      throw new ConfigError('openai-compat baseUrl is not a valid URL');
-    }
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new ConfigError('openai-compat baseUrl must use http or https');
-    if (url.username !== '' || url.password !== '') throw new ConfigError('openai-compat baseUrl must not embed credentials');
-    if (typeof options.model !== 'string' || options.model.trim() === '') throw new ConfigError('openai-compat model must be a non-empty string');
     const key = options.apiKey;
-    if (key !== undefined && key !== '' && !API_KEY_PATTERN.test(key)) throw new ConfigError('API key contains characters that are not allowed in an HTTP header');
+    const hasKey = key !== undefined && key !== '';
+    const problem = endpointProblem(typeof options.baseUrl === 'string' ? options.baseUrl : '', hasKey);
+    if (problem !== undefined) throw new ConfigError(`openai-compat baseUrl ${ENDPOINT_MESSAGES[problem]}`);
+    const url = new URL(options.baseUrl);
+    if (typeof options.model !== 'string' || options.model.trim() === '') throw new ConfigError('openai-compat model must be a non-empty string');
+    if (hasKey && !API_KEY_PATTERN.test(key)) throw new ConfigError('API key contains characters that are not allowed in an HTTP header');
     this.#apiKey = key === undefined || key === '' ? undefined : key;
     this.#url = `${url.origin}${url.pathname.replace(/\/+$/, '')}/chat/completions`;
     this.#model = options.model;

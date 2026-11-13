@@ -130,6 +130,7 @@ export type ProviderConfig =
   | { provider: 'anthropic'; model: string; apiKeyEnv: string }                        // default ANTHROPIC_API_KEY
   | { provider: 'openai-compat'; model: string; baseUrl: string; apiKeyEnv?: string }; // e.g. http://localhost:11434/v1
 ```
+**Endpoint / key-egress rule** (`src/llm/endpoint.ts`; enforced at `loadConfig` and again in both clients): `baseUrl` is http(s) only and must not embed credentials (`user:pw@`); both are rejected at config load, with a message that never echoes the value. The API key is sent only over `https`, or over `http` to a loopback host (`localhost`, `127.0.0.0/8`, `::1`; exact matches, so `localhost.evil.com` is not loopback). A config with `apiKeyEnv` and a non-loopback `http:` `baseUrl` is a `ConfigError`; a keyless non-loopback `http:` endpoint is allowed (nothing to leak). The Anthropic client applies the same rule to its `baseUrl` override. Neither client follows redirects (`redirect: 'error'`), so a 3xx cannot forward the key. Not enforced: private / link-local / metadata addresses are not blocked, so a config file from an untrusted source can still make the process send requests to internal hosts (without the key over http); treat `$GHOSTWRITER_CONFIG` as trusted input.
 
 ## v2 contracts
 ```ts

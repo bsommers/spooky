@@ -42,7 +42,7 @@ describe('createLlmClient', () => {
 
   it('refuses an apiKeyEnv that looks like a pasted key, without echoing it', () => {
     for (const provider of ['anthropic', 'openai-compat'] as const) {
-      const cfg = (provider === 'anthropic' ? { provider, model: 'm', apiKeyEnv: KEY } : { provider, model: 'm', baseUrl: 'http://h/v1', apiKeyEnv: KEY }) as ProviderConfig;
+      const cfg = (provider === 'anthropic' ? { provider, model: 'm', apiKeyEnv: KEY } : { provider, model: 'm', baseUrl: 'https://h/v1', apiKeyEnv: KEY }) as ProviderConfig;
       let err: unknown;
       try {
         createLlmClient(cfg, { env: { [KEY]: 'x' } });
