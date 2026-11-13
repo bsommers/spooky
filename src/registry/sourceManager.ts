@@ -85,7 +85,9 @@ export class SourceManager {
   /**
    * Redact, profile, chunk, embed and store `text` as the corpus of `authorId`, replacing any earlier ingest of the
    * same author. Everything that can fail on the input (size, redaction, profile, chunk count, embedding) happens
-   * before the previous data is touched, so a rejected ingest leaves the author as it was.
+   * before the previous data is touched, and the store swap uses `replaceCollection` (atomic), so a rejected ingest
+   * leaves the author as it was. A store without `replaceCollection` falls back to delete-then-upsert, where a store
+   * failure drops the author.
    */
   ingest(authorId: string, displayName: string, text: string): Promise<StylometricProfile> {
     return this.#serial(() => this.#ingest(authorId, displayName, text));
@@ -118,14 +120,20 @@ export class SourceManager {
     }
 
     const collection = profile.vectorCollectionName;
-    await this.#store.deleteCollection(collection);
-    try {
-      await this.#store.upsert(collection, items);
-    } catch (err) {
-      // The old chunks are already gone; do not keep a profile that points at nothing.
-      await this.#store.deleteCollection(collection).catch(() => undefined);
-      this.#profiles.delete(authorId);
-      throw err;
+    if (typeof this.#store.replaceCollection === 'function') {
+      // Atomic: on any rejection (capacity, dimensions, I/O) the previous chunks and profile are untouched.
+      await this.#store.replaceCollection(collection, items);
+    } else {
+      // A store without atomic replace cannot offer the guarantee: the old chunks are dropped before the upsert.
+      await this.#store.deleteCollection(collection);
+      try {
+        await this.#store.upsert(collection, items);
+      } catch (err) {
+        // Do not keep a profile that points at nothing.
+        await this.#store.deleteCollection(collection).catch(() => undefined);
+        this.#profiles.delete(authorId);
+        throw err;
+      }
     }
     this.#profiles.set(authorId, profile);
     return copyProfile(profile);

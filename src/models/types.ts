@@ -71,6 +71,8 @@ export interface VectorStore {
   upsert(collection: string, items: { id: string; vector: number[]; chunk: Chunk }[]): Promise<void>;
   query(collection: string, vector: number[], k: number): Promise<ScoredChunk[]>;
   deleteCollection(collection: string): Promise<void>;
+  /** Optional atomic replace: afterwards the collection holds exactly `items`; on rejection the old contents are unchanged. */
+  replaceCollection?(collection: string, items: { id: string; vector: number[]; chunk: Chunk }[]): Promise<void>;
   save?(path: string): Promise<void>;
   load?(path: string): Promise<void>;
 }

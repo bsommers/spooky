@@ -381,3 +381,38 @@ describe('InMemoryVectorStore: save / load', () => {
     await s.upsert('c', [item('b', [2])]); // replacement does not grow
   });
 });
+
+describe('InMemoryVectorStore.replaceCollection', () => {
+  it('replaces the contents exactly and drops stale ids', async () => {
+    const s = new InMemoryVectorStore();
+    await s.upsert('c', [item('a', [1, 0]), item('b', [0, 1])]);
+    await s.replaceCollection('c', [item('z', [1, 1])]);
+    const hits = await s.query('c', [1, 1], 10);
+    expect(hits.map((h) => h.id)).toEqual(['z']);
+  });
+
+  it('a capacity rejection leaves the old collection untouched; capacity is counted net of the replaced collection', async () => {
+    const s = new InMemoryVectorStore({ maxItems: 3 });
+    await s.upsert('c', [item('a', [1, 0]), item('b', [0, 1])]);
+    await expect(s.replaceCollection('c', [item('w', [1, 0]), item('x', [1, 0]), item('y', [1, 0]), item('z', [1, 0])])).rejects.toBeInstanceOf(InputTooLargeError);
+    expect((await s.query('c', [1, 0], 10)).map((h) => h.id)).toEqual(['a', 'b']);
+    await s.replaceCollection('c', [item('w', [1, 0]), item('x', [1, 0]), item('y', [1, 0])]); // 3 <= 3 net of the old 2
+    expect(await s.query('c', [1, 0], 10)).toHaveLength(3);
+  });
+
+  it('a validation failure (bad vector, different dimension from the old data is fine) leaves the old collection untouched', async () => {
+    const s = new InMemoryVectorStore();
+    await s.upsert('c', [item('a', [1, 0])]);
+    await expect(s.replaceCollection('c', [item('x', [1, Number.NaN])])).rejects.toThrow(TypeError);
+    expect((await s.query('c', [1, 0], 10)).map((h) => h.id)).toEqual(['a']);
+    await s.replaceCollection('c', [item('x', [1, 0, 0])]);
+    expect((await s.query('c', [1, 0, 0], 10)).map((h) => h.id)).toEqual(['x']);
+  });
+
+  it('an empty replacement deletes the collection', async () => {
+    const s = new InMemoryVectorStore();
+    await s.upsert('c', [item('a', [1, 0])]);
+    await s.replaceCollection('c', []);
+    expect(await s.query('c', [1, 0], 10)).toEqual([]);
+  });
+});

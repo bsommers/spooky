@@ -39,7 +39,19 @@ class SpyStore extends InMemoryVectorStore {
     this.collections.add(c);
     return super.upsert(c, items);
   }
+  override async replaceCollection(c: string, items: Parameters<VectorStore['upsert']>[1]): Promise<void> {
+    this.upserted.push(...items.map((i) => i.chunk));
+    this.collections.add(c);
+    return super.replaceCollection(c, items);
+  }
 }
+
+/** A store with only the base VectorStore surface (no atomic replace). */
+const baseOnly = (inner: InMemoryVectorStore): VectorStore => ({
+  upsert: (c, items) => inner.upsert(c, items),
+  query: (c, v, k) => inner.query(c, v, k),
+  deleteCollection: (c) => inner.deleteCollection(c),
+});
 
 describe('SourceManager.ingest / getProfile / listAuthors', () => {
   it('ingests and returns the profile that getProfile later serves', async () => {
@@ -263,13 +275,46 @@ describe('SourceManager: failure atomicity and concurrency', () => {
     expect((await sm.retrieve('ada', 'database', 3)).length).toBe(3);
   });
 
-  it('a store failure after the old data was dropped leaves no half-state: the author is unknown', async () => {
-    const store = new InMemoryVectorStore({ maxItems: 3 });
+  it('CR-01: a capacity rejection on re-ingest leaves the previous author fully intact', async () => {
+    const store = new InMemoryVectorStore({ maxItems: 20 });
     const sm = make({ store });
+    const before = await sm.ingest('ada', 'Ada', CORPUS);
+    const hitsBefore = await sm.retrieve('ada', 'database', 100);
+    expect(hitsBefore.length).toBeGreaterThan(0);
+    expect(hitsBefore.length).toBeLessThanOrEqual(20);
+    await expect(sm.ingest('ada', 'Ada', 'word '.repeat(2000))).rejects.toBeInstanceOf(InputTooLargeError);
+    expect(sm.getProfile('ada')).toEqual(before);
+    expect(await sm.retrieve('ada', 'database', 100)).toEqual(hitsBefore);
+    // the author can still be re-ingested with something that fits
+    await sm.ingest('ada', 'Ada', 'Tiny corpus. Small.');
+    expect(sm.getProfile('ada').authorId).toBe('ada');
+  });
+
+  it('CR-01: a store I/O failure during replace leaves the previous author intact', async () => {
+    let fail = false;
+    class FlakyStore extends InMemoryVectorStore {
+      override async replaceCollection(c: string, items: Parameters<VectorStore['upsert']>[1]): Promise<void> {
+        if (fail) throw new Error('disk full');
+        return super.replaceCollection(c, items);
+      }
+    }
+    const store = new FlakyStore();
+    const sm = make({ store });
+    const before = await sm.ingest('ada', 'Ada', CORPUS);
+    const hitsBefore = await sm.retrieve('ada', 'database', 5);
+    fail = true;
+    await expect(sm.ingest('ada', 'Ada', 'Another corpus entirely. With words.')).rejects.toThrow('disk full');
+    expect(sm.getProfile('ada')).toEqual(before);
+    expect(await sm.retrieve('ada', 'database', 5)).toEqual(hitsBefore);
+  });
+
+  it('a store without replaceCollection falls back to delete-then-upsert: a store failure leaves the author unknown', async () => {
+    const inner = new InMemoryVectorStore({ maxItems: 3 });
+    const sm = make({ store: baseOnly(inner) });
     await sm.ingest('ada', 'Ada', 'Tiny corpus. Small.');
     await expect(sm.ingest('ada', 'Ada', 'word '.repeat(400))).rejects.toBeInstanceOf(InputTooLargeError);
     expect(() => sm.getProfile('ada')).toThrow(UnknownAuthorError);
-    expect(await store.query('author/ada', new Array(64).fill(1), 10)).toEqual([]);
+    expect(await inner.query('author/ada', new Array(64).fill(1), 10)).toEqual([]);
   });
 
   it('concurrent ingests of one author are serialized: the last call wins completely', async () => {

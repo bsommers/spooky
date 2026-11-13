@@ -69,10 +69,9 @@ export class InMemoryVectorStore implements VectorStore {
     this.#maxCollections = options.maxCollections ?? 10_000;
   }
 
-  /** Insert or replace by id. The whole batch is validated first; a bad item stores nothing from the batch. */
-  async upsert(collection: string, items: { id: string; vector: number[]; chunk: Chunk }[]): Promise<void> {
-    const existing = this.#collections.get(collection);
-    let dim = existing?.dim;
+  /** Validate a batch and build its entries; throws before anything is stored. */
+  #stage(items: { id: string; vector: number[]; chunk: Chunk }[], dim0: number | undefined): { staged: Array<[string, Entry]>; dim: number | undefined } {
+    let dim = dim0;
     const staged: Array<[string, Entry]> = [];
     for (const it of items) {
       const vector = toVector(it.vector, `vector for "${String(it.id).slice(0, 40)}"`);
@@ -82,6 +81,13 @@ export class InMemoryVectorStore implements VectorStore {
       else if (vector.length !== dim) throw new TypeError(`upsert: vector has ${vector.length} dimensions; collection has ${dim}`);
       staged.push([it.id, { vector, norm: norm(vector), chunk: copyChunk(it.chunk) }]);
     }
+    return { staged, dim };
+  }
+
+  /** Insert or replace by id. The whole batch is validated first; a bad item stores nothing from the batch. */
+  async upsert(collection: string, items: { id: string; vector: number[]; chunk: Chunk }[]): Promise<void> {
+    const existing = this.#collections.get(collection);
+    const { staged, dim } = this.#stage(items, existing?.dim);
     if (staged.length === 0) return;
 
     let added = 0;
@@ -99,6 +105,23 @@ export class InMemoryVectorStore implements VectorStore {
       this.#collections.set(collection, col);
     }
     for (const [id, entry] of staged) col.items.set(id, entry);
+  }
+
+  /**
+   * Atomically make `collection` hold exactly `items` (any earlier contents are dropped). The new collection is built
+   * and its capacity checked (net of the collection it replaces) before the swap, so a rejection of any kind leaves
+   * the previous contents untouched. An empty `items` deletes the collection.
+   */
+  async replaceCollection(collection: string, items: { id: string; vector: number[]; chunk: Chunk }[]): Promise<void> {
+    const { staged, dim } = this.#stage(items, undefined);
+    if (staged.length === 0) {
+      this.#collections.delete(collection);
+      return;
+    }
+    const next: Collection = { dim: dim as number, items: new Map(staged) };
+    const total = this.#size() - (this.#collections.get(collection)?.items.size ?? 0) + next.items.size;
+    if (total > this.#maxItems) throw new InputTooLargeError(total, this.#maxItems, 'vectors');
+    this.#collections.set(collection, next);
   }
 
   async query(collection: string, vector: number[], k: number): Promise<ScoredChunk[]> {
