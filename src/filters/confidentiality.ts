@@ -143,7 +143,13 @@ interface Rule {
 }
 
 const B = '(?<![A-Za-z0-9])';
-const VALUE_QUOTED_OR_BARE = `(?:"([^"\\n]{1,256})"|'([^'\\n]{1,256})'|([^\\s"',;&]{4,}))`;
+/**
+ * A secret's value: quoted (any length up to a line, the closing quote is optional so an unterminated quote still
+ * redacts to the end of the line instead of leaking) or bare. A bare value runs to whitespace, a quote or `&`; it may
+ * contain `,` and `;` because passwords do (`password=abc,def`).
+ */
+const QUOTED_VALUE_MAX = 65_536;
+const VALUE_QUOTED_OR_BARE = `(?:"([^"\\n]{1,${QUOTED_VALUE_MAX}})"?|'([^'\\n]{1,${QUOTED_VALUE_MAX}})'?|([^\\s"'&]{4,}))`;
 
 /** Built-in rules, in tie-break priority order (earlier wins when two rules cover exactly the same span). */
 const BUILTIN_RULES: readonly Rule[] = [
@@ -172,13 +178,15 @@ const CONTEXT_RULES: readonly Rule[] = [
   },
   {
     type: 'url_credential',
-    rx: /(?<=[A-Za-z][A-Za-z0-9+.-]{1,15}:\/\/)([^\s/@:]{1,128}:[^\s/@]{1,256})(?=@)/gud,
+    // user:password up to the LAST `@` of the authority (a password may contain `@` or `/`): the lazy password stops
+    // at the first `@` that is followed by a host and then `/ ? # :` or the end.
+    rx: /(?<=[A-Za-z][A-Za-z0-9+.-]{1,15}:\/\/)([^\s/@:]{1,128}:[^\s?#]{1,1024}?)(?=@[^@\s/?#]{0,255}(?:[/?#:\s]|$))/gud,
     valueGroups: [1],
   },
   {
     type: 'secret_assignment',
     rx: new RegExp(
-      `(?:(?:password|passwd|pwd|secret|api[_-]?key|apikey|private[_-]?key|credentials?)[A-Za-z0-9_.-]{0,30}|token)["']?[ \\t]{0,5}[:=][ \\t]{0,5}${VALUE_QUOTED_OR_BARE}`,
+      `(?:(?:password|passwd|pwd|secret|api[_-]?key|apikey|private[_-]?key|credentials?)[A-Za-z0-9_.-]{0,30}|token)["']?[ \\t]{0,5}[:=]\\s{0,40}${VALUE_QUOTED_OR_BARE}`,
       'giud',
     ),
     valueGroups: [1, 2, 3],

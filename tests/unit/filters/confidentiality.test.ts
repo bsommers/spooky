@@ -332,6 +332,68 @@ describe('ConfidentialityFilter: custom rules (CNF-03)', () => {
   });
 });
 
+describe('ConfidentialityFilter: contextual value boundaries (CR-05)', () => {
+  const rx = (t: string) => run(t).then((r) => r.content);
+  const longValue = (n: number) => 'Zq7'.repeat(Math.ceil(n / 3)).slice(0, n);
+
+  it.each([300, 1000, 20_000])('a quoted value of %i characters is fully redacted', async (n) => {
+    const v = longValue(n);
+    expect(await rx(`password: "${v}" next`)).toBe('password: "[REDACTED:secret_assignment]" next');
+    expect(await rx(`{"api_key": '${v}'}`)).toBe(`{"api_key": '[REDACTED:secret_assignment]'}`);
+  });
+
+  it('an unterminated quote redacts to the end of the line instead of leaking', async () => {
+    expect(await rx('secret = "abcdefgh\nnext line')).toBe('secret = "[REDACTED:secret_assignment]\nnext line');
+  });
+
+  it('a value on the line after the separator is redacted (pretty-printed JSON, YAML block style)', async () => {
+    expect(await rx('{"password":\n  "abcdefgh"}')).toBe('{"password":\n  "[REDACTED:secret_assignment]"}');
+    expect(await rx('password:\n  hunter2hunter2')).toBe('password:\n  [REDACTED:secret_assignment]');
+    expect(await rx('{\r\n"token":\r\n\t"abcdefgh"\r\n}')).toBe('{\r\n"token":\r\n\t"[REDACTED:secret_assignment]"\r\n}');
+  });
+
+  it.each([
+    ['postgres://user:p@ss@host/db', 'postgres://[REDACTED:url_credential]@host/db'],
+    ['postgres://user:p@ss@w0rd@host:5432/db?x=1', 'postgres://[REDACTED:url_credential]@host:5432/db?x=1'],
+    ['redis://default:pa/ss@cache.internal:6379', 'redis://[REDACTED:url_credential]@cache.internal:6379'],
+    ['https://u:pw@host', 'https://[REDACTED:url_credential]@host'],
+    ['ftp://admin:' + 'x'.repeat(600) + '@ftp.example.invalid/pub', 'ftp://[REDACTED:url_credential]@ftp.example.invalid/pub'],
+  ])('URL userinfo keeps nothing of the password: %s', async (input, expected) => {
+    expect(await rx(input)).toBe(expected);
+  });
+
+  it('URLs without credentials are left alone', async () => {
+    for (const u of ['https://example.com/a?b=c', 'https://example.com:8080/path', 'mailto://bob@example.com', 'see https://x.test and bob@x.test']) {
+      expect(await rx(u), u).toBe(u);
+    }
+  });
+
+  it('a bare value containing , or ; is redacted whole', async () => {
+    expect(await rx('password=abc,def;ghi done')).toBe('password=[REDACTED:secret_assignment] done');
+  });
+
+  it('the wider boundaries stay linear on adversarial input', async () => {
+    const inputs = [
+      'http://u:' + 'a@'.repeat(50_000),
+      'http://u:' + 'a'.repeat(200_000),
+      'http://u:a@h'.repeat(20_000),
+      'password: "'.repeat(20_000),
+      'password:\n'.repeat(20_000),
+      'token=' + ',;'.repeat(100_000),
+      'x://a:'.repeat(30_000),
+    ];
+    for (const text of inputs) {
+      const t = performance.now();
+      await run(text);
+      expect(performance.now() - t, text.slice(0, 20)).toBeLessThan(3000);
+    }
+  }, 60_000);
+
+  it('a bare value still stops at & (query separator) and whitespace', async () => {
+    expect(await rx('password=abcd&user=bob')).toBe('password=[REDACTED:secret_assignment]&user=bob');
+  });
+});
+
 describe('ConfidentialityFilter: normalization (unicode evasion)', () => {
   it('zero-width characters inside a key are stripped, then the key is redacted', async () => {
     const k = secret('aws').text;
