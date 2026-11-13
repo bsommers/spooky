@@ -1,6 +1,6 @@
 # Checkpoint (2026-11-13, autonomous run mid-flight; refreshed after idle)
 
-**Status:** IN PROGRESS. `/gsd-autonomous` running. Phases 1-3 COMPLETE (Phase 3 verified, review CR-01..05,07 fixed; open CR-06, IN-01, IN-02). Next: Phase 4 (pause first for D1-D7 in .planning/PROJECT.md). Phases 5-8 pending. No push/PR/merge.
+**Status:** IN PROGRESS. `/gsd-autonomous` running. Phases 1-4 COMPLETE (P4 verified; fixed CR-01..04,WR-05). Next: Phase 5 (Orchestration/LLM/CLI): PAUSE FIRST to confirm D2 (LLM adapters) and dep versions @anthropic-ai/sdk ^0.40, commander ^12. P5 must also add profile persistence + restore API (WR-07), CONTRACTS.md entries for ProfileError/StoreCorruptError/Config types, wire blocklist/custom rules from config (P2 IN-01), persona-banned trace. Phases 6-8 pending. No push/PR/merge.
 
 ## Goal (user's words)
 "/gsd-execute-phase 1 - be sure to launch parallel subagents using the best and cheapest model for the jobs preserving quality", then "/gsd-autonomous" (all remaining phases: discuss -> plan -> execute).

@@ -32,10 +32,10 @@
 
 ### Source axis (author voice)
 
-- [ ] **SRC-01**: Chunker splits documents on paragraph/sentence boundaries with size cap and overlap.
-- [ ] **SRC-02**: Stylometry extractor produces a `StylometricProfile` from corpus text.
-- [ ] **SRC-03**: `SourceManager` CRUD for author profiles + corpus chunks into `VectorStore`; retrieval returns top-k exemplar passages for a query.
-- [ ] **SRC-04**: Corpus is run through the confidentiality filter before being stored.
+- [x] **SRC-01**: Chunker splits documents on paragraph/sentence boundaries with size cap and overlap.
+- [x] **SRC-02**: Stylometry extractor produces a `StylometricProfile` from corpus text.
+- [x] **SRC-03**: `SourceManager` CRUD for author profiles + corpus chunks into `VectorStore`; retrieval returns top-k exemplar passages for a query.
+- [x] **SRC-04**: Corpus is run through the confidentiality filter before being stored.
 
 ### Target axis (audience)
 
