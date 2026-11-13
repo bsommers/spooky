@@ -1,5 +1,6 @@
 // Typed error hierarchy (.planning/CONTRACTS.md "Errors"). Every error carries a stable string `code`
 // that callers and the CLI exit-code mapping key off; never match on `message`.
+import { createHash } from 'node:crypto';
 import type { ConfigIssue } from './types.js';
 
 export abstract class GhostwriterError extends Error {
@@ -42,11 +43,18 @@ export class UnknownPersonaError extends GhostwriterError {
 }
 
 export class UnknownAuthorError extends GhostwriterError {
-  readonly authorId: string;
+  /** The id the caller asked for. Non-enumerable so it never leaks through JSON or log serialization of the error. */
+  declare readonly authorId: string;
 
+  /**
+   * The message deliberately does not echo `authorId`: a caller-supplied id may be secret-shaped, and error messages
+   * end up in logs. It carries the id's length and a short hash prefix so two failures can still be told apart.
+   */
   constructor(authorId: string) {
-    super('UNKNOWN_AUTHOR', `unknown author "${authorId}"`);
-    this.authorId = authorId;
+    const id = String(authorId);
+    const tag = createHash('sha256').update(id).digest('hex').slice(0, 8);
+    super('UNKNOWN_AUTHOR', `unknown author (${id.length} characters, sha256 ${tag})`);
+    Object.defineProperty(this, 'authorId', { value: id, enumerable: false, writable: false, configurable: true });
   }
 }
 

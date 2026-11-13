@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { HashEmbedder } from '../../src/embedding/hashEmbedder.js';
 import { ConfidentialityFilter } from '../../src/filters/confidentiality.js';
 import { FilterPipeline } from '../../src/filters/pipeline.js';
+import { ConfigError, UnknownAuthorError } from '../../src/models/errors.js';
 import type { Embedder, VectorStore } from '../../src/models/types.js';
 import { SourceManager } from '../../src/registry/sourceManager.js';
 import { InMemoryVectorStore } from '../../src/store/inMemoryVectorStore.js';
@@ -132,6 +133,58 @@ describe('SRC-04: corpus secrets never reach the store', () => {
       expect((await stat(file)).mode & 0o777).toBe(0o600);
     } finally {
       await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('CR-03: a secret-shaped authorId is refused and never echoed', () => {
+  it.each(['aws', 'ghp', 'sk', 'slack'])('a %s-shaped authorId is rejected with ConfigError and reaches no store, embedder or message', async (kind) => {
+    const id = makeSecrets(11)[kind]!().text;
+    expect(id).toMatch(/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/); // it passes the plain syntax check, so only redaction can stop it
+    const r = rig();
+    let caught: unknown;
+    try {
+      await r.sm.ingest(id, 'Ada', prose(5));
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(ConfigError);
+    expect(String((caught as Error).message)).not.toContain(id);
+    expect(JSON.stringify(caught, Object.getOwnPropertyNames(caught))).not.toContain(id);
+    expect(r.seenByStore).toEqual([]);
+    expect(r.seenByEmbedder).toEqual([]);
+    expect(r.sm.listAuthors()).toEqual([]);
+    const dir = await mkdtemp(join(tmpdir(), 'gw-sec-'));
+    try {
+      expect(await dump(r, join(dir, 'store.json'))).not.toContain(id);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('a blocklisted term as authorId is rejected too; an ordinary id still works', async () => {
+    const r = rig(['nightfall']);
+    await expect(r.sm.ingest('nightfall', 'Ada', prose(5))).rejects.toBeInstanceOf(ConfigError);
+    await expect(r.sm.ingest('ada-1', 'Ada', prose(5))).resolves.toMatchObject({ authorId: 'ada-1' });
+  });
+
+  it('UnknownAuthorError (retrieve/remove/getProfile) does not echo a secret-shaped id in message or JSON', async () => {
+    const id = makeSecrets(12).ghp!().text;
+    const r = rig();
+    const errs: unknown[] = [];
+    await r.sm.retrieve(id, 'q', 3).catch((e: unknown) => errs.push(e));
+    await r.sm.remove(id).catch((e: unknown) => errs.push(e));
+    try {
+      r.sm.getProfile(id);
+    } catch (e) {
+      errs.push(e);
+    }
+    expect(errs).toHaveLength(3);
+    for (const e of errs) {
+      expect(e).toBeInstanceOf(UnknownAuthorError);
+      expect((e as Error).message).not.toContain(id);
+      expect(JSON.stringify(e)).not.toContain(id);
+      expect((e as UnknownAuthorError).authorId).toBe(id); // still available programmatically
     }
   });
 });

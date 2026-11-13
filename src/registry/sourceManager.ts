@@ -104,6 +104,11 @@ export class SourceManager {
       throw new InputTooLargeError(this.#profiles.size + 1, this.#limits.maxAuthors, 'authors');
     }
 
+    // The id is stored in plaintext (profile, collection name, chunk ids and authorIds, the store file), so it gets the
+    // same treatment as the corpus: an id the confidentiality filter would change is refused, and never echoed.
+    if ((await this.#redact(authorId, authorId)) !== authorId) {
+      throw new ConfigError('authorId rejected: it matches a confidential pattern (value withheld); choose a neutral identifier');
+    }
     const safeText = await this.#redact(authorId, text);
     const safeName = (await this.#redact(authorId, displayName.trim())).replace(/\s+/g, ' ');
     const profile = extractProfile(authorId, safeName, safeText);
