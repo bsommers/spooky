@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -41,6 +41,15 @@ describe('smoke: build', () => {
     expect(existsSync(entry)).toBe(true);
     const mod = await import(pathToFileURL(entry).href);
     expect(mod).toBeTypeOf('object');
+  });
+
+  it('engines.node matches the toolchain minimum (vite ^20.19.0 || >=22.12.0)', () => {
+    const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { engines?: { node?: string } };
+    expect(pkg.engines?.node).toBe('^20.19.0 || >=22.12.0');
+    const vitePkg = JSON.parse(readFileSync(require.resolve('vite/package.json'), 'utf8')) as {
+      engines?: { node?: string };
+    };
+    expect(vitePkg.engines?.node).toBe(pkg.engines?.node);
   });
 
   it('src/index.ts imports without throwing', async () => {
