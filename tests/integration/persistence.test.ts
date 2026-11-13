@@ -223,3 +223,40 @@ describe('SourceManager.restoreProfiles', () => {
     expect(b.listAuthors()).toEqual([]);
   });
 });
+
+describe('SourceManager crash consistency (CR-02)', () => {
+  /** A store whose save() writes the file and then "crashes" (rejects) when armed: the process died between the two state-file writes. */
+  class CrashAfterSave extends InMemoryVectorStore {
+    armed = false;
+    override async save(path: string): Promise<void> {
+      await super.save(path);
+      if (this.armed) throw new Error('simulated crash after store write');
+    }
+  }
+
+  it('remove: a crash right after the store write leaves a state a fresh process can load', async () => {
+    const store = new CrashAfterSave();
+    const a = make(store);
+    await a.ingest('terse', 'T', corpus());
+    await a.ingest('other', 'O', corpus('verbose-hedging.txt'));
+    store.armed = true;
+    await expect(a.remove('terse')).rejects.toThrow('simulated crash');
+    const b = make();
+    await b.load(); // used to throw StoreCorruptError("a profile has no stored chunks")
+    expect(b.listAuthors().map((p) => p.authorId)).not.toContain('terse');
+    expect(b.listAuthors().map((p) => p.authorId)).toContain('other');
+    expect((await b.retrieve('other', 'deploy rollback', 2)).length).toBeGreaterThan(0);
+  });
+
+  it('ingest: a crash right after the store write leaves a loadable state (new author absent, old author intact)', async () => {
+    const store = new CrashAfterSave();
+    const a = make(store);
+    await a.ingest('terse', 'T', corpus());
+    store.armed = true;
+    await expect(a.ingest('other', 'O', corpus('verbose-hedging.txt'))).rejects.toThrow('simulated crash');
+    const b = make();
+    await b.load();
+    expect(b.listAuthors().map((p) => p.authorId)).toEqual(['terse']);
+    expect((await b.retrieve('terse', 'deploy rollback', 2)).length).toBeGreaterThan(0);
+  });
+});

@@ -13,9 +13,10 @@
 //
 // Persistence (optional, `options.persistence`): the vector store file and a profiles file are written after every
 // successful ingest / remove, INSIDE the same serialized task, and `load()` restores both. Because store.save and
-// store.load run on the manager's queue they can never interleave with an ingest, a delete or a retrieval. The two
-// files are written store first; a crash between the writes leaves new chunks next to the old profile, never a profile
-// without chunks. Single writer: two processes saving to one state directory race last-writer-wins.
+// store.load run on the manager's queue they can never interleave with an ingest, a delete or a retrieval. The write
+// order depends on the operation so a crash between the two writes never leaves a profile without chunks (which
+// `load()` rejects as corruption): ingest writes the store first (new chunks next to the old or no profile), remove
+// writes the profiles first (the profile is gone, orphan chunks are harmless and dropped by the next save).
 import { chunk } from '../ingestion/chunker.js';
 import { extractProfile, vectorCollectionName } from '../ingestion/stylometry.js';
 import { ConfigError, FilterFailedError, InputTooLargeError, ProfileError, StoreCorruptError, UnknownAuthorError } from '../models/errors.js';
@@ -165,7 +166,7 @@ export class SourceManager {
       }
     }
     this.#profiles.set(authorId, profile);
-    await this.#persist();
+    await this.#persist('store-first');
     return copyProfile(profile);
   }
 
@@ -210,7 +211,7 @@ export class SourceManager {
       if (!this.#profiles.has(authorId)) throw new UnknownAuthorError(authorId);
       await this.#store.deleteCollection(vectorCollectionName(authorId));
       this.#profiles.delete(authorId);
-      await this.#persist();
+      await this.#persist('profiles-first');
     });
   }
 
@@ -246,7 +247,7 @@ export class SourceManager {
 
   /** Write the store and profiles files now (also happens automatically after every ingest / remove). */
   save(): Promise<void> {
-    return this.#serial(() => this.#persist());
+    return this.#serial(() => this.#persist('store-first'));
   }
 
   async #load(): Promise<void> {
@@ -273,11 +274,17 @@ export class SourceManager {
     for (const profile of profiles) this.#profiles.set(profile.authorId, profile);
   }
 
-  async #persist(): Promise<void> {
+  /** `load()` rejects a profile without chunks, so the file that may be stale after a crash must be the store when adding and the profiles when removing. */
+  async #persist(order: 'store-first' | 'profiles-first'): Promise<void> {
     const p = this.#persistence;
     if (p === undefined) return;
-    await this.#store.save!(p.storePath);
-    await saveProfiles(p.profilesPath, this.listAuthors());
+    if (order === 'store-first') {
+      await this.#store.save!(p.storePath);
+      await saveProfiles(p.profilesPath, this.listAuthors());
+    } else {
+      await saveProfiles(p.profilesPath, this.listAuthors());
+      await this.#store.save!(p.storePath);
+    }
   }
 
   #checkAuthorId(authorId: unknown): void {
