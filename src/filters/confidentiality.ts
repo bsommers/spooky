@@ -7,7 +7,8 @@
 //    what makes the filter idempotent.
 //  * Every rule is collected as a [start,end) span over the normalized text; overlapping spans are UNIONED (never
 //    partially redacted), so a blocklist term inside a PEM block or `Acme` vs `Acme Corp` leave no remnant.
-//  * Placeholders already present in the input are a pseudo-rule that wins ties, which is what makes f(f(x)) == f(x).
+//  * Placeholders already present in the input are a pseudo-rule: a group made only of placeholders is left as is, and
+//    redaction repeats until the text stops changing, which is what makes f(f(x)) == f(x) hold by construction.
 //  * No regex is ever used with `.test()`/`.exec()`: all scanning goes through `String.prototype.matchAll`, which
 //    works on a clone, so the stored regexes keep `lastIndex === 0` forever (PROJECT.md defect 3).
 //  * Built-in patterns are linear (bounded repeats, boundary look-behinds on unbounded ones). Custom rules are
