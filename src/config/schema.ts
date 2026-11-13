@@ -6,6 +6,8 @@ import { DEFAULT_PERSONAS } from '../../config/targetPersonas.js';
 import { DEFAULT_PIPELINE, KNOWN_FILTER_NAMES } from '../../config/filters.js';
 
 const positiveInt = z.number().int().positive();
+/** Trimmed, non-empty string: whitespace-only values are rejected. */
+const nonBlank = z.string().trim().min(1);
 
 const filterSpecSchema = z.strictObject({
   name: z.string().refine((v) => KNOWN_FILTER_NAMES.includes(v), {
@@ -44,11 +46,11 @@ const pipelineSchema = z.array(filterSpecSchema).superRefine((pipeline, ctx) => 
 
 const personaSchema = z.strictObject({
   key: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, 'must start with a letter or digit and contain only letters, digits, "_" or "-"'),
-  name: z.string().min(1),
-  cognitiveLoad: z.string().min(1),
-  informationDensity: z.string().min(1),
-  structuralMandates: z.array(z.string().min(1)),
-  bannedPhrases: z.array(z.string().min(1)), // an empty phrase would match everywhere
+  name: nonBlank,
+  cognitiveLoad: nonBlank,
+  informationDensity: nonBlank,
+  structuralMandates: z.array(nonBlank),
+  bannedPhrases: z.array(nonBlank), // an empty or whitespace-only phrase would match everywhere
 });
 
 const personasSchema = z
@@ -76,7 +78,7 @@ export const configSchema = z.strictObject({
     .refine((c) => c.overlap < c.size, { path: ['overlap'], error: 'must be smaller than chunk.size' })
     .default(() => ({ ...DEFAULT_CHUNK })),
   llm: z.strictObject({
-    model: z.string().min(1),
+    model: nonBlank,
     maxTokens: positiveInt.default(DEFAULT_LLM.maxTokens),
     temperature: z.number().min(0).max(2).default(DEFAULT_LLM.temperature),
     maxRetries: z.number().int().min(0).max(MAX_LLM_RETRIES).default(DEFAULT_LLM.maxRetries),

@@ -129,6 +129,29 @@ describe('loadConfig: invalid input fails fast with path-qualified errors', () =
     expect(failure({ llm: { model: '' } }).message).toContain('llm.model');
   });
 
+  it('whitespace-only llm.model is rejected', () => {
+    expect(failure({ llm: { model: '   ' } }).issues.map((i) => i.path)).toContain('llm.model');
+  });
+
+  it('whitespace-only persona text fields are rejected', () => {
+    for (const field of ['name', 'cognitiveLoad', 'informationDensity'] as const) {
+      const err = failure({ ...minimal(), personas: [{ ...persona('a'), [field]: ' \t ' }] });
+      expect(err.issues.map((i) => i.path)).toContain(`personas[0].${field}`);
+    }
+    expect(failure({ ...minimal(), personas: [{ ...persona('a'), structuralMandates: [' '] }] }).message).toContain(
+      'personas[0].structuralMandates[0]',
+    );
+  });
+
+  it('whitespace-only banned phrase is rejected', () => {
+    const p = { ...persona('a'), bannedPhrases: [' '] };
+    expect(failure({ ...minimal(), personas: [p] }).message).toContain('personas[0].bannedPhrases[0]');
+  });
+
+  it('surrounding whitespace is trimmed from accepted values', () => {
+    expect(loadConfig({ llm: { model: '  m  ' } }).llm.model).toBe('m');
+  });
+
   it('missing llm section entirely is rejected and names llm', () => {
     expect(failure({}).message).toContain('llm');
   });
