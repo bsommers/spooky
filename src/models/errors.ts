@@ -88,7 +88,7 @@ export class ProfileError extends GhostwriterError {
   }
 }
 
-/** A persisted vector-store file that is not valid JSON or does not match the store schema. Never carries file content. */
+/** A persisted state file (vector store or profiles) that is unreadable, not valid, incomplete or inconsistent. Never carries file content. */
 export class StoreCorruptError extends GhostwriterError {
   constructor(message: string, options?: { cause?: unknown }) {
     super('STORE_CORRUPT', message, options);

@@ -68,11 +68,34 @@ export interface GenerateOptions { exemplarCount?: number; maxTokens?: number; t
 export interface GenerateResult { text: string; trace: TraceEntry[]; promptTokensEstimate: number }
 ```
 
+## Config shapes (src/models/types.ts section 8; loaded and validated by `loadConfig`)
+```ts
+export type FilterStageSpec = Stage | 'both';            // where a configured filter runs; config level only
+export interface FilterSpec { name: string; stage: FilterStageSpec; onError: OnError; enabled: boolean }   // one entry of the ordered filters.pipeline
+export interface ConfigIssue { path: string; message: string }   // e.g. { path: 'llm.model', message: 'is required' }
+export interface CustomRuleConfig { name: string; pattern: string; caseInsensitive?: boolean }
+export interface ConfidentialityConfig { blocklist: string[]; caseInsensitive: boolean; customRules: CustomRuleConfig[] }
+export interface Config {
+  limits: { maxInputChars: number };
+  chunk: { size: number; overlap: number };
+  llm: { model: string; maxTokens: number; temperature: number; maxRetries: number;
+         provider?: 'anthropic' | 'openai-compat'; baseUrl?: string; apiKeyEnv?: string };  // apiKeyEnv = variable NAME, never a key
+  filters: { pipeline: FilterSpec[] };
+  personas: TargetPersonaConfig[];
+  confidentiality?: ConfidentialityConfig;   // absent = built-in rules only; reaches the filter via buildPipeline(cfg, stage)
+}
+```
+Rules: `loadConfig` throws `ConfigError` with one `ConfigIssue` per problem (path-qualified); unknown keys are rejected; confidentiality must stay enabled, fail-closed and last at `post`; `openai-compat` requires `llm.baseUrl` (http/https), `baseUrl` is rejected for `anthropic`; custom rules are compiled eagerly (ReDoS/size budget) so a bad rule fails at load.
+
 ## Errors (all extend `GhostwriterError { code: string }`)
-`ConfigError(CONFIG_INVALID)`, `FilterFailedError(FILTER_FAILED, filter)`, `UnknownPersonaError(UNKNOWN_PERSONA, valid[])`, `UnknownAuthorError(UNKNOWN_AUTHOR)`, `InputTooLargeError(INPUT_TOO_LARGE)`, `LlmError(LLM_FAILED, attempts)`.
+`ConfigError(CONFIG_INVALID, issues: ConfigIssue[])`, `FilterFailedError(FILTER_FAILED, filter)`, `UnknownPersonaError(UNKNOWN_PERSONA, valid[])`, `UnknownAuthorError(UNKNOWN_AUTHOR)`, `InputTooLargeError(INPUT_TOO_LARGE)`, `LlmError(LLM_FAILED, attempts)`,
+`ProfileError(PROFILE_INVALID)` (a corpus that yields no profile, or a profile record that fails validation; names the field, never the value),
+`StoreCorruptError(STORE_CORRUPT)` (a persisted state file, vector store or profiles, that is unreadable, invalid, incomplete or inconsistent; never carries file content).
 
 ## CLI exit codes
-0 ok · 2 usage/config · 3 unknown persona/author · 4 filter failed (fail-closed) · 5 LLM failed · 6 input too large.
+0 ok · 1 unexpected/file-system error (reported by class name or errno only) · 2 usage/config/input (`CONFIG_INVALID`, `PROFILE_INVALID`, commander usage errors, unreadable input file, no API key for the selected provider) · 3 unknown persona/author · 4 filter failed (fail-closed) · 5 LLM failed · 6 input too large · 7 persisted state corrupt (`STORE_CORRUPT`).
+
+`--json` prints exactly one document on stdout: `{ ok: true, ...data }` or `{ ok: false, error: { code, message } }` (code = the error's `code`, `USAGE` for usage errors, `IO_ERROR`/`INTERNAL` for exit 1). Without `--json`: result on stdout, `error: <message>` on stderr. Logs and warnings never go to stdout.
 
 ## Surface parity (uniform surfaces)
 | Capability | Library | CLI |
@@ -81,7 +104,19 @@ export interface GenerateResult { text: string; trace: TraceEntry[]; promptToken
 | show profile | `engine.getProfile(id)` | `ghostwriter profile <id> [--json]` |
 | list personas | `engine.listPersonas()` | `ghostwriter personas` |
 | list filters | `engine.listFilters()` | `ghostwriter filters` |
-| generate | `engine.generate(...)` | `ghostwriter generate --author --persona [--json]` |
+| generate | `engine.generate(authorId, personaKey, input, options?)` | `ghostwriter generate --author --persona [--json]` |
+
+`tests/integration/parity.test.ts` parses this table: every row needs an `Engine` method and a CLI command with the listed flags, and neither surface may have a capability the table lacks. (`Engine.create(options)` / `engine.load()` restore persisted state; the CLI does that implicitly.) Input for `ingest`/`generate` comes from `<file>`, `--file <path>` or stdin; every command accepts `--config`, `--state-dir`, `--json`.
+
+## Persistence (state directory)
+`Engine({ stateDir })` / `--state-dir` (default `$GHOSTWRITER_STATE_DIR`, else `$XDG_STATE_HOME/ghostwriter`, else `~/.local/state/ghostwriter`) holds `store.json` (vector store, chunk text) and `profiles.json` (`{format:'ghostwriter-profiles', version:1, profiles[]}`). Both: mode 0600 in a 0700 directory, atomic temp-file + rename, byte-deterministic, written only after redaction. Saved after every ingest/remove inside `SourceManager`'s serialization queue (as are `load()`, `save()`, `restoreProfiles()`); loading validates everything and throws `StoreCorruptError` (or `InputTooLargeError`). Single writer: concurrent processes on one directory are last-writer-wins.
+
+## Engine / orchestrator
+```ts
+Engine.create(options: EngineOptions): Promise<Engine>     // new Engine(options) = no disk access
+engine.generate(authorId, personaKey, input, options?: GenerateOptions): Promise<GenerateResult>
+```
+Flow: size cap (`config.limits.maxInputChars`) -> persona lookup -> author lookup -> (lazy) LLM client -> PRE pipeline -> retrieve with the redacted query -> `buildPrompt` -> `withRetry(llm.complete)` -> empty/non-string/oversized answer = `LlmError` -> POST pipeline -> `findBannedPhrases` -> trace entry `persona-banned` (`{found:true,count}`) only when a banned phrase survives. Trace order: pre filters, `llm` (`{attempts, exemplars, chars}`), post filters, `persona-banned`. A pipeline whose trace has no successful `confidentiality` entry is `FilterFailedError`.
 
 ## Pipeline semantics
 - Pre stage runs Confidentiality (and any `pre`/`both` filter). Post stage runs Style then Confidentiality again (`both`).
