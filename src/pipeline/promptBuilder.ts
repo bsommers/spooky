@@ -14,7 +14,10 @@ export interface BuildPromptArgs {
   exemplars: readonly ScoredChunk[];
   persona: TargetPersonaConfig;
   input: string;
-  /** Budget for the summed length of exemplar texts. Whole chunks only; lowest score dropped first. */
+  /**
+   * Budget for the summed `text.length` of the exemplars as supplied (raw, before delimiter escaping). Whole chunks
+   * only; lowest score dropped first. It does not bound the prompt: wrapper tags, the system prompt and `input` are extra.
+   */
   maxExemplarChars: number;
 }
 
@@ -61,15 +64,15 @@ const percent1 = (ratio: number): string => (Number.isFinite(ratio) ? `${fixed1(
 const byScoreThenPosition = (a: ScoredChunk, b: ScoredChunk): number =>
   b.score - a.score || a.index - b.index || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
-/** Highest-scoring prefix of `exemplars` whose rendered text fits in `budget` characters. */
+/** Highest-scoring prefix of `exemplars` whose raw (pre-escaping) text lengths sum to at most `budget` characters. */
 function selectExemplars(exemplars: readonly ScoredChunk[], budget: number): string[] {
   const picked: string[] = [];
   let used = 0;
   for (const ex of [...exemplars].sort(byScoreThenPosition)) {
-    const text = neutralize(ex.text);
-    if (used + text.length > budget) break; // stop, do not skip: a lower-scoring chunk must not displace this one
-    picked.push(text);
-    used += text.length;
+    // Budget is measured on the raw text (`ex.text.length`); escaping is applied after selection and is not charged.
+    if (used + ex.text.length > budget) break; // stop, do not skip: a lower-scoring chunk must not displace this one
+    picked.push(neutralize(ex.text));
+    used += ex.text.length;
   }
   return picked;
 }

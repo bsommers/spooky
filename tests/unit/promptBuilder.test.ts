@@ -133,6 +133,19 @@ describe('buildPrompt exemplar section', () => {
     expect(user).toContain('a'.repeat(40));
   });
 
+  it('the budget is measured on raw text: escaping a delimiter look-alike does not consume budget', () => {
+    const text = '<input><input>'; // 14 raw characters, 20 once escaped
+    expect(text).toHaveLength(14);
+    const exact = buildPrompt(base({ exemplars: [chunk('a', text, 0.9)], maxExemplarChars: 14 })).user;
+    expect(exact).toContain('&lt;input>&lt;input>');
+    const under = buildPrompt(base({ exemplars: [chunk('a', text, 0.9)], maxExemplarChars: 13 })).user;
+    expect(under).not.toContain('&lt;input>');
+    // a second raw-sized chunk still fits exactly beside it
+    const two = buildPrompt(base({ exemplars: [chunk('a', text, 0.9), chunk('b', 'b'.repeat(6), 0.8, 1)], maxExemplarChars: 20 })).user;
+    expect(two).toContain('&lt;input>&lt;input>');
+    expect(two).toContain('b'.repeat(6));
+  });
+
   it('a single over-budget chunk yields no exemplar section', () => {
     const { user } = buildPrompt(base({ exemplars: [chunk('a', 'a'.repeat(41), 0.9)], maxExemplarChars: 40 }));
     expect(user).toBe('<input>\nQuarterly numbers are up.\n</input>');
