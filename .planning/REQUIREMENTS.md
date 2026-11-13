@@ -10,25 +10,25 @@
 
 ### Filter pipeline
 
-- [ ] **FLT-01**: `Filter` interface is async: `process(text, ctx): Promise<FilterResult>`; has `name`, `stage: 'pre'|'post'|'both'`.
-- [ ] **FLT-02**: `FilterPipeline.register/use` chainable; executes in registration order; returns `{text, trace[]}` (per-filter `modified`, duration, metadata, no raw secrets in trace).
-- [ ] **FLT-03**: Per-filter `onError: 'fail-closed' | 'skip'` policy. Confidentiality defaults to fail-closed (throws `FilterFailedError`, no text returned).
-- [ ] **FLT-04**: Filters can be enabled/disabled and ordered from config without code changes.
+- [x] **FLT-01**: `Filter` interface is async: `process(text, ctx): Promise<FilterResult>`; has `name`, `stage: 'pre'|'post'|'both'`.
+- [x] **FLT-02**: `FilterPipeline.register/use` chainable; executes in registration order; returns `{text, trace[]}` (per-filter `modified`, duration, metadata, no raw secrets in trace).
+- [x] **FLT-03**: Per-filter `onError: 'fail-closed' | 'skip'` policy. Confidentiality defaults to fail-closed (throws `FilterFailedError`, no text returned).
+- [x] **FLT-04**: Filters can be enabled/disabled and ordered from config without code changes.
 
 ### Confidentiality
 
-- [ ] **CNF-01**: Redact AWS access keys, GitHub tokens (`ghp_`, `github_pat_`), `sk-` API keys, Slack tokens, JWTs, bearer tokens, and full PEM private-key blocks (header through footer).
-- [ ] **CNF-02**: Redact **all** occurrences, not just the first.
-- [ ] **CNF-03**: Configurable blocklist of literal terms (case-insensitive option); entries escaped, never interpreted as regex; custom regex rules supplied separately and validated at construction.
-- [ ] **CNF-04**: Placeholder typed and deterministic; metadata reports counts per rule, never matched values.
-- [ ] **CNF-05**: Redaction is idempotent (`f(f(x)) == f(x)`).
+- [x] **CNF-01**: Redact AWS access keys, GitHub tokens (`ghp_`, `github_pat_`), `sk-` API keys, Slack tokens, JWTs, bearer tokens, and full PEM private-key blocks (header through footer).
+- [x] **CNF-02**: Redact **all** occurrences, not just the first.
+- [x] **CNF-03**: Configurable blocklist of literal terms (case-insensitive option); entries escaped, never interpreted as regex; custom regex rules supplied separately and validated at construction.
+- [x] **CNF-04**: Placeholder typed and deterministic; metadata reports counts per rule, never matched values.
+- [x] **CNF-05**: Redaction is idempotent (`f(f(x)) == f(x)`).
 
 ### Style (anti-AI-cliche) filter
 
-- [ ] **STY-01**: Remove/replace configured cliche phrases with correct casing and punctuation repair.
-- [ ] **STY-02**: Phrase list is data (config), with replacement or deletion per entry; persona `bannedPhrases` merged in via ctx.
-- [ ] **STY-03**: Sentence-rhythm check: flag/split runs of N+ sentences within ±15% of the same length, using the author profile's target variance. Deterministic (no randomness).
-- [ ] **STY-04**: Never alters content inside code fences, inline code, URLs, or quoted blocks.
+- [x] **STY-01**: Remove/replace configured cliche phrases with correct casing and punctuation repair.
+- [x] **STY-02**: Phrase list is data (config), with replacement or deletion per entry; persona `bannedPhrases` merged in via ctx.
+- [x] **STY-03**: Sentence-rhythm check: flag/split runs of N+ sentences within ±15% of the same length, using the author profile's target variance. Deterministic (no randomness).
+- [x] **STY-04**: Never alters content inside code fences, inline code, URLs, or quoted blocks.
 
 ### Source axis (author voice)
 
