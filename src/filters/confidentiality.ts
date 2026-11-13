@@ -12,15 +12,20 @@
 //  * No global (`g`) regex is ever used with `.test()`/`.exec()`: all scanning goes through `String.prototype.matchAll`,
 //    which works on a clone, so the stored regexes keep `lastIndex === 0` forever (PROJECT.md defect 3).
 //  * Built-in patterns are linear (bounded repeats, boundary look-behinds on unbounded ones). Custom rules are
-//    validated at construction (no nested/ambiguous repetition, no backreferences, no empty match, length cap) and
-//    are applied to bounded windows of the text, which caps their worst case.
+//    validated at construction (no nested/ambiguous repetition, no unbounded quantifier, no backreferences, no empty
+//    match, no match longer than CUSTOM_MAX_MATCH, length cap) and are applied to bounded windows of the text, which
+//    caps their worst case without ever missing a match.
 import { ConfigError } from '../models/errors.js';
 import type { Filter, FilterResult, OnError, PipelineContext, Stage } from '../models/types.js';
 
 export interface CustomRule {
   /** Becomes the placeholder type: `[REDACTED:<name>]`. Lowercase letters, digits, underscore. */
   name: string;
-  /** Regex source (no delimiters). Compiled with the `u` flag. */
+  /**
+   * Regex source (no delimiters). Compiled with the `u` flag. Must be able to match at most 512 characters: unbounded
+   * quantifiers (`+`, `*`, `{n,}`) are rejected, use a bounded repeat such as `{1,64}`. Look-behind/look-ahead see at
+   * most 64 characters of context. See assertSafePattern for the ReDoS budget.
+   */
   pattern: string;
   caseInsensitive?: boolean;
 }
@@ -50,12 +55,20 @@ const MAX_LARGE_QUANTIFIERS = 1;
 const LARGE_QUANTIFIER_COST = 64;
 const MAX_VARIABLE_COST = 256;
 /**
- * Custom rules scan the text in windows of this many UTF-16 units, advancing by half a window, which bounds a
- * quadratic-prone pattern to O(window^2) per window. Consequence: a custom-rule match is only guaranteed to be
- * found when it is at most CUSTOM_STEP (512) characters long; built-in rules are not windowed.
+ * Longest match a custom rule may produce (UTF-16 units). Enforced at construction from the pattern itself: a pattern
+ * with an unbounded quantifier, or whose longest possible match exceeds this, is rejected, so a custom secret can never
+ * be longer than what the windowed scan below is guaranteed to see.
  */
-const CUSTOM_WINDOW = 1024;
+const CUSTOM_MAX_MATCH = 512;
+/**
+ * Custom rules scan the text window by window, which bounds the cost of a backtracking pattern to the window size.
+ * Match STARTS in [from, from + CUSTOM_STEP) belong to a window; the window slice also carries CUSTOM_CONTEXT units of
+ * real text on each side of that range (look-behind / look-ahead / `\b` see them; `^` only matches at the true start
+ * of the text; matches that start in the left context are discarded and found by the previous window).
+ * Look-around reaches at most CUSTOM_CONTEXT units beyond the match.
+ */
 const CUSTOM_STEP = 512;
+const CUSTOM_CONTEXT = 64;
 /** Backstop for the redact() fixed-point loop; real inputs converge in 2 passes. */
 const MAX_PASSES = 8;
 const CUSTOM_NAME_RE = /^[a-z][a-z0-9_]{0,31}$/;
@@ -139,8 +152,9 @@ function escapeLiteral(term: string): string {
 }
 
 /**
- * Reject patterns that can blow up the backtracking engine. Conservative on purpose: a legitimate token pattern
- * (`EMP-\d{6}`, `[A-Z]{3}-[0-9a-f]{8}`) passes; ambiguous repetition does not.
+ * Reject patterns that can blow up the backtracking engine or that can match more than the windowed scan can see.
+ * Conservative on purpose: a legitimate token pattern (`EMP-\d{6}`, `[A-Z]{3}-[0-9a-f]{8}`, `internal-\d{1,32}`) passes;
+ * ambiguous repetition, unbounded quantifiers and matches longer than CUSTOM_MAX_MATCH do not.
  */
 function assertSafePattern(name: string, pattern: string): void {
   const fail = (why: string): never => {
@@ -152,28 +166,36 @@ function assertSafePattern(name: string, pattern: string): void {
   interface Group {
     hasAlt: boolean;
     hasQuant: boolean;
+    /** longest completed alternative so far, and the length of the one being parsed (UTF-16 units) */
+    maxAlt: number;
+    cur: number;
+    zeroWidth: boolean;
   }
-  const stack: Group[] = [{ hasAlt: false, hasQuant: false }];
+  const frame = (zeroWidth = false): Group => ({ hasAlt: false, hasQuant: false, maxAlt: 0, cur: 0, zeroWidth });
+  const stack: Group[] = [frame()];
   const top = (): Group => stack[stack.length - 1] as Group;
-
-  let largeCount = 0;
-  let cost = 1;
-  /** Charge a quantifier against the ReDoS budget. */
-  const charge = (q: Quant): void => {
-    if (q.max <= q.min) return; // fixed count: no choice, no backtracking
-    const large = q.max > SMALL_REPEAT_MAX;
-    if (large && ++largeCount > MAX_LARGE_QUANTIFIERS) {
-      fail(`more than ${MAX_LARGE_QUANTIFIERS} unbounded or large (max > ${SMALL_REPEAT_MAX}) quantifier`);
-    }
-    cost *= large ? LARGE_QUANTIFIER_COST : q.max - q.min + 1;
-    if (cost > MAX_VARIABLE_COST) fail('quantifiers are too ambiguous together (backtracking budget exceeded)');
-  };
 
   interface Quant {
     next: number;
     min: number;
     max: number;
   }
+  let largeCount = 0;
+  let cost = 1;
+  /** Charge a quantifier against the ReDoS budget. */
+  const charge = (q: Quant): void => {
+    if (q.max === Infinity) {
+      fail('unbounded quantifiers (+, *, {n,}) are not allowed; use a bounded repeat such as {1,64}');
+    }
+    if (q.max <= q.min) return; // fixed count: no choice, no backtracking
+    const large = q.max > SMALL_REPEAT_MAX;
+    if (large && ++largeCount > MAX_LARGE_QUANTIFIERS) {
+      fail(`more than ${MAX_LARGE_QUANTIFIERS} large (max > ${SMALL_REPEAT_MAX}) quantifier`);
+    }
+    cost *= large ? LARGE_QUANTIFIER_COST : q.max - q.min + 1;
+    if (cost > MAX_VARIABLE_COST) fail('quantifiers are too ambiguous together (backtracking budget exceeded)');
+  };
+
   /** Parse a quantifier at `i`; null if none. */
   const quantifierAt = (i: number): Quant | null => {
     const ch = pattern[i];
@@ -201,20 +223,48 @@ function assertSafePattern(name: string, pattern: string): void {
     return { next, min, max };
   };
 
+  /** An atom of `width` UTF-16 units ends at `at`; applies a following quantifier and returns the next index. */
+  const atom = (width: number, at: number): number => {
+    const q = quantifierAt(at);
+    let len = width;
+    let next = at;
+    if (q) {
+      top().hasQuant = true;
+      charge(q);
+      next = q.next;
+      len = width * q.max; // q.max is finite here (charge rejects Infinity)
+    }
+    top().cur += len;
+    return next;
+  };
+
   for (let i = 0; i < pattern.length; ) {
     const ch = pattern[i] as string;
     if (ch === '\\') {
       const nx = pattern[i + 1];
       if (nx !== undefined && /[1-9]/.test(nx)) fail('backreferences are not allowed');
       if (nx === 'k') fail('named backreferences are not allowed');
-      i += 2;
-      // an escaped atom may itself be quantified
-      const q = quantifierAt(i);
-      if (q) {
-        top().hasQuant = true;
-        charge(q);
-        i = q.next;
+      if (nx === 'b' || nx === 'B') {
+        i += 2; // zero-width assertion
+        continue;
       }
+      let end = i + 2;
+      let width = 1;
+      if ((nx === 'p' || nx === 'P' || nx === 'u') && pattern[end] === '{') {
+        const close = pattern.indexOf('}', end);
+        end = close === -1 ? pattern.length : close + 1;
+        width = 2; // may be an astral code point
+      } else if (nx === 'u' && /^[0-9a-fA-F]{4}/.test(pattern.slice(end, end + 4))) {
+        end += 4;
+        width = 2; // may be half of an astral pair
+      } else if (nx === 'x' && /^[0-9a-fA-F]{2}/.test(pattern.slice(end, end + 2))) {
+        end += 2;
+      } else if (nx === 'c' && /[A-Za-z]/.test(pattern[end] ?? '')) {
+        end += 1;
+      } else if (nx === 'D' || nx === 'W' || nx === 'S') {
+        width = 2; // negated classes can match an astral code point
+      }
+      i = atom(width, end);
       continue;
     }
     if (ch === '[') {
@@ -222,58 +272,67 @@ function assertSafePattern(name: string, pattern: string): void {
       if (pattern[j] === '^') j++;
       if (pattern[j] === ']') j++;
       while (j < pattern.length && pattern[j] !== ']') j += pattern[j] === '\\' ? 2 : 1;
-      i = j + 1;
-      const q = quantifierAt(i);
-      if (q) {
-        top().hasQuant = true;
-        charge(q);
-        i = q.next;
-      }
+      const inner = pattern.slice(i + 1, j);
+      const wide = inner.startsWith('^') || /[^\u0000-\u007f]|\\[pPDWS]|\\u/.test(inner);
+      i = atom(wide ? 2 : 1, j + 1);
       continue;
     }
     if (ch === '(') {
-      stack.push({ hasAlt: false, hasQuant: false });
       i++;
+      let zeroWidth = false;
       if (pattern[i] === '?') {
         i++;
         if (pattern[i] === '<' && pattern[i + 1] !== '=' && pattern[i + 1] !== '!') {
           const close = pattern.indexOf('>', i);
           i = close === -1 ? pattern.length : close + 1;
         } else {
+          zeroWidth = pattern[i] === '=' || pattern[i] === '!' || (pattern[i] === '<' && (pattern[i + 1] === '=' || pattern[i + 1] === '!'));
           i += pattern[i] === '<' ? 2 : 1; // `:` `=` `!` or `<=` `<!`
         }
       }
+      stack.push(frame(zeroWidth));
       continue;
     }
     if (ch === ')') {
       if (stack.length === 1) fail('unbalanced parenthesis');
       const g = stack.pop() as Group;
       i++;
+      const inner = g.zeroWidth ? 0 : Math.max(g.maxAlt, g.cur);
       const q = quantifierAt(i);
+      let len = inner;
       if (q) {
         if (q.max > 1 && (g.hasAlt || g.hasQuant)) fail('a repeated group may not contain alternation or another quantifier');
         charge(q);
         i = q.next;
         top().hasQuant = true;
+        len = inner * q.max;
       }
+      top().cur += len;
       top().hasAlt = top().hasAlt || g.hasAlt;
       top().hasQuant = top().hasQuant || g.hasQuant;
       continue;
     }
     if (ch === '|') {
-      top().hasAlt = true;
+      const t = top();
+      t.hasAlt = true;
+      t.maxAlt = Math.max(t.maxAlt, t.cur);
+      t.cur = 0;
       i++;
       continue;
     }
-    i++;
-    const q = quantifierAt(i); // quantifier directly after this atom
-    if (q) {
-      top().hasQuant = true;
-      charge(q);
-      i = q.next;
+    if (ch === '^' || ch === '$') {
+      i++; // zero-width anchor (never quantifiable)
+      continue;
     }
+    const code = ch.charCodeAt(0);
+    const pair = code >= 0xd800 && code <= 0xdbff && /[\udc00-\udfff]/.test(pattern[i + 1] ?? '');
+    i = atom(ch === '.' || pair ? 2 : 1, i + (pair ? 2 : 1));
   }
   if (stack.length !== 1) fail('unbalanced parenthesis');
+  const longest = Math.max(top().maxAlt, top().cur);
+  if (longest > CUSTOM_MAX_MATCH) {
+    fail(`pattern can match up to ${longest} characters; the limit is ${CUSTOM_MAX_MATCH}`);
+  }
 }
 
 function compileCustom(rule: CustomRule): Rule {
@@ -371,10 +430,11 @@ export class ConfidentialityFilter implements Filter {
 
     this.rules.forEach((rule, prio) => {
       if (prio === 0 && !hasPlaceholder) return;
-      if (rule.windowed && norm.length > CUSTOM_WINDOW) {
+      if (rule.windowed && norm.length > CUSTOM_STEP + CUSTOM_MAX_MATCH) {
         for (let from = 0; from < norm.length; from += CUSTOM_STEP) {
-          this.collect(rule, prio, norm.slice(from, from + CUSTOM_WINDOW), from, spans);
-          if (from + CUSTOM_WINDOW >= norm.length) break;
+          const ws = Math.max(0, from - CUSTOM_CONTEXT);
+          const we = from + CUSTOM_STEP + CUSTOM_MAX_MATCH + CUSTOM_CONTEXT;
+          this.collect(rule, prio, norm.slice(ws, we), ws, spans, [from, from + CUSTOM_STEP]);
         }
       } else {
         this.collect(rule, prio, norm, 0, spans);
@@ -422,8 +482,10 @@ export class ConfidentialityFilter implements Filter {
     return { text: out.join(''), counts: Object.fromEntries(counts) };
   }
 
-  private collect(rule: Rule, prio: number, hay: string, offset: number, spans: Span[]): void {
+  /** `startRange` keeps only matches whose absolute start is in [lo, hi): the rest belong to a neighbouring window. */
+  private collect(rule: Rule, prio: number, hay: string, offset: number, spans: Span[], startRange?: [number, number]): void {
     for (const m of hay.matchAll(rule.rx)) {
+      if (startRange !== undefined && (m.index + offset < startRange[0] || m.index + offset >= startRange[1])) continue;
       let start = m.index;
       let end = m.index + m[0].length;
       if (rule.valueGroups !== undefined) {

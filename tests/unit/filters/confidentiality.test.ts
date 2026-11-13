@@ -195,7 +195,7 @@ describe('ConfidentialityFilter: custom rules (CNF-03)', () => {
   });
 
   it('is case-insensitive when asked', async () => {
-    const f = new ConfidentialityFilter({ customRules: [{ name: 'tag', pattern: 'internal-\\d+', caseInsensitive: true }] });
+    const f = new ConfidentialityFilter({ customRules: [{ name: 'tag', pattern: 'internal-\\d{1,32}', caseInsensitive: true }] });
     expect((await run('see INTERNAL-42', f)).content).toBe('see [REDACTED:tag]');
   });
 
@@ -215,7 +215,11 @@ describe('ConfidentialityFilter: custom rules (CNF-03)', () => {
     ['one large quantifier next to several small ambiguous ones', 'a+a{1,8}a{1,8}b'],
     ['many small ambiguous quantifiers over budget', 'a{1,16}a{1,16}a{1,16}b'],
     ['backreference', '(a)\\1'],
-    ['matches the empty string', 'a*'],
+    ['unbounded + (CR-03)', 'internal-\\d+'],
+    ['unbounded {n,}', 'x{2,}y'],
+    ['bounded match longer than the window guarantee (CR-03)', 'BEGIN[\\s\\S]{0,2000}END'],
+    ['alternation with a branch over the limit', 'ab|c{500}d{20}'],
+    ['matches the empty string', 'a?'],
     ['too long', 'a'.repeat(400)],
   ])('rejects a catastrophic or unbounded pattern at construction: %s', (_n, pattern) => {
     expect(() => new ConfidentialityFilter({ customRules: [{ name: 'r', pattern }] })).toThrow(ConfigError);
@@ -224,14 +228,17 @@ describe('ConfidentialityFilter: custom rules (CNF-03)', () => {
   it.each([
     ['fixed counts never backtrack', '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}'],
     ['IPv4-shaped', '\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}'],
-    ['one large quantifier', 'internal-\\d+'],
+    ['one large bounded quantifier', 'internal-\\d{1,32}'],
+    ['longest possible match exactly at the limit', 'x[a-z]{500}y{10}'],
+    ['alternation within the limit', '(?:foo|bar)-\\d{4}'],
+    ['astral escape', '\\u{1F600}{2}\\p{L}{1,4}'],
     ['two small variable quantifiers', '[A-Z]{2,4}-\\d{4,8}'],
   ])('still accepts a legitimate rule: %s', (_n, pattern) => {
     expect(() => new ConfidentialityFilter({ customRules: [{ name: 'r', pattern }] })).not.toThrow();
   });
 
   it('every accepted pattern finishes quickly on worst-case inputs (budget is real, not nominal)', async () => {
-    const accepted = ['a+b', 'a{1,3}a{1,3}a{1,3}a{1,3}b', 'a+a{1,3}b', 'a{1,16}a{1,16}b', 'x?x?x?x?x?x?x?x?b'];
+    const accepted = ['a{1,64}b', 'a{1,3}a{1,3}a{1,3}a{1,3}b', 'a{1,64}a{1,3}b', 'a{1,16}a{1,16}b', 'x?x?x?x?x?x?x?x?b'];
     const inputs = ['a'.repeat(100_000), 'ab'.repeat(50_000), 'x'.repeat(100_000)];
     for (const pattern of accepted) {
       const f = new ConfidentialityFilter({ customRules: [{ name: 'r', pattern }] });
@@ -254,7 +261,7 @@ describe('ConfidentialityFilter: custom rules (CNF-03)', () => {
 
   it('custom-rule matches straddling a window boundary are still found (windows overlap by half)', async () => {
     const f = new ConfidentialityFilter({ customRules: [{ name: 'employee_id', pattern: 'EMP-\\d{6}' }] });
-    for (let at = 500; at < 540; at++) {
+    for (let at = 480; at < 1100; at++) {
       const text = 'x'.repeat(at) + 'EMP-123456' + 'y'.repeat(3000);
       const r = await run(text, f);
       expect(r.content).not.toContain('EMP-123456');
@@ -262,8 +269,63 @@ describe('ConfidentialityFilter: custom rules (CNF-03)', () => {
     }
   });
 
+  describe('window edges do not change what a rule means or hide a match (CR-03)', () => {
+    const mk = (pattern: string) => new ConfidentialityFilter({ customRules: [{ name: 'r', pattern }] });
+
+    it('a maximum-length (512) match is redacted at every alignment', async () => {
+      const f = mk('S[a-z]{510}E');
+      const body = 'S' + 'q'.repeat(510) + 'E';
+      for (let at = 0; at < 1100; at += 7) {
+        const out = (await run('-'.repeat(at) + body + '-'.repeat(1500), f)).content;
+        expect(out, `at ${at}`).not.toContain('qqqqq');
+        expect(out).toContain('[REDACTED:r]');
+      }
+    });
+
+    it('^ matches only at the true start of the text, not at each window start', async () => {
+      const f = mk('^X\\d{1,3}');
+      const text = 'a'.repeat(1024) + 'X5 tail';
+      expect((await run(text, f)).content).toBe(text);
+      expect((await run('X5 ' + 'a'.repeat(2000), f)).content).toBe('[REDACTED:r] ' + 'a'.repeat(2000));
+    });
+
+    it('$ matches only at the true end of the text', async () => {
+      const f = mk('\\d{3}$');
+      const text = '123' + 'a'.repeat(3000);
+      expect((await run(text, f)).content).toBe(text);
+      expect((await run('a'.repeat(3000) + '123', f)).content).toBe('a'.repeat(3000) + '[REDACTED:r]');
+    });
+
+    it('\\b and look-behind see the real left context at a window start', async () => {
+      const f = mk('\\bKEY\\d{4}');
+      for (let at = 480; at < 560; at++) {
+        const glued = 'a'.repeat(at - 1) + 'x' + 'KEY1234' + 'z'.repeat(1500); // preceded by a word char: no \b
+        expect((await run(glued, f)).content, `at ${at}`).toBe(glued);
+        const spaced = 'a'.repeat(at - 1) + ' ' + 'KEY1234' + 'z'.repeat(1500);
+        expect((await run(spaced, f)).content).toContain('[REDACTED:r]');
+      }
+      const lb = mk('(?<=id=)\\d{6}');
+      for (let at = 440; at < 580; at += 3) {
+        const text = 'a'.repeat(at) + 'id=123456' + 'b'.repeat(1500);
+        expect((await run(text, lb)).content, `at ${at}`).not.toContain('123456');
+      }
+    });
+
+    it('a lookahead near the end of a window sees the real text', async () => {
+      const f = mk('FOO(?!bar)');
+      for (let at = 480; at < 560; at++) {
+        const t = 'a'.repeat(at) + 'FOObar' + 'z'.repeat(1500);
+        expect((await run(t, f)).content, `at ${at}`).toBe(t);
+      }
+    });
+
+    it('a 1500-character block that the old BEGIN..END{0,2000} rule leaked is now a construction error', () => {
+      expect(() => mk('BEGIN[\\s\\S]{0,2000}END')).toThrow(ConfigError);
+    });
+  });
+
   it('a quadratic-prone but accepted pattern still completes quickly on 50k characters (per-rule input cap)', async () => {
-    const f = new ConfidentialityFilter({ customRules: [{ name: 'q', pattern: '\\d+z' }] });
+    const f = new ConfidentialityFilter({ customRules: [{ name: 'q', pattern: '\\d{1,64}z' }] });
     const start = performance.now();
     await run('1'.repeat(50_000), f);
     expect(performance.now() - start).toBeLessThan(200);
