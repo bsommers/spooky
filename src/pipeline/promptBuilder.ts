@@ -74,7 +74,28 @@ function selectExemplars(exemplars: readonly ScoredChunk[], budget: number): str
   return picked;
 }
 
-function systemPrompt(profile: StylometricProfile, persona: TargetPersonaConfig): string {
+/**
+ * Render a configuration string as a single line: every line break and whitespace run (including U+0085, which `\s`
+ * misses) collapses to one space and delimiter look-alikes are neutralized, so a value can neither forge a standalone
+ * line or section in the system prompt nor close the <input> block.
+ */
+const line = (value: string): string => neutralize(String(value).replace(/[\s\u0085]+/g, ' ').trim());
+
+function systemPrompt(rawProfile: StylometricProfile, rawPersona: TargetPersonaConfig): string {
+  const profile = {
+    ...rawProfile,
+    displayName: line(rawProfile.displayName),
+    preferredPunctuation: rawProfile.preferredPunctuation.map(line),
+    commonTransitionWords: rawProfile.commonTransitionWords.map(line),
+  };
+  const persona = {
+    ...rawPersona,
+    name: line(rawPersona.name),
+    cognitiveLoad: line(rawPersona.cognitiveLoad),
+    informationDensity: line(rawPersona.informationDensity),
+    structuralMandates: rawPersona.structuralMandates.map(line),
+    bannedPhrases: rawPersona.bannedPhrases.map(line),
+  };
   const list = (items: readonly string[]): string => (items.length > 0 ? items.join(', ') : 'none');
   const lines = [
     `You are a ghostwriter. Write in the voice of ${profile.displayName} for the audience described below.`,
