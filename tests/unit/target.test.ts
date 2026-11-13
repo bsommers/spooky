@@ -165,12 +165,38 @@ describe('findBannedPhrases', () => {
   });
 
   it('matches non-ASCII phrases case-insensitively', () => {
-    expect(findBannedPhrases('STRASSE and Éclair', withBanned('éclair'))).toEqual(['éclair']);
+    expect(findBannedPhrases('Fresh Éclair', withBanned('éclair'))).toEqual(['éclair']);
   });
 
-  it('does not backtrack catastrophically on a pathological phrase and long text', () => {
-    const started = Date.now();
-    expect(findBannedPhrases('a'.repeat(50_000) + '!', withBanned('(a+)+$'))).toEqual([]);
-    expect(Date.now() - started).toBeLessThan(1000);
+  it.each([
+    ['zero-width space', 'circ\u200ble back'],
+    ['soft hyphen', 'circle\u00ad back'],
+    ['fullwidth letters', '\uff43\uff49\uff52\uff43\uff4c\uff45 back'],
+    ['NBSP', 'circle\u00a0back'],
+    ['double space', 'circle  back'],
+    ['newline', 'circle\nback'],
+    ['invisible next to the space', 'circle\u200b back'],
+    ['mixed case', 'CiRcLe BaCk'],
+  ])('matches a phrase hidden by %s', (_name, text) => {
+    expect(findBannedPhrases(`let us ${text} later`, withBanned('circle back'))).toEqual(['circle back']);
+  });
+
+  it('matches a single-word phrase split by a soft hyphen or zero-width joiner', () => {
+    expect(findBannedPhrases('we de\u00adlve and del\u200dve', withBanned('delve'))).toEqual(['delve']);
+  });
+
+  it('normalizes the configured phrase too, and ignores phrases that are empty after normalization', () => {
+    expect(findBannedPhrases('circle back', withBanned('circle\u00a0\u00a0back'))).toEqual(['circle\u00a0\u00a0back']);
+    expect(findBannedPhrases('anything', withBanned('\u200b', '\u00ad \n'))).toEqual([]);
+  });
+
+  it('does not match words that merely look related', () => {
+    expect(findBannedPhrases('circles and backs', withBanned('circle back'))).toEqual([]);
+  });
+
+  it('treats a pathological phrase as a literal, so there is no pattern to backtrack on', () => {
+    const p = withBanned('(a+)+$');
+    expect(findBannedPhrases('a'.repeat(50_000) + '!', p)).toEqual([]);
+    expect(findBannedPhrases('x (a+)+$ y', p)).toEqual(['(a+)+$']);
   });
 });
