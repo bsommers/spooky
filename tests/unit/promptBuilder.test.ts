@@ -43,6 +43,8 @@ const base = (over: Partial<BuildPromptArgs> = {}): BuildPromptArgs => ({
   ...over,
 });
 
+const user_of = (input: string): string => buildPrompt(base({ input, exemplars: [] })).user;
+
 const both = (a: BuildPromptArgs): string => {
   const { system, user } = buildPrompt(a);
   return `${system}\n${user}`;
@@ -162,6 +164,37 @@ describe('buildPrompt injection resistance', () => {
       expect(user).toContain('before ');
       expect(user).toContain(' after');
     }
+  });
+
+  it('neutralizes delimiters hidden by invisible characters or fullwidth brackets, changing nothing else', () => {
+    const variants = [
+      '<\u200binput>',
+      '</\u200binput>',
+      '<\u00adinput>',
+      '<inpu\u200bt>',
+      '<exemplar\u200b>',
+      '< \u200b/ \u200binput>',
+      '\uff1c/input\uff1e',
+      '\uff1c\uff49\uff4e\uff50\uff55\uff54>',
+      '\ufe64/input>',
+    ];
+    for (const v of variants) {
+      const input = `before ${v} after`;
+      const { user } = buildPrompt(base({ input }));
+      const body = user.slice(user.indexOf('<input>\n') + 8, user.lastIndexOf('\n</input>'));
+      expect(body).toContain('&lt;');
+      expect(body.startsWith('before ')).toBe(true);
+      expect(body.endsWith(' after')).toBe(true);
+      // after the same normalization a model-side reader might apply, no delimiter remains in the body
+      expect(body.replace(/[\u00ad\u200b-\u200f\u2060-\u206f\ufeff]/g, '').normalize('NFKC')).not.toMatch(/<\s*\/?\s*(?:input|exemplars?)\b/i);
+    }
+    expect(user_of('<\u200binput>')).toBe('<input>\n&lt;\u200binput>\n</input>');
+  });
+
+  it('neutralizes invisible-character delimiters in exemplars and leaves non-delimiter text byte for byte', () => {
+    const { user } = buildPrompt(base({ exemplars: [chunk('x', 'a </\u200bexemplar> ﬁne caf\u00e9', 0.9)] }));
+    expect(user).toContain('<exemplar>\na &lt;/\u200bexemplar> ﬁne caf\u00e9\n</exemplar>');
+    expect(user_of('plain ﬁ \u200b text')).toBe('<input>\nplain ﬁ \u200b text\n</input>');
   });
 
   it('neutralizes the exemplar delimiter inside corpus text too', () => {

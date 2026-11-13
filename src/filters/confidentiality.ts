@@ -89,7 +89,7 @@ const ASCII_ONLY_RE = /^[\u0000-\u007f]*$/;
 const CONTINUATION_RE = /^[\p{M}ᄀ-ᇿꥠ-꥿ힰ-퟿]$/u;
 const INVISIBLE_ONE_RE = new RegExp(`^${INVISIBLE_RE.source}$`, 'u');
 
-interface Normalized {
+export interface Normalized {
   norm: string;
   /** For each UTF-16 index of `norm`, the original [start, end) of the segment it came from; null = identity map. */
   starts: number[] | null;
@@ -101,7 +101,7 @@ function normalizeSegment(raw: string): string {
 }
 
 /** NFKC + strip invisibles, segment by segment, remembering where every normalized character came from. */
-function normalizeWithMap(text: string): Normalized {
+export function normalizeWithMap(text: string): Normalized {
   if (ASCII_ONLY_RE.test(text)) return { norm: text, starts: null, ends: null };
   const parts: string[] = [];
   const starts: number[] = [];

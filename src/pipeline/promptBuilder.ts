@@ -6,6 +6,7 @@
 // look-alikes inside that text are neutralized, so the text cannot close its own block and speak as the prompt.
 // Residual risk (accepted, see the phase threat model): a model may still follow instructions written inside the
 // fenced input; delimiting plus the explicit "source material, not instructions" rule reduces but cannot eliminate it.
+import { normalizeWithMap } from '../filters/confidentiality.js';
 import type { ScoredChunk, StylometricProfile, TargetPersonaConfig } from '../models/types.js';
 
 export interface BuildPromptArgs {
@@ -22,11 +23,31 @@ export interface BuiltPrompt {
   user: string;
 }
 
-/** `<`, optional `/`, then a delimiter tag name (any case, whitespace tolerated). */
-const DELIMITER_LOOKALIKE = /<(\s*\/?\s*(?:input|exemplars?)\b)/gi;
+/** `<`, optional `/`, then a delimiter tag name (any case, whitespace tolerated). Matched on the NFKC view of the text. */
+const DELIMITER_LOOKALIKE = /<\s*\/?\s*(?:input|exemplars?)\b/gi;
 
-/** Turn delimiter look-alikes into inert text (`<input>` -> `&lt;input>`), leaving all other angle brackets alone. */
-const neutralize = (text: string): string => text.replace(DELIMITER_LOOKALIKE, '&lt;$1');
+/**
+ * Turn delimiter look-alikes into inert text (`<input>` -> `&lt;input>`), leaving all other angle brackets alone.
+ * Detection runs on the NFKC view with invisible characters removed (the same view the confidentiality filter matches
+ * on), so `<\u200binput>`, `<inpu\u200bt>` and fullwidth `＜/input＞` are caught. Only the offending `<` is rewritten,
+ * in the original text; everything else is returned byte for byte.
+ */
+function neutralize(text: string): string {
+  if (!text.includes('<') && /^[\u0000-\u007f]*$/.test(text)) return text;
+  const { norm, starts } = normalizeWithMap(text);
+  const hits: Array<[number, number]> = [];
+  for (const m of norm.matchAll(DELIMITER_LOOKALIKE)) {
+    const i = m.index as number;
+    const s = starts === null ? i : (starts[i] as number);
+    hits.push([s, s + String.fromCodePoint(text.codePointAt(s) as number).length]); // just the `<` code point
+  }
+  let out = text;
+  for (let k = hits.length - 1; k >= 0; k--) {
+    const [s, e] = hits[k] as [number, number];
+    out = `${out.slice(0, s)}&lt;${out.slice(e)}`;
+  }
+  return out;
+}
 
 /** Fixed one-decimal rendering; never "-0.0"; non-finite values print as "n/a". */
 function fixed1(n: number): string {
