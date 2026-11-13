@@ -290,6 +290,23 @@ describe('buildPrompt determinism and number formatting', () => {
     expect(JSON.stringify(buildPrompt(base()))).toBe(JSON.stringify(buildPrompt(base())));
   });
 
+  it('same inputs in any argument order give byte-identical output (shuffled exemplars, duplicate scores, tight budget)', () => {
+    const chunks = [
+      chunk('e', 'EEEE', 0.5, 4),
+      chunk('a', 'AAAA', 0.9, 0),
+      chunk('d', 'DDDD', 0.5, 3),
+      chunk('c', 'CCCC', 0.5, 3),
+      chunk('b', 'BBBB', 0.7, 1),
+    ];
+    const ref = JSON.stringify(buildPrompt(base({ exemplars: chunks, maxExemplarChars: 12 })));
+    const orders = [[4, 3, 2, 1, 0], [2, 0, 4, 1, 3], [1, 3, 0, 4, 2], [3, 4, 1, 2, 0]];
+    for (const o of orders) {
+      expect(JSON.stringify(buildPrompt(base({ exemplars: o.map((i) => chunks[i]!), maxExemplarChars: 12 })))).toBe(ref);
+    }
+    expect(JSON.parse(ref).user).toContain('BBBB');
+    expect(JSON.parse(ref).user).not.toContain('DDDD');
+  });
+
   it('matches the stored snapshot', () => {
     const { system, user } = buildPrompt(base());
     expect(system).toMatchSnapshot('system');

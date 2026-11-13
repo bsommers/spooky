@@ -190,6 +190,11 @@ describe('findBannedPhrases', () => {
     expect(findBannedPhrases('anything', withBanned('\u200b', '\u00ad \n'))).toEqual([]);
   });
 
+  it('uses simple case-insensitive matching, not full Unicode case folding: "STRASSE" does not match "straße"', () => {
+    expect(findBannedPhrases('STRASSE', withBanned('straße'))).toEqual([]);
+    expect(findBannedPhrases('STRAßE', withBanned('straße'))).toEqual(['straße']);
+  });
+
   it('does not match words that merely look related', () => {
     expect(findBannedPhrases('circles and backs', withBanned('circle back'))).toEqual([]);
   });
@@ -198,5 +203,7 @@ describe('findBannedPhrases', () => {
     const p = withBanned('(a+)+$');
     expect(findBannedPhrases('a'.repeat(50_000) + '!', p)).toEqual([]);
     expect(findBannedPhrases('x (a+)+$ y', p)).toEqual(['(a+)+$']);
+    // structural check in place of a wall-clock bound: metacharacters carry no pattern meaning
+    expect(findBannedPhrases('abc', withBanned('a.c', 'a|b', '^a', '[abc]'))).toEqual([]);
   });
 });
