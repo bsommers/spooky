@@ -6,6 +6,7 @@ import {
   InputTooLargeError,
   LlmError,
   ProfileError,
+  StoreCorruptError,
   UnknownAuthorError,
   UnknownPersonaError,
 } from '../../src/models/errors.js';
@@ -18,6 +19,7 @@ const cases: ReadonlyArray<{ name: string; code: string; make: () => Ghostwriter
   { name: 'InputTooLargeError', code: 'INPUT_TOO_LARGE', make: () => new InputTooLargeError(300_000, 200_000) },
   { name: 'LlmError', code: 'LLM_FAILED', make: () => new LlmError(3) },
   { name: 'ProfileError', code: 'PROFILE_INVALID', make: () => new ProfileError('no words') },
+  { name: 'StoreCorruptError', code: 'STORE_CORRUPT', make: () => new StoreCorruptError('bad store') },
 ];
 
 describe('GhostwriterError hierarchy', () => {
