@@ -1,0 +1,13 @@
+I think it is worth saying, at the outset, that the migration might turn out to be considerably more involved than the original estimate suggested, and perhaps we ought to consider whether the schedule that was agreed upon in the spring can reasonably be maintained; however, I am not entirely certain that postponing the work would be wiser.
+
+It seems to me that the difficulty lies, at least in part, with the way in which the older services were designed, since many of the assumptions that were made at the time have apparently been quietly invalidated by the growth of the user base. Moreover, the documentation that was written to describe those assumptions was rarely updated, so that what remains is, arguably, a somewhat misleading picture of how the system actually behaves.
+
+Furthermore, it should be noted that the decision to adopt the new storage layer was taken after a lengthy and, I believe, thoughtful discussion; nevertheless, it is possible that some of the concerns raised by the operations group were not given the weight they deserved, and those concerns may well return once the first real workloads have been moved across.
+
+In my opinion, the most prudent course would probably be to proceed in stages, so that the effects of each change can be observed before the next one is introduced; this approach is, of course, slower, but it is also likely to be considerably safer, and the cost of an unexpected failure would be borne by every team that depends on the platform.
+
+Consequently, I would suggest that we sort of agree, as a working assumption, that the first stage will be completed by the end of the quarter, that the results will be reviewed carefully by everyone concerned, and that the later stages will be planned only when the outcome of that review has been understood. Perhaps this is overly cautious; still, caution seems preferable to regret.
+
+Additionally, it has been proposed that a small group be appointed to monitor the transition, and it is generally felt that the group ought to include at least one person who was involved in building the original system, since such a person tends to know where the less obvious dependencies are hidden. It was also suggested that the findings be summarised in a short report, which would be circulated before the next planning meeting is held.
+
+Finally, I might add that none of this is intended as criticism of the work that has been done so far; rather, it is offered in the hope that a little extra deliberation now may spare us a good deal of difficulty later, and that the project, when it is eventually finished, will be regarded as having been handled with appropriate care.

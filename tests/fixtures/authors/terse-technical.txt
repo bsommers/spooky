@@ -1,0 +1,25 @@
+Cache miss. Fetch from disk. Write back. Done.
+
+The service starts in 40 ms. It binds port 8080. It reads config from env. No retries on boot.
+
+Latency: p50 is 12 ms. p99 is 90 ms. Tail spikes come from GC. We pin the heap to 512 MB. Spikes drop.
+
+Queue depth stays flat. Workers pull one job at a time. Each job has a timeout. Timeouts kill the worker. The supervisor restarts it.
+
+Config: three keys only. PORT, DB_URL, LOG_LEVEL. Defaults are sane. Override per host.
+
+Deploy: build, test, push. The pipeline takes six minutes. Rollback takes one. We roll back first and debug after.
+
+Index the user table on email. Query time falls from 300 ms to 2 ms. Writes slow by 3 percent. Accept it.
+
+Logs are JSON. One line per event. Fields: ts, level, msg, trace. Grep works. So does jq.
+
+Disk fills at 2 GB per day. Rotate hourly. Keep seven days. Delete the rest.
+
+The parser rejects bad input. It returns code 400. It never panics. Fuzzing found four bugs. All four are fixed.
+
+Locks: take them in order. Release them in reverse. Never hold one across a network call. This rule ended the deadlocks.
+
+Metrics: count requests, errors, retries. Alert on error rate above 1 percent. Page on two windows in a row.
+
+Build the image once. Run it everywhere. Tag by commit. Never reuse a tag.

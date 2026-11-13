@@ -42,7 +42,7 @@ const TRANSITIONS = [
   'however', 'therefore', 'moreover', 'furthermore', 'thus', 'hence', 'consequently', 'additionally', 'nevertheless',
   'nonetheless', 'meanwhile', 'instead', 'otherwise', 'besides', 'similarly', 'likewise', 'finally', 'overall',
   'specifically', 'indeed', 'also', 'but', 'yet', 'for example', 'for instance', 'in addition', 'in particular',
-  'in conclusion', 'in summary', 'on the other hand', 'as a result', 'in contrast', 'first', 'next',
+  'in conclusion', 'in summary', 'on the other hand', 'as a result', 'in contrast',
 ] as const;
 
 /** Case-insensitive alternation of phrases (longest first), matched on whole words; inner spaces match any whitespace run. */

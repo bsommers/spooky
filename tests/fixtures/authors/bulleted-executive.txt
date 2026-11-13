@@ -1,0 +1,42 @@
+# Q3 Update
+
+Headline: revenue up 14 percent! Churn down for the third quarter running.
+
+## Wins
+- Closed the Northwind deal (largest this year)
+- Launched self-serve onboarding; activation up 22 percent
+- Cut support backlog from 340 to 90 tickets
+- Hired the regional leads we planned for
+
+## Risks
+- Two enterprise renewals are open: decisions due in October
+- Hiring in EMEA is behind plan
+- Cloud spend is trending 8 percent over budget
+
+## Decisions needed
+1. Approve the EMEA hiring plan
+2. Pick the pricing option: flat or usage-based?
+3. Greenlight the data platform migration
+
+## Next steps
+- Finance to re-forecast cloud spend by Friday
+- Sales to confirm both renewals this month
+- Product to share the pricing analysis (one page)
+
+## Metrics
+- ARR: up, ahead of plan
+- NPS: 51, steady
+- Gross margin: 78 percent, flat
+- Net retention: 112 percent!
+
+## Customer notes
+- Northwind wants a dedicated success manager
+- Contoso asked for SSO; shipping in Q4
+- Fabrikam is evaluating a competitor: executive call this week
+
+## Asks
+- Board: endorse the hiring plan
+- Leadership: unblock the migration budget
+- Everyone: keep the renewals on track
+
+Overall: strong quarter. Focus for Q4 is retention, hiring, and cost control. Questions? Ask now!
