@@ -284,3 +284,40 @@ describe('orchestrator: real style filter', () => {
     expect(out.trace.some((t) => t.filter === 'persona-banned')).toBe(false);
   });
 });
+
+describe('orchestrator: exemplars are re-redacted at generate time (CR-01)', () => {
+  const persona = { key: 'exec', name: 'E', cognitiveLoad: 'l', informationDensity: 'm', structuralMandates: [], bannedPhrases: [] };
+
+  it('a blocklist term added after ingest never reaches the provider via exemplars', async () => {
+    const r = await makeRig([calm(1)], {
+      ingest: false,
+      config: { llm: { model: 'm' }, personas: [persona], confidentiality: { blocklist: ['Falcon'] } },
+    });
+    // Ingest under a pipeline without the blocklist (the "old ruleset").
+    const old = await makeRig([calm(1)], { ingest: false });
+    await old.sources.ingest('terse', 'Terse', 'Project Falcon ships on Monday. Falcon needs a rollback plan. Falcon is on track.');
+    const o = new Orchestrator({ ...r.deps, sources: old.sources });
+    await o.generate('terse', 'exec', 'Summarize the Falcon plan?', { exemplarCount: 3 });
+    const req = r.llm.requests[0]!;
+    expect(req.user).toContain('<exemplar>');
+    expect(req.user).not.toContain('Falcon');
+    expect(req.system).not.toContain('Falcon');
+  });
+
+  it('an exemplar whose pre run has no successful confidentiality entry fails closed before the LLM', async () => {
+    const r = await makeRig([calm(1)]);
+    let calls = 0;
+    const real = r.deps.pre;
+    const pre = {
+      names: real.names,
+      run: async (text: string, ctx: Parameters<typeof real.run>[1]) => {
+        calls++;
+        const out = await real.run(text, ctx);
+        return calls === 1 ? out : { ...out, trace: [] };
+      },
+    } as unknown as FilterPipeline;
+    const o = new Orchestrator({ ...r.deps, pre });
+    await expect(o.generate('terse', 'exec', 'hello world', { exemplarCount: 2 })).rejects.toBeInstanceOf(FilterFailedError);
+    expect(r.llm.callCount).toBe(0);
+  });
+});

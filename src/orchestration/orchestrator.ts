@@ -1,6 +1,6 @@
 // Generation orchestrator (ORC-01..05): the one place the source axis, the target axis, the filters and the LLM meet.
 //
-//   input -> size cap -> PRE pipeline (confidentiality) -> retrieve exemplars (redacted query) -> buildPrompt
+//   input -> size cap -> PRE pipeline (confidentiality) -> retrieve exemplars (redacted query) -> PRE on each exemplar -> buildPrompt
 //         -> LLM (bounded retry) -> POST pipeline (style, confidentiality) -> banned-phrase check -> {text, trace}
 //
 // Ordering is the security property. Unknown persona / author and an oversized input are rejected before any filter
@@ -15,7 +15,7 @@ import type { TargetManager } from '../registry/targetManager.js';
 import type { SourceManager } from '../registry/sourceManager.js';
 import type { FilterPipeline } from '../filters/pipeline.js';
 import { ConfigError, FilterFailedError, InputTooLargeError, LlmError } from '../models/errors.js';
-import type { Config, GenerateOptions, GenerateResult, LlmClient, PipelineContext, PipelineOutput, TraceEntry } from '../models/types.js';
+import type { Config, GenerateOptions, GenerateResult, LlmClient, PipelineContext, PipelineOutput, ScoredChunk, TraceEntry } from '../models/types.js';
 
 /** Exemplar chunks retrieved when `GenerateOptions.exemplarCount` is not given. */
 export const DEFAULT_EXEMPLAR_COUNT = 3;
@@ -65,8 +65,16 @@ export class Orchestrator {
     const safe = pre.text;
 
     // 2. Retrieve with the redacted query.
-    const exemplars =
+    const retrieved =
       opts.exemplarCount === 0 ? [] : await this.#d.sources.retrieve(authorId, safe.slice(0, MAX_RETRIEVAL_QUERY_CHARS), opts.exemplarCount);
+    // Stored text was redacted under the ruleset of the ingest; the live ruleset (or a tampered store file) may differ,
+    // so every exemplar goes through the same PRE pipeline as the input. No successful confidentiality entry = no prompt.
+    const exemplars: ScoredChunk[] = [];
+    for (const ex of retrieved) {
+      const out = await this.#d.pre.run(ex.text, { authorId, personaKey, stage: 'pre' });
+      requireConfidentiality(out, 'pre');
+      exemplars.push({ ...ex, text: out.text });
+    }
 
     // 3. Prompt.
     const prompt = buildPrompt({ profile, exemplars, persona, input: safe, maxExemplarChars: opts.exemplarCount * config.chunk.size });
