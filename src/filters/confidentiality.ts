@@ -41,7 +41,7 @@ export interface ConfidentialityOptions {
 
 export const PLACEHOLDER_PREFIX = '[REDACTED:';
 /** A redaction placeholder, e.g. `[REDACTED:aws_key]`. */
-const PLACEHOLDER_RE = /\[REDACTED:[a-z0-9_]{1,40}\]/g;
+export const PLACEHOLDER_RE = /\[REDACTED:[a-z0-9_]{1,40}\]/g;
 
 const MAX_CUSTOM_PATTERN_LENGTH = 256;
 /**

@@ -72,3 +72,10 @@ export class LlmError extends GhostwriterError {
     this.attempts = attempts;
   }
 }
+
+/** A corpus that cannot yield a stylometric profile (no words, no sentences). Carries no corpus text. */
+export class ProfileError extends GhostwriterError {
+  constructor(message: string) {
+    super('PROFILE_INVALID', message);
+  }
+}
