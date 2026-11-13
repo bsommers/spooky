@@ -125,6 +125,12 @@ export function buildPrompt(args: BuildPromptArgs): BuiltPrompt {
   if (!Number.isInteger(maxExemplarChars) || maxExemplarChars < 0) {
     throw new RangeError(`maxExemplarChars must be a non-negative integer, got ${maxExemplarChars}`);
   }
+  for (const ex of exemplars) {
+    // A NaN / infinite score makes the ranking comparator inconsistent, so the selected set would depend on input order.
+    if (!Number.isFinite(ex.score)) {
+      throw new RangeError(`exemplar ${JSON.stringify(ex.id)} has a non-finite score (${ex.score}); scores must be finite numbers`);
+    }
+  }
   return {
     system: systemPrompt(profile, persona),
     user: userPrompt(selectExemplars(exemplars, maxExemplarChars), input),
