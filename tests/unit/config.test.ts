@@ -78,10 +78,10 @@ describe('loadConfig: valid input', () => {
   it('enabled defaults to true and onError defaults to fail-closed when omitted', () => {
     const cfg = loadConfig({
       ...minimal(),
-      filters: { pipeline: [{ name: 'confidentiality', stage: 'pre' }] },
+      filters: { pipeline: [{ name: 'confidentiality', stage: 'both' }] },
     });
     expect(cfg.filters.pipeline).toEqual([
-      { name: 'confidentiality', stage: 'pre', onError: 'fail-closed', enabled: true },
+      { name: 'confidentiality', stage: 'both', onError: 'fail-closed', enabled: true },
     ]);
   });
 
@@ -185,6 +185,48 @@ describe('loadConfig: invalid input fails fast with path-qualified errors', () =
       message: 'unknown filter "foo"',
     });
     expect(err.message).toContain('filters.pipeline[1].name: unknown filter "foo"');
+  });
+
+  describe('confidentiality invariant (D6/FLT-03)', () => {
+    const conf = (over: Record<string, unknown> = {}) => ({ name: 'confidentiality', stage: 'both', ...over });
+    const withPipeline = (pipeline: unknown[]) => ({ ...minimal(), filters: { pipeline } });
+
+    it('rejects an empty pipeline', () => {
+      const err = failure(withPipeline([]));
+      expect(err.issues).toContainEqual({
+        path: 'filters.pipeline',
+        message: 'confidentiality must be enabled and fail-closed at stage "pre"',
+      });
+      expect(err.message).toContain('stage "post"');
+    });
+
+    it('rejects a disabled confidentiality filter', () => {
+      expect(failure(withPipeline([conf({ enabled: false })])).message).toContain('confidentiality must be enabled');
+    });
+
+    it('rejects confidentiality with onError skip, naming the path', () => {
+      const err = failure(withPipeline([conf({ onError: 'skip' })]));
+      expect(err.issues).toContainEqual({
+        path: 'filters.pipeline[0].onError',
+        message: 'confidentiality must be fail-closed',
+      });
+    });
+
+    it('rejects a pipeline that covers only one stage', () => {
+      const pre = failure(withPipeline([conf({ stage: 'pre' })]));
+      expect(pre.message).toContain('stage "post"');
+      const post = failure(withPipeline([conf({ stage: 'post' })]));
+      expect(post.message).toContain('stage "pre"');
+    });
+
+    it('rejects a pipeline with only non-confidentiality filters', () => {
+      expect(failure(withPipeline([{ name: 'style', stage: 'post' }])).message).toContain('confidentiality');
+    });
+
+    it('accepts separate pre and post entries, and a single "both" entry', () => {
+      expect(() => loadConfig(withPipeline([conf({ stage: 'pre' }), conf({ stage: 'post' })]))).not.toThrow();
+      expect(() => loadConfig(withPipeline([conf()]))).not.toThrow();
+    });
   });
 
   it('invalid stage and onError values are rejected', () => {

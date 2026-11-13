@@ -16,6 +16,32 @@ const filterSpecSchema = z.strictObject({
   enabled: z.boolean().default(true),
 });
 
+// D6 / FLT-03: confidentiality must run before the LLM call (pre) and after generation (post), and must fail
+// closed. A config that removes, disables or relaxes it is rejected at load instead of silently becoming pass-through.
+const pipelineSchema = z.array(filterSpecSchema).superRefine((pipeline, ctx) => {
+  for (const stage of ['pre', 'post'] as const) {
+    const covered = pipeline.some(
+      (f) =>
+        f.name === 'confidentiality' &&
+        f.enabled &&
+        f.onError === 'fail-closed' &&
+        (f.stage === stage || f.stage === 'both'),
+    );
+    if (!covered) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [],
+        message: `confidentiality must be enabled and fail-closed at stage "${stage}"`,
+      });
+    }
+  }
+  pipeline.forEach((f, i) => {
+    if (f.name === 'confidentiality' && f.onError !== 'fail-closed') {
+      ctx.addIssue({ code: 'custom', path: [i, 'onError'], message: 'confidentiality must be fail-closed' });
+    }
+  });
+});
+
 const personaSchema = z.strictObject({
   key: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, 'must start with a letter or digit and contain only letters, digits, "_" or "-"'),
   name: z.string().min(1),
@@ -57,7 +83,7 @@ export const configSchema = z.strictObject({
   }),
   filters: z
     .strictObject({
-      pipeline: z.array(filterSpecSchema).default(() => DEFAULT_PIPELINE.map((f) => ({ ...f }))),
+      pipeline: pipelineSchema.default(() => DEFAULT_PIPELINE.map((f) => ({ ...f }))),
     })
     .default(() => ({ pipeline: DEFAULT_PIPELINE.map((f) => ({ ...f })) })),
   personas: personasSchema.default(() => DEFAULT_PERSONAS.map((p) => structuredClone(p))),
