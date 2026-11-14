@@ -30,7 +30,7 @@ const make = (n: number): string => para.repeat(Math.ceil(n / para.length)).slic
 async function bestOf(chars: number, runs: number): Promise<number> {
   const input = make(chars);
   const answer = make(chars);
-  const engine = new Engine({ config: loadConfig({ llm: { model: 'mock' }, limits: { maxInputChars: 400_000 } }), llm: new MockLlmClient(() => answer) });
+  const engine = new Engine({ config: loadConfig({ llm: { model: 'mock' } }), llm: new MockLlmClient(() => answer) });
   await engine.ingest('terse', 'Terse Author', corpus());
   for (let i = 0; i < 2; i++) await engine.generate('terse', 'engineer', input); // warm-up (JIT)
   let best = Infinity;

@@ -42,7 +42,7 @@ End-to-end: `tests/system/e2e.test.ts` runs 3 fixture authors x 2 personas throu
 
 ### Performance guard (`tests/system/perf.test.ts`)
 
-Whole `generate()` path (size cap, pre filters, retrieval, prompt, scripted model, post filters), draft and model answer both of the stated size, best of 9 warm runs per size (the test raises `maxInputChars` to 400 000, so 200 000 chars is below the cap, not at the default):
+Whole `generate()` path (size cap, pre filters, retrieval, prompt, scripted model, post filters), draft and model answer both of the stated size, best of 9 warm runs per size, default config (200 000 chars is exactly the default `maxInputChars`):
 
 | Input | Measured |
 |---|---|
