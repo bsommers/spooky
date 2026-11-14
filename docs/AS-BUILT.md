@@ -40,16 +40,18 @@ End-to-end: `tests/system/e2e.test.ts` runs 3 fixture authors x 2 personas throu
 
 `git clone` of the branch into an empty directory, then `npm ci && scripts/verify.sh` (all six tiers, 1107 tests), `npm run build` and `scripts/verify.sh --coverage` all exit 0 (2026-11-14). `npm ci` reports 0 vulnerabilities.
 
-### Performance budget (`tests/system/perf.test.ts`)
+### Performance guard (`tests/system/perf.test.ts`)
 
-Whole `generate()` path (size cap, pre filters, retrieval, prompt, scripted model, post filters), draft and model answer both of the stated size, default config, best of 9 warm runs:
+Whole `generate()` path (size cap, pre filters, retrieval, prompt, scripted model, post filters), draft and model answer both of the stated size, best of 9 warm runs (50k: 9 runs, 200k: 9 runs; the test raises `maxInputChars` to 400 000):
 
-| Input | Measured | Budget (3x) |
-|---|---|---|
-| 50 000 chars | 3.7 ms warm (10.8 ms for the first, cold call) | 11 ms |
-| 200 000 chars (default `maxInputChars`) | 15 ms | 45 ms |
+| Input | Measured |
+|---|---|
+| 50 000 chars | about 3.7 ms warm (10.8 ms for the first, cold call) |
+| 200 000 chars | about 15 ms |
 
-Scaling is linear (12.5k: 1.1 ms, 25k: 2.0 ms, 50k: 3.7 ms, 100k: 7.2 ms, 200k: 15 ms). Real latency is dominated by the model call, not the pipeline. The budget uses the best of several runs so a busy machine cannot fail the build, while a super-linear regression still does; `GHOSTWRITER_PERF_SCALE=<factor>` scales both budgets on a slower machine.
+Scaling is linear (12.5k: 1.1 ms, 25k: 2.0 ms, 50k: 3.7 ms, 100k: 7.2 ms, 200k: 15 ms). Real latency is dominated by the model call, not the pipeline.
+
+The test asserts a **ratio**, `t(200k) / t(50k) < 8` (linear is about 4, a quadratic pass about 16), so it has no machine-dependent constant and holds under CPU contention and on other Node versions (an absolute 3x budget failed 3 of 3 runs with 40 busy processes). Set `GHOSTWRITER_PERF_SCALE=<positive number>` to also enforce absolute ceilings of 11 ms x factor (50k) and 45 ms x factor (200k) on a dedicated box; an invalid value (`abc`, `0`, negative) fails the test with a clear message.
 
 ### Coverage gate (`npm run coverage`, `scripts/verify.sh --coverage`)
 

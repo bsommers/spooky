@@ -1,20 +1,27 @@
-// Performance budget (system tier). The whole generate() path (size cap, pre filters, retrieval, prompt, scripted model,
-// post filters) on a 50 000-character draft and a 50 000-character model answer.
+// Performance guard (system tier). The whole generate() path (size cap, pre filters, retrieval, prompt, scripted model,
+// post filters) on a 50 000-character and a 200 000-character draft, each with an equally long model answer.
 //
-// Budget = 3 x the number measured on the dev machine (Node 26, 2026-11-14), best of 9 warm runs, so a noisy neighbour
-// cannot fail the build but an algorithmic regression (a quadratic pass, a lost fast path) does:
-//   50 000 chars : measured 3.7 ms  -> budget 11 ms
-//  200 000 chars : measured 15 ms   -> budget 45 ms (the default maxInputChars; guards against super-linear growth)
-// A slower machine may scale both with GHOSTWRITER_PERF_SCALE=<factor>. Recorded in docs/AS-BUILT.md.
+// The primary assertion is a RATIO, not a wall-clock number: t(200k) / t(50k) must stay below MAX_RATIO. The input is 4x
+// larger, so linear growth gives about 4 (measured 3.7 ms -> 15 ms on Node 26, 2026-11-14) and a quadratic pass gives
+// about 16. A ratio needs no machine-dependent constant, so CPU contention and slower Node versions scale both sides.
+// An absolute ceiling is checked only when GHOSTWRITER_PERF_SCALE=<positive number> is set explicitly (opt-in, for a
+// dedicated benchmark box): budgets are then 11 ms x SCALE (50k) and 45 ms x SCALE (200k). Recorded in docs/AS-BUILT.md.
 import { describe, expect, it } from 'vitest';
 import { Engine } from '../../src/engine.js';
 import { loadConfig } from '../../src/config/load.js';
 import { MockLlmClient } from '../../src/llm/mockClient.js';
 import { corpus } from '../helpers/rig.js';
 
-const SCALE = Number(process.env.GHOSTWRITER_PERF_SCALE ?? 1);
-const BUDGET_50K_MS = 11 * SCALE;
-const BUDGET_200K_MS = 45 * SCALE;
+const MAX_RATIO = 8; // linear is about 4, quadratic about 16
+
+/** Absolute-budget scale factor; undefined (no absolute check) unless GHOSTWRITER_PERF_SCALE is set. Throws on junk. */
+function parseScale(raw: string | undefined): number | undefined {
+  if (raw === undefined || raw === '') return undefined;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) throw new Error(`GHOSTWRITER_PERF_SCALE must be a positive finite number, got "${raw}"`);
+  return n;
+}
+const SCALE = parseScale(process.env.GHOSTWRITER_PERF_SCALE);
 
 const para =
   'We shipped the billing fix on Friday. Furthermore, it is important to note that the deploy used key AKIAIOSFODNN7EXAMPLE and the team moved fast. Obviously, latency fell from 300 ms to 2 ms; see https://example.com/a?b=1. ';
@@ -36,12 +43,20 @@ async function bestOf(chars: number, runs: number): Promise<number> {
   return best;
 }
 
-describe('perf budget', () => {
-  it(`50k-character draft through the full pipeline finishes within ${BUDGET_50K_MS} ms`, async () => {
-    expect(await bestOf(50_000, 9)).toBeLessThan(BUDGET_50K_MS);
+describe('perf scaling', () => {
+  it(`200k-character draft costs less than ${MAX_RATIO}x the 50k-character draft (linear is about 4x)`, async () => {
+    const t50 = await bestOf(50_000, 9);
+    const t200 = await bestOf(200_000, 9);
+    expect(t200 / t50, `t50=${t50.toFixed(2)} ms, t200=${t200.toFixed(2)} ms`).toBeLessThan(MAX_RATIO);
+    if (SCALE !== undefined) {
+      expect(t50).toBeLessThan(11 * SCALE);
+      expect(t200).toBeLessThan(45 * SCALE);
+    }
   });
 
-  it(`200k-character draft (default maxInputChars) finishes within ${BUDGET_200K_MS} ms`, async () => {
-    expect(await bestOf(200_000, 5)).toBeLessThan(BUDGET_200K_MS);
+  it('rejects an invalid GHOSTWRITER_PERF_SCALE', () => {
+    for (const bad of ['abc', '0', '-1', 'Infinity']) expect(() => parseScale(bad)).toThrow(/GHOSTWRITER_PERF_SCALE/);
+    expect(parseScale(undefined)).toBeUndefined();
+    expect(parseScale('2.5')).toBe(2.5);
   });
 });
