@@ -30,15 +30,15 @@ End-to-end: `tests/system/e2e.test.ts` runs 3 fixture authors x 2 personas throu
 |---|---|
 | smoke | 4 |
 | unit | 648 |
-| integration | 183 |
-| system | 26 |
+| integration | 184 |
+| system | 43 |
 | security | 241 |
 | torture | 5 |
-| total | 1107 |
+| total | 1125 |
 
 ### Clean clone
 
-`git clone` of the branch into an empty directory, then `npm ci && scripts/verify.sh` (all six tiers, 1107 tests), `npm run build` and `scripts/verify.sh --coverage` all exit 0 (2026-11-14). `npm ci` reports 0 vulnerabilities.
+`git clone` of the branch into an empty directory, then `npm ci && scripts/verify.sh` (all six tiers; 1107 tests when it was run, 1125 after the review fixes), `npm run build` and `scripts/verify.sh --coverage` all exit 0 (2026-11-14). `npm ci` reports 0 vulnerabilities.
 
 ### Performance guard (`tests/system/perf.test.ts`)
 
