@@ -93,7 +93,7 @@ const noEmoji: Filter = {
   },
 };
 // 1. config/filters.ts: add 'noEmoji' to KNOWN_FILTER_NAMES.
-// 2. Config: { filters: { pipeline: [...default entries..., { name: 'noEmoji', stage: 'post' }] } }, before the last confidentiality.
+// 2. Config filters.pipeline: insert { name: 'noEmoji', stage: 'post' } between the 'style' entry and the final 'confidentiality' entry.
 // 3. Engine: new Engine({ config, factories: { ...defaultFactories(), noEmoji: () => noEmoji } })
 ```
 

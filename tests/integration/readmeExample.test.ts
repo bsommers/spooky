@@ -1,5 +1,8 @@
 // Keeps the README's "add a filter in under 20 lines" example honest: the snippet below is copied verbatim into
 // README.md, and this test runs it through a real Engine.
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { KNOWN_FILTER_NAMES } from '../../config/filters.js';
 import { Engine, defaultFactories, loadConfig, MockLlmClient } from '../../src/index.js';
@@ -17,7 +20,7 @@ const noEmoji: Filter = {
   },
 };
 // 1. config/filters.ts: add 'noEmoji' to KNOWN_FILTER_NAMES.
-// 2. Config: { filters: { pipeline: [...default entries..., { name: 'noEmoji', stage: 'post' }] } }, before the last confidentiality.
+// 2. Config filters.pipeline: insert { name: 'noEmoji', stage: 'post' } between the 'style' entry and the final 'confidentiality' entry.
 // 3. Engine: new Engine({ config, factories: { ...defaultFactories(), noEmoji: () => noEmoji } })
 // ---- README snippet end ----
 
@@ -47,5 +50,27 @@ describe('README example: a custom filter', () => {
     expect(r.text).toBe('Shipped it  on Friday.');
     expect(r.trace.map((t) => t.filter)).toEqual(['confidentiality', 'llm', 'style', 'noEmoji', 'confidentiality']);
     expect(r.trace.find((t) => t.filter === 'noEmoji')).toMatchObject({ modified: true, metadata: { removed: 2 } });
+  });
+});
+
+describe('README example: the snippet in README.md is this test\'s snippet', () => {
+  const squash = (t: string): string => t.replace(/\s+/g, ' ').trim();
+
+  it('the fenced ts block that defines noEmoji matches the code between the markers, ignoring whitespace', () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const self = readFileSync(join(here, 'readmeExample.test.ts'), 'utf8');
+    // The marker strings are built from pieces so that this function does not contain them itself.
+    const start = '// ---- README snippet ' + 'start ----\n';
+    const end = '// ---- README snippet ' + 'end ----';
+    const a = self.indexOf(start);
+    const b = self.indexOf(end);
+    expect(a, 'start marker').toBeGreaterThanOrEqual(0);
+    expect(b, 'end marker').toBeGreaterThan(a);
+    const snippet = self.slice(a + start.length, b);
+
+    const readme = readFileSync(join(here, '..', '..', 'README.md'), 'utf8');
+    const blocks = [...readme.matchAll(/```ts\n([\s\S]*?)```/g)].map((m) => m[1] as string).filter((blk) => blk.includes('const noEmoji'));
+    expect(blocks, 'exactly one README ts block defines noEmoji').toHaveLength(1);
+    expect(squash(blocks[0] as string)).toBe(squash(snippet));
   });
 });
