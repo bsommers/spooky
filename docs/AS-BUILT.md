@@ -42,7 +42,7 @@ End-to-end: `tests/system/e2e.test.ts` runs 3 fixture authors x 2 personas throu
 
 ### Performance guard (`tests/system/perf.test.ts`)
 
-Whole `generate()` path (size cap, pre filters, retrieval, prompt, scripted model, post filters), draft and model answer both of the stated size, best of 9 warm runs (50k: 9 runs, 200k: 9 runs; the test raises `maxInputChars` to 400 000):
+Whole `generate()` path (size cap, pre filters, retrieval, prompt, scripted model, post filters), draft and model answer both of the stated size, best of 9 warm runs per size (the test raises `maxInputChars` to 400 000, so 200 000 chars is below the cap, not at the default):
 
 | Input | Measured |
 |---|---|
@@ -68,9 +68,9 @@ Uncovered lines (the gate is on lines; these are what remains):
 - `src/filters/confidentiality.ts:336-343, 364-365, 383-386` (custom-rule length-budget parser: the `\x`, `\u` and `\c` escape sizes, named groups, and the quantifier charge on a repeated group) and `:502` (the throw when redaction fails to reach a fixed point in 8 passes; no input is known to reach it, and the pipeline would turn it into `FilterFailedError`).
 - `src/registry/profileFile.ts:144` (rethrow of an unexpected `fs` error while cleaning a temp file); `stateLock.ts:80-82` (closing the lock file handle after a failed write) and `:120` (release when the lock file is already gone).
 
-Uncovered branches without an uncovered line (all defensive `?:`, `??` and `if` arms): `confidentiality.ts` 111, 241, 293, 300, 324, 333-335, 338-342, 350-351, 363-367, 375, 382, 406-407, 425, 465, 493, 557, 563; `pipeline.ts` 57; `protectedSpans.ts` 87, 123; `registry.ts` 38, 82-83, 93; `style.ts` 62, 70, 216, 270, 279-283, 292, 352; `profileFile.ts` 42, 108, 111, 125, 136; `sourceManager.ts` 53, 126, 147, 227, 311; `stateLock.ts` 87, 124; `targetManager.ts` 54. Over all of `src/`: 96.2% statements, 92.0% branches.
+Uncovered branches without an uncovered line (all defensive `?:`, `??` and `if` arms): `confidentiality.ts` 111, 241, 293, 300, 324, 333-335, 338-342, 350-351, 363-367, 375, 382, 406-407, 425, 465, 493, 557, 563; `pipeline.ts` 57; `protectedSpans.ts` 87, 123; `registry.ts` 38, 82-83, 93; `style.ts` 62, 70, 216, 270, 279-283, 292, 352; `profileFile.ts` 42, 108, 111, 125, 136; `sourceManager.ts` 53, 126, 147, 227, 311; `stateLock.ts` 87, 124; `targetManager.ts` 54. Over all of `src/` (measured 2026-11-14): 96.43% statements, 92.12% branches.
 
-Coverage mode changes one test: the 1 MB `chunk()` timing test (`tests/unit/chunker.test.ts`) is skipped when `--coverage` is passed, because v8 instrumentation makes it about 20x slower (3 s to 60 s) and a wall-clock assertion means nothing there. It runs in every normal `npm test` and `scripts/verify.sh`, so under `--coverage` the unit tier reports one skipped test (verify.sh counts it as neither passed nor failed; that is the open `CR-06` item from Phase 1).
+Coverage mode changes one test: the 1 MB `chunk()` timing test (`tests/unit/chunker.test.ts`) is skipped when coverage is on, however it was enabled (`--coverage`, `--coverage.enabled`, `--coverage=true` or config; the test reads the resolved vitest config), because v8 instrumentation makes it about 20x slower (3 s to 60 s) and a wall-clock assertion means nothing there. It runs in every normal `npm test` and `scripts/verify.sh`. `scripts/verify.sh` prints a `skipped:` line, shows `SKIPPED` per tier, and fails on any skipped or todo test outside `--coverage`; under `--coverage` the unit tier reports the one expected skip.
 
 ## What differs from the plan
 

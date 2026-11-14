@@ -49,7 +49,7 @@ With Anthropic instead: `export ANTHROPIC_API_KEY=...` and `generate --author an
 | `ghostwriter personas` | List target personas (`engineer`, `executive`, `newcomer` by default). |
 | `ghostwriter filters` | List the filter pipeline in execution order. |
 
-Every command takes `--config <file.json>` (default `$GHOSTWRITER_CONFIG`), `--state-dir <dir>` (default `$GHOSTWRITER_STATE_DIR`, else `~/.local/state/ghostwriter`) and `--json`. The result goes to stdout and nothing else does; warnings and errors go to stderr. With `--json` stdout is exactly one document, `{ok:true,...}` or `{ok:false,error:{code,message}}`.
+Every command takes `--config <file.json>` (default `$GHOSTWRITER_CONFIG`), `--state-dir <dir>` (default `$GHOSTWRITER_STATE_DIR`, else `$XDG_STATE_HOME/ghostwriter`, else `~/.local/state/ghostwriter`) and `--json`. The result goes to stdout and nothing else does; warnings and errors go to stderr. With `--json` stdout is exactly one document, `{ok:true,...}` or `{ok:false,error:{code,message}}`.
 
 Exit codes: `0` ok, `1` unexpected or file-system error, `2` usage/config/input, `3` unknown persona or author, `4` a fail-closed filter failed, `5` LLM failed, `6` input too large, `7` stored state corrupt, `8` state directory locked.
 
