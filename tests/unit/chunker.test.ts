@@ -188,10 +188,14 @@ describe('chunk: validation', () => {
   });
 });
 
+/** True when this run has coverage on, however it was enabled (--coverage, --coverage.enabled, --coverage=true, or config). */
+const coverageEnabled = (globalThis as { __vitest_worker__?: { config?: { coverage?: { enabled?: boolean } } } }).__vitest_worker__?.config?.coverage?.enabled === true;
+
 describe('chunk: pathological input stays fast and terminates', () => {
   // v8 coverage instrumentation makes this ~20x slower (3 s -> 60 s), so a wall-clock check is meaningless there. It still
-  // runs in every normal `npm test` / scripts/verify.sh; the coverage run only measures lines (vitest.config.ts).
-  it.skipIf(process.env.GHOSTWRITER_COVERAGE_RUN === '1')('1 MB of whitespace-free text, tiny stride', () => {
+  // runs in every normal `npm test` / scripts/verify.sh; the coverage run only measures lines. scripts/verify.sh reports
+  // the skip and fails on any skipped test outside coverage mode.
+  it.skipIf(coverageEnabled)('1 MB of whitespace-free text, tiny stride', () => {
     const t0 = performance.now();
     const out = chunk('y'.repeat(1_000_000), { size: 800, overlap: 799, maxChunks: 2_000_000 });
     expect(out.length).toBeGreaterThan(1000);

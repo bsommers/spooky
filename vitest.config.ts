@@ -1,13 +1,9 @@
 import { defineConfig } from 'vitest/config';
 
-// Set for `vitest --coverage` runs so wall-clock-only tests can opt out (v8 instrumentation slows tight loops ~20x).
-const coverageRun = process.argv.includes('--coverage');
-
 export default defineConfig({
   test: {
     include: ['tests/**/*.test.ts'],
     environment: 'node',
-    env: { GHOSTWRITER_COVERAGE_RUN: coverageRun ? '1' : '0' },
     // Only active with `--coverage` (npm run coverage, scripts/verify.sh --coverage).
     coverage: {
       provider: 'v8',

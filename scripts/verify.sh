@@ -77,13 +77,14 @@ fi
 echo
 echo "== per-tier counts =="
 if [ -f "$TMP/results.json" ]; then
-  node - "$TMP/results.json" "$ROOT" "${TIERS[@]}" <<'NODE' || FAIL=1
+  COVERAGE="$COVERAGE" node - "$TMP/results.json" "$ROOT" "${TIERS[@]}" <<'NODE' || FAIL=1
 const fs = require('node:fs');
 const path = require('node:path');
 const [, , file, root, ...tiers] = process.argv;
 const report = JSON.parse(fs.readFileSync(file, 'utf8'));
-const counts = Object.fromEntries(tiers.map((t) => [t, { total: 0, passed: 0, failed: 0 }]));
-counts.other = { total: 0, passed: 0, failed: 0 };
+const counts = Object.fromEntries(tiers.map((t) => [t, { total: 0, passed: 0, failed: 0, skipped: 0 }]));
+counts.other = { total: 0, passed: 0, failed: 0, skipped: 0 };
+const coverageRun = process.env.COVERAGE === '1';
 for (const suite of report.testResults ?? []) {
   const rel = path.relative(root, suite.name).split(path.sep);
   const tier = rel[0] === 'tests' && tiers.includes(rel[1]) ? rel[1] : 'other';
@@ -91,6 +92,7 @@ for (const suite of report.testResults ?? []) {
     counts[tier].total += 1;
     if (t.status === 'passed') counts[tier].passed += 1;
     else if (t.status === 'failed') counts[tier].failed += 1;
+    else counts[tier].skipped += 1; // skipped, todo, pending
   }
   // A suite that failed to load has no assertions but is still a failure.
   if (suite.status === 'failed' && (suite.assertionResults ?? []).length === 0) {
@@ -99,11 +101,24 @@ for (const suite of report.testResults ?? []) {
   }
 }
 let bad = false;
+let skipped = 0;
 for (const [tier, c] of Object.entries(counts)) {
   if (tier === 'other' && c.total === 0) continue;
-  const line = c.total === 0 ? '0 tests' : `${c.passed}/${c.total} passed` + (c.failed ? `, ${c.failed} FAILED` : '');
+  const line =
+    c.total === 0
+      ? '0 tests'
+      : `${c.passed}/${c.total} passed` + (c.failed ? `, ${c.failed} FAILED` : '') + (c.skipped ? `, ${c.skipped} SKIPPED` : '');
   console.log(`${tier.padEnd(12)} ${line}`);
   if (c.failed) bad = true;
+  skipped += c.skipped;
+}
+if (skipped > 0 && !coverageRun) {
+  console.error(`verify.sh: ${skipped} test(s) skipped outside --coverage mode; a skipped test proves nothing, so this fails`);
+  bad = true;
+} else if (skipped > 0) {
+  console.log(`skipped: ${skipped} (allowed under --coverage: the wall-clock chunker test opts out)`);
+} else {
+  console.log('skipped: 0');
 }
 process.exit(bad ? 1 : 0);
 NODE
