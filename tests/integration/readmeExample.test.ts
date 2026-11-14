@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { KNOWN_FILTER_NAMES } from '../../config/filters.js';
 import { Engine, defaultFactories, loadConfig, MockLlmClient } from '../../src/index.js';
 import type { Filter } from '../../src/index.js';
@@ -25,31 +25,36 @@ const noEmoji: Filter = {
 // ---- README snippet end ----
 
 describe('README example: a custom filter', () => {
-  const added = !KNOWN_FILTER_NAMES.includes('noEmoji');
-  afterEach(() => {
-    const i = (KNOWN_FILTER_NAMES as string[]).indexOf('noEmoji');
-    if (i >= 0) (KNOWN_FILTER_NAMES as string[]).splice(i, 1);
-  });
-
   it('runs in the post stage, before the final confidentiality pass, and shows up in the trace', async () => {
-    if (added) (KNOWN_FILTER_NAMES as string[]).push('noEmoji'); // step 1, done in the source tree for real users
-    const config = loadConfig({
-      llm: { model: 'mock' },
-      filters: {
-        pipeline: [
-          { name: 'confidentiality', stage: 'pre', onError: 'fail-closed' },
-          { name: 'style', stage: 'post', onError: 'skip' },
-          { name: 'noEmoji', stage: 'post' },
-          { name: 'confidentiality', stage: 'post', onError: 'fail-closed' },
-        ],
-      },
-    });
-    const engine = new Engine({ config, llm: new MockLlmClient(['Shipped it 🚀 on Friday.']), factories: { ...defaultFactories(), noEmoji: () => noEmoji } });
-    await engine.ingest('terse', 'Terse', corpus());
-    const r = await engine.generate('terse', 'engineer', 'We shipped the fix.');
-    expect(r.text).toBe('Shipped it  on Friday.');
-    expect(r.trace.map((t) => t.filter)).toEqual(['confidentiality', 'llm', 'style', 'noEmoji', 'confidentiality']);
-    expect(r.trace.find((t) => t.filter === 'noEmoji')).toMatchObject({ modified: true, metadata: { removed: 2 } });
+    // Step 1, done in the source tree for real users. Here the shared array is touched only for the duration of this
+    // test, and only if the name was not already there, so nothing leaks to other tests (e.g. with --no-isolate).
+    const names = KNOWN_FILTER_NAMES as string[];
+    const added = !names.includes('noEmoji');
+    if (added) names.push('noEmoji');
+    try {
+      const config = loadConfig({
+        llm: { model: 'mock' },
+        filters: {
+          pipeline: [
+            { name: 'confidentiality', stage: 'pre', onError: 'fail-closed' },
+            { name: 'style', stage: 'post', onError: 'skip' },
+            { name: 'noEmoji', stage: 'post' },
+            { name: 'confidentiality', stage: 'post', onError: 'fail-closed' },
+          ],
+        },
+      });
+      const engine = new Engine({ config, llm: new MockLlmClient(['Shipped it 🚀 on Friday.']), factories: { ...defaultFactories(), noEmoji: () => noEmoji } });
+      await engine.ingest('terse', 'Terse', corpus());
+      const r = await engine.generate('terse', 'engineer', 'We shipped the fix.');
+      expect(r.text).toBe('Shipped it  on Friday.');
+      expect(r.trace.map((t) => t.filter)).toEqual(['confidentiality', 'llm', 'style', 'noEmoji', 'confidentiality']);
+      expect(r.trace.find((t) => t.filter === 'noEmoji')).toMatchObject({ modified: true, metadata: { removed: 2 } });
+    } finally {
+      if (added) {
+        const i = names.indexOf('noEmoji');
+        if (i >= 0) names.splice(i, 1);
+      }
+    }
   });
 });
 
