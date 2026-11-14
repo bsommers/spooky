@@ -36,6 +36,10 @@ End-to-end: `tests/system/e2e.test.ts` runs 3 fixture authors x 2 personas throu
 | torture | 5 |
 | total | 1107 |
 
+### Clean clone
+
+`git clone` of the branch into an empty directory, then `npm ci && scripts/verify.sh` (all six tiers, 1107 tests), `npm run build` and `scripts/verify.sh --coverage` all exit 0 (2026-11-14). `npm ci` reports 0 vulnerabilities.
+
 ### Performance budget (`tests/system/perf.test.ts`)
 
 Whole `generate()` path (size cap, pre filters, retrieval, prompt, scripted model, post filters), draft and model answer both of the stated size, default config, best of 9 warm runs:
