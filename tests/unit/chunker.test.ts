@@ -189,7 +189,9 @@ describe('chunk: validation', () => {
 });
 
 describe('chunk: pathological input stays fast and terminates', () => {
-  it('1 MB of whitespace-free text, tiny stride', () => {
+  // v8 coverage instrumentation makes this ~20x slower (3 s -> 60 s), so a wall-clock check is meaningless there. It still
+  // runs in every normal `npm test` / scripts/verify.sh; the coverage run only measures lines (vitest.config.ts).
+  it.skipIf(process.env.GHOSTWRITER_COVERAGE_RUN === '1')('1 MB of whitespace-free text, tiny stride', () => {
     const t0 = performance.now();
     const out = chunk('y'.repeat(1_000_000), { size: 800, overlap: 799, maxChunks: 2_000_000 });
     expect(out.length).toBeGreaterThan(1000);

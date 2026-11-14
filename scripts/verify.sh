@@ -3,6 +3,7 @@
 #
 #   scripts/verify.sh                   run everything
 #   scripts/verify.sh --only <pattern>  run only test files whose path matches <pattern>
+#   scripts/verify.sh --coverage        also enforce the coverage gate (src/filters, src/registry >= 90% lines)
 #
 # Tiers (tests/<tier>/): smoke unit integration system security torture.
 # A tier directory that does not exist yet reports "0 tests"; it is not an error.
@@ -14,6 +15,7 @@ cd "$ROOT" || exit 2
 
 TIERS=(smoke unit integration system security torture)
 ONLY=""
+COVERAGE=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -25,8 +27,12 @@ while [ $# -gt 0 ]; do
       ONLY="$2"
       shift 2
       ;;
+    --coverage)
+      COVERAGE=1
+      shift
+      ;;
     -h|--help)
-      sed -n '2,9p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -56,6 +62,9 @@ fi
 echo
 echo "== tests =="
 VITEST_ARGS=(run --reporter=default --reporter=json "--outputFile.json=$TMP/results.json")
+if [ "$COVERAGE" -eq 1 ]; then
+  VITEST_ARGS+=(--coverage)
+fi
 if [ -n "$ONLY" ]; then
   VITEST_ARGS+=("$ONLY")
 fi
