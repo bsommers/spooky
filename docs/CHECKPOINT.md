@@ -1,12 +1,12 @@
 # Checkpoint (2026-11-13, autonomous run mid-flight)
 
-**Status:** IN PROGRESS. `/gsd-autonomous` running. Phases 1-6 (all of v1) COMPLETE and committed (P6 verified, gate 1125 tests). Next: Phases 7-8 are v2 - confirm with user before running; also open: fast-forward main. No push/PR/merge.
+**Status:** Phases 1-6 (all of v1) COMPLETE. `main` fast-forwarded to e198796 and PUSHED to origin/main (user-authorized 2026-11-14). Phase branch `gsd/phase-01-foundation` not pushed. Phases 7-8 (v2) pending: confirm with user before running. No PR.
 
 ## Goal (user's words)
 "/gsd-execute-phase 1 - ... parallel subagents using the best and cheapest model", then "/gsd-autonomous" (all remaining phases). User confirmed D2 (LLM adapters) and deps @anthropic-ai/sdk ^0.40, commander ^12; D3/D4/D5 kept as written.
 
 ## State (verify by command after compact)
-- Repo https://github.com/bsommers/spooky. Branch `gsd/phase-01-foundation`, far ahead of `main` (97b526f). Nothing pushed, no PR.
+- Repo https://github.com/bsommers/spooky. Branch `gsd/phase-01-foundation`, far ahead of `main` (97b526f). main pushed; branch not pushed; no PR.
 - Docs commits: P1 534e935, P2 e956e8a, P3 5a346d9, P4 f69c48c, P5 2ab63a1 (code commits precede each).
 - Untracked, never commit: `.planning/config.json`, `.planning/state.json`.
 - No background agents running.
@@ -26,7 +26,7 @@ E2E test, 1k-input fuzz torture (only GhostwriterError thrown), perf budget 3x m
 - Optional: `git remote set-head origin -a`; SCR-*/HUM-* missing from REQUIREMENTS traceability.
 
 ## Authorizations
-- None outward-facing. No push/PR/release/merge to main. Commits on the phase branch only.
+- Push of main done once (2026-11-14). Any further push/PR/release needs fresh say-so.
 
 ## Decisions still open
-- Run Phase 6 (user "go" pending). Run v2 phases 7-8? Fast-forward `main`?
+- Run v2 phases 7-8? Fix glued-secret leak in confidentiality filter (documented limit) or keep?
