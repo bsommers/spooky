@@ -1,6 +1,6 @@
 // End-to-end (system tier, in process): the public Engine with the default config and a scripted mock model.
 // 3 fixture authors are ingested, then each generates for 2 personas. Asserts what the user can observe: persona
-// structure reaches the prompt and the (scripted) answer, the trace has the documented shape, nothing secret leaves
+// mandates reach the prompt (the scripted answer only mirrors what the prompt asked for), the trace has the documented shape, nothing secret leaves
 // the process or appears in the result, and the whole run is deterministic.
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -9,6 +9,8 @@ import { describe, expect, it } from 'vitest';
 import { Engine } from '../../src/engine.js';
 import { loadConfig } from '../../src/config/load.js';
 import { MockLlmClient } from '../../src/llm/mockClient.js';
+import { LlmTransportError } from '../../src/llm/retry.js';
+import { LlmError } from '../../src/models/errors.js';
 import type { LlmRequest, TraceEntry } from '../../src/models/types.js';
 
 const authorsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'authors');
@@ -42,7 +44,7 @@ async function runAll() {
 }
 
 describe('e2e: ingest 3 authors, generate 2 personas each', () => {
-  it('produces one result per (author, persona) with persona structure markers', async () => {
+  it('produces one result per (author, persona); the scripted model answers according to the mandate it was prompted with', async () => {
     const { results } = await runAll();
     expect(results).toHaveLength(6);
     for (const r of results.filter((x) => x.persona === 'executive')) {
@@ -120,5 +122,38 @@ describe('e2e: ingest 3 authors, generate 2 personas each', () => {
     const { engine } = await runAll();
     const avg = AUTHORS.map((a) => engine.getProfile(a.id).avgSentenceLength);
     expect(new Set(avg).size).toBe(3);
+  });
+
+  it('a banned phrase that survives the style filter (inside inline code) is flagged as persona-banned, and the text is still returned', async () => {
+    const llm = new MockLlmClient(['BLUF: ship it.\n\nSee `deep dive` in the runbook. Furthermore, no regressions.']);
+    const engine = new Engine({ config: loadConfig({ llm: { model: 'mock' } }), llm });
+    await engine.ingest('terse', AUTHORS[0].name, readFileSync(join(authorsDir, AUTHORS[0].file), 'utf8'));
+    const r = await engine.generate('terse', 'executive', DRAFT);
+    expect(r.text).toContain('`deep dive`'); // protected span: the style filter leaves inline code alone
+    expect(r.text).not.toMatch(/Furthermore/i);
+    expect(r.trace.map((t) => t.filter)).toEqual(['confidentiality', 'llm', 'style', 'confidentiality', 'persona-banned']);
+    expect(r.trace.at(-1)).toMatchObject({ filter: 'persona-banned', modified: false, metadata: { found: true, count: 1 } });
+    expect(JSON.stringify(r.trace)).not.toContain('deep dive'); // the trace reports a count, never the phrase
+  });
+
+  it('a transient provider failure is retried and reported as attempts: 2; a final failure rejects with LlmError and no text', async () => {
+    const noSleep = async (): Promise<void> => {};
+    const flaky = new MockLlmClient([new LlmTransportError('network'), 'The billing fix ships Friday.']);
+    const engine = new Engine({ config: loadConfig({ llm: { model: 'mock' } }), llm: flaky, retry: { sleep: noSleep } });
+    await engine.ingest('terse', AUTHORS[0].name, readFileSync(join(authorsDir, AUTHORS[0].file), 'utf8'));
+    const ok = await engine.generate('terse', 'engineer', DRAFT);
+    expect(ok.text).toContain('The billing fix ships Friday.');
+    expect(ok.trace.find((t) => t.filter === 'llm')?.metadata).toMatchObject({ attempts: 2 });
+
+    const down = new MockLlmClient(() => {
+      throw new LlmTransportError('http', { status: 503 });
+    });
+    const failing = new Engine({ config: loadConfig({ llm: { model: 'mock', maxRetries: 1 } }), llm: down, retry: { sleep: noSleep } });
+    await failing.ingest('terse', AUTHORS[0].name, readFileSync(join(authorsDir, AUTHORS[0].file), 'utf8'));
+    const err = await failing.generate('terse', 'engineer', DRAFT).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(LlmError);
+    expect(err).toMatchObject({ code: 'LLM_FAILED', attempts: 2 });
+    expect(down.callCount).toBe(2);
+    expect(String((err as Error).message)).not.toContain(AWS);
   });
 });
