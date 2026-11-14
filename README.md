@@ -37,7 +37,7 @@ echo "We should ship the billing fix Friday." | node dist/src/cli/bin.js generat
 
 With Anthropic instead: `export ANTHROPIC_API_KEY=...` and `generate --author ann --persona executive --model <anthropic-model-id>`. The key is only ever read from the environment variable named by `llm.apiKeyEnv` (default `ANTHROPIC_API_KEY`); it is never put in a config file, flag value, log or trace.
 
-`ghostwriter` is the installed bin name (`npm link` or `npx ghostwriter ...` after a build).
+`ghostwriter` is the bin name after `npm link` in a built checkout; the commands above call `node dist/src/cli/bin.js` directly. The package is named `spooky` and is not published, so do not run `npx ghostwriter`: outside a linked checkout it would fetch an unrelated registry package of that name.
 
 ## CLI
 
