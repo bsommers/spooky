@@ -48,13 +48,13 @@ Body: `{ "ok": false, "error": { "code": "UNKNOWN_AUTHOR", "message": "..." } }`
 | `STATE_LOCKED`, `OVERLOADED` | 503 | 8 | `OVERLOADED` carries `Retry-After: 1` |
 
 ## Options
-`ghostwriter serve [--host 127.0.0.1] [--port 8787] [--token-env NAME] [--allow-origin URL]... [--allow-host NAME]... [--max-body BYTES] [--mcp] [--config FILE] [--state-dir DIR] [--json]`
+`ghostwriter serve [--host 127.0.0.1] [--port 8787] [--token-env NAME] [--allow-origin URL]... [--allow-host NAME]... [--max-body BYTES] [--max-ingest-body BYTES] [--mcp] [--config FILE] [--state-dir DIR] [--json]`
 
 - `--port 0` picks a free port; with `--json` the startup document `{"ok":true,"listening":{"host","port","url","api","mcp","auth"}}` is printed on stdout (the "listening on" line goes to stderr).
 - `--token-env NAME`: the NAME of the environment variable holding the bearer token (16 to 512 printable characters). The token is never taken from the command line. If the variable is unset or empty the server does not start (it never silently falls back to "no token").
 - `--host`: anything but a loopback address needs `--token-env`, otherwise the server refuses to start (`CONFIG_INVALID`, exit 2).
 - `--allow-origin`: an exact browser origin (`http://localhost:5173`) that may call the API cross-origin. Never `*`, never `null`, no paths.
-- `--max-body`: request body cap in bytes (default 16 MiB, range 1 KiB to 256 MiB).
+- `--max-body`: request body cap in bytes for every route except ingest (default 1 MiB); `--max-ingest-body`: cap for `ingest` and `/mcp` (default 10 MiB). Both range from 1 KiB to 256 MiB. A body over the cap is 413 before it is read. (The engine accepts corpora up to 10 M characters, up to 40 MB of UTF-8; raise `--max-ingest-body` if you ingest more than 10 MiB through the API, or ingest with the CLI.)
 - Defaults you cannot change from the command line: 30 s to receive a request, 8 operations in flight (the ninth gets 503), 16 KiB of headers.
 
 ## Threat model and the tokenless default

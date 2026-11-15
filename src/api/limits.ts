@@ -9,8 +9,10 @@ import { SurfaceError } from '../service/errors.js';
 import { InputTooLargeError } from '../models/errors.js';
 
 export interface ApiLimits {
-  /** Largest request body in bytes. A 10M-character corpus is up to 40 MB of UTF-8; the default fits ordinary corpora. */
+  /** Largest request body in bytes for every route except ingest (REQUIREMENTS API-03: default 1 MiB). */
   maxBodyBytes: number;
+  /** Largest body for `ingest` and for `/mcp` (which can carry an ingest call): default 10 MiB. A corpus is capped by the engine separately. */
+  maxIngestBodyBytes: number;
   /** Time allowed to receive the whole request (headers and body), milliseconds. */
   readTimeoutMs: number;
   /** Operations (and MCP requests) running at the same time. */
@@ -18,7 +20,8 @@ export interface ApiLimits {
 }
 
 export const DEFAULT_API_LIMITS: Readonly<ApiLimits> = Object.freeze({
-  maxBodyBytes: 16 * 1024 * 1024,
+  maxBodyBytes: 1024 * 1024,
+  maxIngestBodyBytes: 10 * 1024 * 1024,
   readTimeoutMs: 30_000,
   maxConcurrent: 8,
 });

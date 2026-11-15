@@ -23,6 +23,7 @@ export interface ListenOpts {
   allowOrigin: string[];
   allowHost: string[];
   maxBody?: number;
+  maxIngestBody?: number;
 }
 
 const int = (v: string): number => {
@@ -39,7 +40,8 @@ export function addListenOptions(cmd: Command): Command {
     .option('--token-env <NAME>', 'NAME of the environment variable holding the bearer token (16+ characters); never the token itself')
     .option('--allow-origin <origin>', 'browser origin allowed to call cross-origin, exact, e.g. http://localhost:5173 (repeatable; never "*")', collect, [] as string[])
     .option('--allow-host <name>', 'extra Host header name accepted besides loopback and --host (repeatable)', collect, [] as string[])
-    .option('--max-body <bytes>', `largest request body (default ${DEFAULT_API_LIMITS.maxBodyBytes})`, int);
+    .option('--max-body <bytes>', `largest request body except ingest (default ${DEFAULT_API_LIMITS.maxBodyBytes})`, int)
+    .option('--max-ingest-body <bytes>', `largest body for ingest and /mcp (default ${DEFAULT_API_LIMITS.maxIngestBodyBytes})`, int);
 }
 
 /** The process-lifetime abort signal: the injected one, else SIGINT / SIGTERM. */
@@ -83,7 +85,7 @@ export async function startListening(
     ...(token === undefined ? {} : { token }),
     allowOrigins: opts.allowOrigin,
     allowHosts: opts.allowHost,
-    ...(opts.maxBody === undefined ? {} : { limits: { maxBodyBytes: opts.maxBody } }),
+    limits: { ...(opts.maxBody === undefined ? {} : { maxBodyBytes: opts.maxBody }), ...(opts.maxIngestBody === undefined ? {} : { maxIngestBodyBytes: opts.maxIngestBody }) },
     api: mode.api,
     mcp: mode.mcp,
     log: (line) => io.stderr(`${line}\n`),

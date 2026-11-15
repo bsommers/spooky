@@ -46,7 +46,7 @@ export interface StdioOptions {
 /** Serve over stdio until the client closes stdin or `signal` aborts. Resolves when the connection has closed. */
 export async function serveStdio(runtime: ServiceRuntime, options: StdioOptions = {}, ops: readonly AnyOperation[] = OPERATIONS): Promise<void> {
   const server = createMcpServer(runtime, ops);
-  const transport = new StdioServerTransport(options.stdin, options.stdout, { maxBufferSize: options.maxMessageBytes ?? DEFAULT_API_LIMITS.maxBodyBytes });
+  const transport = new StdioServerTransport(options.stdin, options.stdout, { maxBufferSize: options.maxMessageBytes ?? DEFAULT_API_LIMITS.maxIngestBodyBytes });
   const closed = new Promise<void>((resolve) => {
     transport.onclose = () => resolve();
   });

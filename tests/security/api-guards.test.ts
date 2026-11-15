@@ -106,7 +106,7 @@ describe('DNS rebinding and CSRF', () => {
 });
 
 describe('size, shape and time limits', () => {
-  const limits = { maxBodyBytes: 2048, readTimeoutMs: 400, maxConcurrent: 2 };
+  const limits = { maxBodyBytes: 2048, maxIngestBodyBytes: 2048, readTimeoutMs: 400, maxConcurrent: 2 };
 
   it('a declared body over the cap is 413 immediately, without reading it or running the operation', async () => {
     await withServer({ limits }, async (s, rig) => {
@@ -132,6 +132,18 @@ describe('size, shape and time limits', () => {
       );
       expect(statusOf(viaSocket)).toBe(413);
       expect(rig.engine.listAuthors()).toHaveLength(1);
+    });
+  });
+
+  it('the default caps are 1 MiB for everything but ingest and 10 MiB for ingest and /mcp (REQUIREMENTS API-03)', async () => {
+    await withServer({}, async (s) => {
+      const small = await socketExchange(s.port, `POST /api/score HTTP/1.1\r\nHost: 127.0.0.1:${s.port}\r\nContent-Type: application/json\r\nContent-Length: ${1024 * 1024 + 1}\r\n\r\n`);
+      expect(statusOf(small)).toBe(413);
+      // an ingest of 5 MiB declared is not refused at the door (it is read, then judged by the schema/engine); 11 MiB is
+      const big = await socketExchange(s.port, `POST /api/ingest HTTP/1.1\r\nHost: 127.0.0.1:${s.port}\r\nContent-Type: application/json\r\nContent-Length: ${11 * 1024 * 1024}\r\n\r\n`);
+      expect(statusOf(big)).toBe(413);
+      const ok = await socketExchange(s.port, `POST /api/ingest HTTP/1.1\r\nHost: 127.0.0.1:${s.port}\r\nContent-Type: application/json\r\nContent-Length: ${5 * 1024 * 1024}\r\n\r\n`, '', 200);
+      expect(statusOf(ok)).toBe(0); // waiting for the body, not rejected
     });
   });
 

@@ -29,7 +29,7 @@ Claude Desktop / Claude Code style client entry (stdio):
 Results: on success `structuredContent` and the text content both hold `{ "ok": true, ...data }`, identical to `ghostwriter --json` and the HTTP body. A failure is a tool result with `isError: true` whose text content is `{ "ok": false, "error": { "code", "message" } }` (no `structuredContent`: clients validate that against the success `outputSchema`), with the same `code` as the other surfaces (table in [API.md](API.md#errors)); `_meta["ghostwriter/category"]` is one of `invalid_request`, `not_found`, `too_large`, `upstream`, `unavailable`, `denied`, `internal`. An unknown tool name is a protocol error (`InvalidParams`).
 
 ## Transports
-- **stdio**: stdout carries protocol frames only (this process writes nothing else there, not even with `--json`); logs go to stderr. End of input ends the session. A single message larger than the body cap (16 MiB) closes the connection.
+- **stdio**: stdout carries protocol frames only (this process writes nothing else there, not even with `--json`); logs go to stderr. End of input ends the session. A single message larger than the ingest cap (10 MiB) closes the connection.
 - **streamable HTTP**: `POST /mcp`, stateless (a fresh server per request, JSON responses, no sessions to hijack). Clients must send `Content-Type: application/json` and `Accept: application/json, text/event-stream`. `GET`/`DELETE` are 405. Host/Origin checks, the bearer token, body/time/concurrency limits and security headers are the ones described in [API.md](API.md#threat-model-and-the-tokenless-default). `mcp --http` serves only `/mcp`; `serve --mcp` serves `/mcp` next to the REST routes.
 
 ## Untrusted inputs

@@ -134,8 +134,8 @@ export async function startApiServer(options: ApiServerOptions): Promise<ApiServ
   const token = options.token === undefined ? undefined : validateToken(options.token);
   assertBindAllowed({ host, hasToken: token !== undefined });
   const limits: ApiLimits = { ...DEFAULT_API_LIMITS, ...options.limits };
-  if (!Number.isInteger(limits.maxBodyBytes) || limits.maxBodyBytes < 1024 || limits.maxBodyBytes > MAX_BODY_CEILING) {
-    throw new ConfigError(`--max-body must be between 1024 and ${MAX_BODY_CEILING} bytes`);
+  for (const [flag, v] of [['--max-body', limits.maxBodyBytes], ['--max-ingest-body', limits.maxIngestBodyBytes]] as const) {
+    if (!Number.isInteger(v) || v < 1024 || v > MAX_BODY_CEILING) throw new ConfigError(`${flag} must be between 1024 and ${MAX_BODY_CEILING} bytes`);
   }
   if (!Number.isInteger(limits.maxConcurrent) || limits.maxConcurrent < 1) throw new ConfigError('max concurrency must be a positive integer');
   const origins = { allowedOrigins: new Set((options.allowOrigins ?? []).map(normalizeAllowedOrigin)) };
@@ -198,8 +198,8 @@ export async function startApiServer(options: ApiServerOptions): Promise<ApiServ
       const release = gate.acquire();
       res.once('close', release);
       if (!isJsonContentType(req.headers['content-type'])) throw new SurfaceError('UNSUPPORTED_MEDIA_TYPE', 'Content-Type must be application/json');
-      checkDeclaredLength(req, limits.maxBodyBytes);
-      const body = parseJsonBody(await readBody(req, limits));
+      checkDeclaredLength(req, limits.maxIngestBodyBytes);
+      const body = parseJsonBody(await readBody(req, { ...limits, maxBodyBytes: limits.maxIngestBodyBytes }));
       await handleMcpHttp(runtime, req, res, body, ops);
       return;
     }
@@ -229,8 +229,9 @@ export async function startApiServer(options: ApiServerOptions): Promise<ApiServ
       input = queryInput(url);
     } else {
       if (!isJsonContentType(req.headers['content-type'])) throw new SurfaceError('UNSUPPORTED_MEDIA_TYPE', 'Content-Type must be application/json');
-      checkDeclaredLength(req, limits.maxBodyBytes);
-      input = parseJsonBody(await readBody(req, limits));
+      const cap = op.mutates ? limits.maxIngestBodyBytes : limits.maxBodyBytes;
+      checkDeclaredLength(req, cap);
+      input = parseJsonBody(await readBody(req, { ...limits, maxBodyBytes: cap }));
     }
     sendJson(res, 200, await runtime.runDocument(op, input));
   }
