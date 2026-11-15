@@ -1,5 +1,5 @@
 {
-  "description": "Labeled calibration corpus for the AI-likeness scorer (Phase 7). One entry per file; scripts/calibrate.ts and tests/unit/scoring/corpus.test.ts reject a file without an entry and an entry without a file.",
+  "description": "Labeled calibration corpus for the AI-likeness scorer. set v1 = original 73 files (Phase 7); set v2 = genre-matched additions (calibration v2). One entry per file; scripts/calibrate.ts and tests/unit/scoring/corpus.test.ts reject a file without an entry and an entry without a file.",
   "files": [
     {
       "file": "human/01-federalist-papers.txt",
@@ -7,7 +7,9 @@
       "source": "The Federalist Papers (Hamilton, Madison, Jay), 1787-88",
       "url": "https://www.gutenberg.org/ebooks/1404",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/02-thoreau-walden.txt",
@@ -15,7 +17,9 @@
       "source": "Walden (Henry David Thoreau), 1854",
       "url": "https://www.gutenberg.org/ebooks/205",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/03-darwin-origin.txt",
@@ -23,7 +27,9 @@
       "source": "On the Origin of Species (Charles Darwin), 1859",
       "url": "https://www.gutenberg.org/ebooks/1228",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/04-franklin-autobiography.txt",
@@ -31,7 +37,9 @@
       "source": "Autobiography (Benjamin Franklin), written 1771-1790",
       "url": "https://www.gutenberg.org/ebooks/148",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/05-emerson-essays.txt",
@@ -39,7 +47,9 @@
       "source": "Essays, First Series (Ralph Waldo Emerson), 1841",
       "url": "https://www.gutenberg.org/ebooks/2944",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/06-twain-mississippi.txt",
@@ -47,7 +57,9 @@
       "source": "Life on the Mississippi (Mark Twain), 1883",
       "url": "https://www.gutenberg.org/ebooks/245",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/07-twain-innocents.txt",
@@ -55,7 +67,9 @@
       "source": "The Innocents Abroad (Mark Twain), 1869",
       "url": "https://www.gutenberg.org/ebooks/3176",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/08-austen-pride.txt",
@@ -63,7 +77,9 @@
       "source": "Pride and Prejudice (Jane Austen), 1813",
       "url": "https://www.gutenberg.org/ebooks/1342",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/09-dickens-two-cities.txt",
@@ -71,7 +87,9 @@
       "source": "A Tale of Two Cities (Charles Dickens), 1859",
       "url": "https://www.gutenberg.org/ebooks/98",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/10-dickens-expectations.txt",
@@ -79,7 +97,9 @@
       "source": "Great Expectations (Charles Dickens), 1861",
       "url": "https://www.gutenberg.org/ebooks/1400",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/11-darwin-beagle.txt",
@@ -87,7 +107,9 @@
       "source": "The Voyage of the Beagle (Charles Darwin), 1839",
       "url": "https://www.gutenberg.org/ebooks/3704",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/12-london-call.txt",
@@ -95,7 +117,9 @@
       "source": "The Call of the Wild (Jack London), 1903",
       "url": "https://www.gutenberg.org/ebooks/215",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/13-doyle-holmes.txt",
@@ -103,7 +127,9 @@
       "source": "The Adventures of Sherlock Holmes (Arthur Conan Doyle), 1892",
       "url": "https://www.gutenberg.org/ebooks/1661",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/14-james-pragmatism.txt",
@@ -111,7 +137,9 @@
       "source": "Pragmatism (William James), 1907",
       "url": "https://www.gutenberg.org/ebooks/5116",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/15-thoreau-disobedience.txt",
@@ -119,7 +147,9 @@
       "source": "Civil Disobedience (Henry David Thoreau), 1849",
       "url": "https://www.gutenberg.org/ebooks/71",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/16-wells-time-machine.txt",
@@ -127,7 +157,9 @@
       "source": "The Time Machine (H. G. Wells), 1895",
       "url": "https://www.gutenberg.org/ebooks/35",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/17-wells-war-worlds.txt",
@@ -135,7 +167,9 @@
       "source": "The War of the Worlds (H. G. Wells), 1898",
       "url": "https://www.gutenberg.org/ebooks/36",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/18-douglass-narrative.txt",
@@ -143,7 +177,9 @@
       "source": "Narrative of the Life of Frederick Douglass, 1845",
       "url": "https://www.gutenberg.org/ebooks/23",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/19-mill-liberty.txt",
@@ -151,7 +187,9 @@
       "source": "On Liberty (John Stuart Mill), 1859",
       "url": "https://www.gutenberg.org/ebooks/34901",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/20-washington-up-slavery.txt",
@@ -159,7 +197,9 @@
       "source": "Up from Slavery (Booker T. Washington), 1901",
       "url": "https://www.gutenberg.org/ebooks/2376",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/21-melville-moby-dick.txt",
@@ -167,7 +207,9 @@
       "source": "Moby-Dick (Herman Melville), 1851",
       "url": "https://www.gutenberg.org/ebooks/2701",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/22-stoker-dracula.txt",
@@ -175,7 +217,9 @@
       "source": "Dracula (Bram Stoker), 1897",
       "url": "https://www.gutenberg.org/ebooks/345",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/23-gilman-wallpaper.txt",
@@ -183,7 +227,9 @@
       "source": "The Yellow Wallpaper (Charlotte Perkins Gilman), 1892",
       "url": "https://www.gutenberg.org/ebooks/1952",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/24-carroll-alice.txt",
@@ -191,7 +237,9 @@
       "source": "Alice's Adventures in Wonderland (Lewis Carroll), 1865",
       "url": "https://www.gutenberg.org/ebooks/11",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/25-bronte-jane-eyre.txt",
@@ -199,7 +247,9 @@
       "source": "Jane Eyre (Charlotte Bronte), 1847",
       "url": "https://www.gutenberg.org/ebooks/1260",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/26-twain-huck-finn.txt",
@@ -207,7 +257,9 @@
       "source": "Adventures of Huckleberry Finn (Mark Twain), 1884",
       "url": "https://www.gutenberg.org/ebooks/76",
       "license": "public domain (Project Gutenberg text, header/footer removed)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits",
+      "set": "v1",
+      "genre": "literary-19c"
     },
     {
       "file": "human/27-rfc1855-netiquette.txt",
@@ -215,7 +267,9 @@
       "source": "RFC 1855, Netiquette Guidelines (1995)",
       "url": "https://www.rfc-editor.org/rfc/rfc1855.txt",
       "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded",
+      "set": "v1",
+      "genre": "rfc"
     },
     {
       "file": "human/28-rfc1925-twelve-truths.txt",
@@ -223,7 +277,9 @@
       "source": "RFC 1925, The Twelve Networking Truths (1996)",
       "url": "https://www.rfc-editor.org/rfc/rfc1925.txt",
       "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded",
+      "set": "v1",
+      "genre": "rfc"
     },
     {
       "file": "human/29-rfc3935-ietf-mission.txt",
@@ -231,7 +287,9 @@
       "source": "RFC 3935, A Mission Statement for the IETF (2004)",
       "url": "https://www.rfc-editor.org/rfc/rfc3935.txt",
       "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded",
+      "set": "v1",
+      "genre": "rfc"
     },
     {
       "file": "human/30-rfc5218-successful-protocol.txt",
@@ -239,7 +297,9 @@
       "source": "RFC 5218, What Makes for a Successful Protocol? (2008)",
       "url": "https://www.rfc-editor.org/rfc/rfc5218.txt",
       "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded",
+      "set": "v1",
+      "genre": "rfc"
     },
     {
       "file": "human/31-rfc7282-consensus.txt",
@@ -247,7 +307,9 @@
       "source": "RFC 7282, On Consensus and Humming in the IETF (2014)",
       "url": "https://www.rfc-editor.org/rfc/rfc7282.txt",
       "license": "IETF Trust RFC text (BCP 78 / IETF Trust Legal Provisions: reproduction permitted with attribution); see NOTICE",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded",
+      "set": "v1",
+      "genre": "rfc"
     },
     {
       "file": "human/32-rfc8890-end-users.txt",
@@ -255,7 +317,9 @@
       "source": "RFC 8890, The Internet is for End Users (2020)",
       "url": "https://www.rfc-editor.org/rfc/rfc8890.txt",
       "license": "IETF Trust RFC text (BCP 78 / IETF Trust Legal Provisions: reproduction permitted with attribution); see NOTICE",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded",
+      "set": "v1",
+      "genre": "rfc"
     },
     {
       "file": "human/33-rfc1958-architecture.txt",
@@ -263,7 +327,9 @@
       "source": "RFC 1958, Architectural Principles of the Internet (1996)",
       "url": "https://www.rfc-editor.org/rfc/rfc1958.txt",
       "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded",
+      "set": "v1",
+      "genre": "rfc"
     },
     {
       "file": "human/34-rfc3439-guidelines.txt",
@@ -271,7 +337,9 @@
       "source": "RFC 3439, Some Internet Architectural Guidelines and Philosophy (2002)",
       "url": "https://www.rfc-editor.org/rfc/rfc3439.txt",
       "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded",
+      "set": "v1",
+      "genre": "rfc"
     },
     {
       "file": "human/35-rfc2775-transparency.txt",
@@ -279,7 +347,9 @@
       "source": "RFC 2775, Internet Transparency (2000)",
       "url": "https://www.rfc-editor.org/rfc/rfc2775.txt",
       "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded",
+      "set": "v1",
+      "genre": "rfc"
     },
     {
       "file": "human/36-rfc8170-planning.txt",
@@ -287,7 +357,9 @@
       "source": "RFC 8170, Planning for Protocol Adoption and Subsequent Transitions (2017)",
       "url": "https://www.rfc-editor.org/rfc/rfc8170.txt",
       "license": "IETF Trust RFC text (BCP 78 / IETF Trust Legal Provisions: reproduction permitted with attribution); see NOTICE",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded",
+      "set": "v1",
+      "genre": "rfc"
     },
     {
       "file": "human/37-rfc2551-roman.txt",
@@ -295,7 +367,9 @@
       "source": "RFC 2551, The Roman Standard Version of the Internet Engineering Task Force (1999)",
       "url": "https://www.rfc-editor.org/rfc/rfc2551.txt",
       "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded",
+      "set": "v1",
+      "genre": "rfc"
     },
     {
       "file": "human/38-rfc4677-tao.txt",
@@ -303,7 +377,9 @@
       "source": "RFC 4677, The Tao of IETF (2006)",
       "url": "https://www.rfc-editor.org/rfc/rfc4677.txt",
       "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded",
+      "set": "v1",
+      "genre": "rfc"
     },
     {
       "file": "human/39-rfc3552-security-text.txt",
@@ -311,7 +387,9 @@
       "source": "RFC 3552, Guidelines for Writing RFC Text on Security Considerations (2003)",
       "url": "https://www.rfc-editor.org/rfc/rfc3552.txt",
       "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded",
+      "set": "v1",
+      "genre": "rfc"
     },
     {
       "file": "ai/01-remote-work.txt",
@@ -319,7 +397,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write a short essay on the benefits of remote work.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/02-sleep.txt",
@@ -327,7 +407,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write a short essay on why sleep matters.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/03-hash-table.txt",
@@ -335,7 +417,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Explain how a hash table works.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/04-language-tips.txt",
@@ -343,7 +427,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write a blog post with five tips for learning a new language.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/05-extension-email.txt",
@@ -351,7 +437,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write an email to my manager asking for a deadline extension.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/06-water-bottle.txt",
@@ -359,7 +447,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write a product description for a stainless steel water bottle.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/07-lighthouse.txt",
@@ -367,7 +457,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write the opening of a short story about a lighthouse keeper.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/08-social-media.txt",
@@ -375,7 +467,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write a short essay about social media and attention.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/09-vaccines.txt",
@@ -383,7 +477,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Explain how vaccines work.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/10-cli-readme.txt",
@@ -391,7 +487,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write the introduction of a README for a command-line tool called \"tidyfiles\" that organizes downloads folders.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/11-printing-press.txt",
@@ -399,7 +497,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Summarize the impact of the printing press.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/12-car-free.txt",
@@ -407,7 +507,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Argue for or against banning cars from downtown areas.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/13-lisbon.txt",
@@ -415,7 +517,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write a travel blog post about a weekend in Lisbon.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/14-sky-blue.txt",
@@ -423,7 +527,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Why is the sky blue?",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/15-interview-prep.txt",
@@ -431,7 +537,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Give advice on preparing for a job interview.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/16-garage.txt",
@@ -439,7 +547,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write a short scene where two siblings clean out their late father's garage.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/17-coastal-cities.txt",
@@ -447,7 +557,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write a short essay on how coastal cities can adapt to climate change.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/18-git-rebase.txt",
@@ -455,7 +567,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Explain the difference between git merge and git rebase.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/19-no-coffee.txt",
@@ -463,7 +577,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write a casual blog post about a week without coffee.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/20-keyboard-review.txt",
@@ -471,7 +587,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write a review of a mid-range mechanical keyboard.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/21-boredom.txt",
@@ -479,7 +597,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write a short essay on the value of boredom.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/22-compound-interest.txt",
@@ -487,7 +607,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Explain how compound interest works.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/23-graduation.txt",
@@ -495,7 +617,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write a short graduation speech.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/24-backoff.txt",
@@ -503,7 +627,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write documentation for a retry with exponential backoff helper.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/25-libraries.txt",
@@ -511,7 +637,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write a short essay on the importance of public libraries.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/26-mars-colony.txt",
@@ -519,7 +647,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write the opening of a story about the first day in a Mars colony.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/27-open-plan.txt",
@@ -527,7 +657,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Argue about whether open-plan offices are a good idea.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/28-neural-net.txt",
@@ -535,7 +667,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Explain how a neural network learns.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/29-garden-newsletter.txt",
@@ -543,7 +677,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write a community garden newsletter update.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/30-urban-bees.txt",
@@ -551,7 +687,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write a short essay on urban beekeeping.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/31-start-running.txt",
@@ -559,7 +697,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "What is a good way to start running? Answer plainly and briefly.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/32-dreams.txt",
@@ -567,7 +707,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Explain why we dream.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/33-teamwork.txt",
@@ -575,7 +717,9 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Write a short essay on the importance of teamwork.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
     },
     {
       "file": "ai/34-password-manager.txt",
@@ -583,7 +727,2399 @@
       "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
       "prompt": "Explain why you should use a password manager.",
       "license": "original text, Apache-2.0 with the repository",
-      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt",
+      "set": "v1",
+      "genre": "mixed"
+    },
+    {
+      "file": "human/v2-001-nist-nist-researchers-correct-common-erro.txt",
+      "label": "human",
+      "source": "NIST Researchers Correct Common Error Confounding Nanotech Measurements | NIST",
+      "url": "https://www.nist.gov/news-events/news/2026/08/nist-researchers-correct-common-error-confounding-nanotech-measurements",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "technical-policy",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-002-nasa-nasa-provides-progress-update-on-moo.txt",
+      "label": "human",
+      "source": "NASA Provides Progress Update on Moon Base Rovers - NASA",
+      "url": "https://www.nasa.gov/missions/moon-base/nasa-provides-progress-update-on-moon-base-rovers/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-003-nasa-gemini-astronaut-photos-inspired-ear.txt",
+      "label": "human",
+      "source": "Gemini Astronaut Photos Inspired Early Earth Observation Program - NASA",
+      "url": "https://www.nasa.gov/image-article/gemini-astronaut-photos-inspired-early-earth-observation-program/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-004-nist-new-chip-based-tape-measure-for-ligh.txt",
+      "label": "human",
+      "source": "New Chip-Based ‘Tape Measure’ for Light Could Revolutionize Mobile Timekeeping and Enhance National Security | NIST",
+      "url": "https://www.nist.gov/news-events/news/2026/10/new-chip-based-tape-measure-light-could-revolutionize-mobile-timekeeping",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "technical-policy",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-005-gutenberg-martin-eden.txt",
+      "label": "human",
+      "source": "Martin Eden (Jack London), 1909",
+      "url": "https://www.gutenberg.org/ebooks/1056",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "1 consecutive paragraphs starting at paragraph index 1044 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-006-nih-two-forever-chemicals-associated-wit.txt",
+      "label": "human",
+      "source": "Two ‘forever chemicals’ associated with higher risk of aggressive breast cancer in NIH analysis | National Institutes of Health (NIH)",
+      "url": "https://www.nih.gov/news-events/news-releases/two-forever-chemicals-associated-higher-risk-aggressive-breast-cancer-nih-analysis",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "health-science",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-007-nist-spooky-particles-transit-dc-suburbs-.txt",
+      "label": "human",
+      "source": "‘Spooky’ Particles Transit DC Suburbs, a Step Toward a Quantum Network | NIST",
+      "url": "https://www.nist.gov/news-events/news/2026/08/spooky-particles-transit-dc-suburbs-step-toward-quantum-network",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "technical-policy",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-008-whitehouse-weekly-address-the-honor-of-serving-.txt",
+      "label": "human",
+      "source": "Weekly Address: The Honor of Serving You as President | whitehouse.gov",
+      "url": "https://obamawhitehouse.archives.gov/the-press-office/2017/01/14/weekly-address-honor-serving-you-president",
+      "license": "US government work, public domain (17 U.S.C. 105); transcript stage directions such as (Applause.) removed",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate); (Applause.) style stage directions removed",
+      "set": "v2",
+      "genre": "speech",
+      "retrieved": "2026-11-15",
+      "era": "2017"
+    },
+    {
+      "file": "human/v2-009-nih-nih-announces-record-number-of-grant.txt",
+      "label": "human",
+      "source": "NIH announces record number of grants to support early career investigators, launches new recruitment initiative for intramural research | National Institutes of Health (NIH)",
+      "url": "https://www.nih.gov/news-events/news-releases/nih-announces-record-number-grants-support-early-career-investigators-launches-new-recruitment-initiative-intramural-research",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "health-science",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-010-fda-fda-grants-accelerated-approval-to-a.txt",
+      "label": "human",
+      "source": "FDA Grants Accelerated Approval to a New Treatment for Head and Neck Squamous Cell Carcinoma | FDA",
+      "url": "https://www.fda.gov/news-events/press-announcements/fda-grants-accelerated-approval-new-treatment-head-and-neck-squamous-cell-carcinoma",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "regulatory",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-011-noaa-how-will-el-ni-o-affect-your-local-f.txt",
+      "label": "human",
+      "source": "How Will El Niño Affect Your Local Fisheries? | NOAA Fisheries",
+      "url": "https://www.noaa.gov/stories/how-will-el-ni-o-affect-your-local-fisheries-ext",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-012-nasa-nasa-welcomes-vietnam-as-newest-arte.txt",
+      "label": "human",
+      "source": "NASA Welcomes Vietnam as Newest Artemis Accords Signatory - NASA",
+      "url": "https://www.nasa.gov/organizations/oiir/nasa-welcomes-vietnam-as-newest-artemis-accords-signatory/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-013-nih-for-the-first-time-researchers-map-o.txt",
+      "label": "human",
+      "source": "For the first time, researchers map out the brain’s behavioral gatekeeper | National Institutes of Health (NIH)",
+      "url": "https://www.nih.gov/news-events/news-releases/first-time-researchers-map-out-brains-behavioral-gatekeeper",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "health-science",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-014-gutenberg-public-opinion.txt",
+      "label": "human",
+      "source": "Public opinion (Walter Lippmann), 1922",
+      "url": "https://www.gutenberg.org/ebooks/6456",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "2 consecutive paragraphs starting at paragraph index 449 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-015-nih-nih-funded-ai-model-predicts-cancer-.txt",
+      "label": "human",
+      "source": "NIH-funded AI model predicts cancer survival from single-cell tumor data | National Institutes of Health (NIH)",
+      "url": "https://www.nih.gov/news-events/news-releases/nih-funded-ai-model-predicts-cancer-survival-single-cell-tumor-data",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "health-science",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-016-whitehouse-remarks-by-vice-president-joe-biden-.txt",
+      "label": "human",
+      "source": "Remarks by Vice President Joe Biden on The Cancer Moonshot | whitehouse.gov",
+      "url": "https://obamawhitehouse.archives.gov/the-press-office/2017/01/17/remarks-vice-president-joe-biden-cancer-moonshot",
+      "license": "US government work, public domain (17 U.S.C. 105); transcript stage directions such as (Applause.) removed",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate); (Applause.) style stage directions removed",
+      "set": "v2",
+      "genre": "speech",
+      "retrieved": "2026-11-15",
+      "era": "2017"
+    },
+    {
+      "file": "human/v2-017-gutenberg-orthodoxy.txt",
+      "label": "human",
+      "source": "Orthodoxy (G. K. Chesterton), 1908",
+      "url": "https://www.gutenberg.org/ebooks/130",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "1 consecutive paragraphs starting at paragraph index 182 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-018-nih-dr-elisabeth-armstrong-named-nih-chi.txt",
+      "label": "human",
+      "source": "Dr. Elisabeth Armstrong named NIH Chief of Staff | National Institutes of Health (NIH)",
+      "url": "https://www.nih.gov/news-events/news-releases/dr-elisabeth-armstrong-named-nih-chief-staff",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "health-science",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-019-nasa-nasa-invites-media-public-to-join-vo.txt",
+      "label": "human",
+      "source": "NASA Invites Media, Public to Join Voyager 1 One-Light Day Activities - NASA",
+      "url": "https://www.nasa.gov/news-release/nasa-invites-media-public-to-join-voyager-1-one-light-day-activities/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-020-doe-solar-achievements-timeline-departme.txt",
+      "label": "human",
+      "source": "Solar Achievements Timeline | Department of Energy",
+      "url": "https://www.energy.gov/cmei/systems/solar-achievements-timeline",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "technical-policy",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-021-gutenberg-my-ntonia.txt",
+      "label": "human",
+      "source": "My Ántonia (Willa Cather), 1918",
+      "url": "https://www.gutenberg.org/ebooks/242",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "5 consecutive paragraphs starting at paragraph index 288 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-022-nist-nist-weighs-in-on-the-mystery-of-the.txt",
+      "label": "human",
+      "source": "NIST Weighs In on the Mystery of the Gravitational Constant | NIST",
+      "url": "https://www.nist.gov/news-events/news/2026/04/nist-weighs-mystery-gravitational-constant",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "technical-policy",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-023-nih-nih-selects-dr-steven-schiff-as-dire.txt",
+      "label": "human",
+      "source": "NIH Selects Dr. Steven Schiff as Director of Fogarty International Center, Associate Director for International Research | National Institutes of Health (NIH)",
+      "url": "https://www.nih.gov/news-events/news-releases/nih-selects-dr-steven-schiff-director-fogarty-international-center-associate-director-international-research",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "health-science",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-024-nist-wear-and-tear-changes-measurable-pfa.txt",
+      "label": "human",
+      "source": "Wear and Tear Changes Measurable PFAS Levels in Firefighter Hoods, Gloves and Wildland Gear | NIST",
+      "url": "https://www.nist.gov/news-events/news/2026/05/wear-and-tear-changes-measurable-pfas-levels-firefighter-hoods-gloves-and",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "technical-policy",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-025-fda-fda-approves-once-weekly-generic-hor.txt",
+      "label": "human",
+      "source": "FDA Approves Once-Weekly Generic Hormone Therapy Patch for Women | FDA",
+      "url": "https://www.fda.gov/news-events/press-announcements/fda-approves-once-weekly-generic-hormone-therapy-patch-women",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "regulatory",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-026-nsf-nsf-launches-20m-pilot-to-accelerate.txt",
+      "label": "human",
+      "source": "NSF launches $20M pilot to accelerate commercialization of promising deep technologies from small businesses | NSF - U.S. National Science Foundation",
+      "url": "https://www.nsf.gov/news/nsf-launches-20m-pilot-accelerate-commercialization",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-027-noaa-noaa-nasa-release-measurements-of-20.txt",
+      "label": "human",
+      "source": "NOAA, NASA release measurements of 2026 ozone hole | National Oceanic and Atmospheric Administration",
+      "url": "https://www.noaa.gov/news-release/noaa-nasa-release-measurements-of-2026-ozone-hole",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-028-gutenberg-ten-days-that-shook-the-world.txt",
+      "label": "human",
+      "source": "Ten Days That Shook the World (John Reed), 1919",
+      "url": "https://www.gutenberg.org/ebooks/3076",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "2 consecutive paragraphs starting at paragraph index 872 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-029-nih-pediatric-neurologist-dr-john-gaitan.txt",
+      "label": "human",
+      "source": "Pediatric neurologist Dr. John Gaitanis to lead NIH’s Eunice Kennedy Shriver National Institute of Child Health and Human Development | National Institutes of Health (NIH)",
+      "url": "https://www.nih.gov/news-events/news-releases/pediatric-neurologist-dr-john-gaitanis-lead-nihs-eunice-kennedy-shriver-national-institute-child-health-human-development",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "health-science",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-030-gutenberg-of-human-bondage.txt",
+      "label": "human",
+      "source": "Of Human Bondage (W. Somerset Maugham), 1915",
+      "url": "https://www.gutenberg.org/ebooks/351",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "5 consecutive paragraphs starting at paragraph index 4225 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-031-nih-new-blood-based-biomarkers-predict-w.txt",
+      "label": "human",
+      "source": "New blood-based biomarkers predict when ALS symptoms will emerge | National Institutes of Health (NIH)",
+      "url": "https://www.nih.gov/news-events/news-releases/new-blood-based-biomarkers-predict-when-als-symptoms-will-emerge",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "health-science",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-032-nist-nist-submits-annual-report-to-congre.txt",
+      "label": "human",
+      "source": "NIST Submits Annual Report to Congress Summarizing FY 2025 Progress on National Construction Safety Team Investigations | NIST",
+      "url": "https://www.nist.gov/news-events/news/2026/03/nist-submits-annual-report-congress-summarizing-fy-2025-progress-national",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "technical-policy",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-033-gutenberg-just-so-stories.txt",
+      "label": "human",
+      "source": "Just so stories (Rudyard Kipling), 1902",
+      "url": "https://www.gutenberg.org/ebooks/2781",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "6 consecutive paragraphs starting at paragraph index 247 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-034-noaa-california-water-levels-break-record.txt",
+      "label": "human",
+      "source": "California water levels break records",
+      "url": "https://www.noaa.gov/stories/california-coastal-water-levels-break-records",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-035-gutenberg-heretics.txt",
+      "label": "human",
+      "source": "Heretics (G. K. Chesterton), 1905",
+      "url": "https://www.gutenberg.org/ebooks/470",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "1 consecutive paragraphs starting at paragraph index 62 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-036-nsf-new-dwarf-planet-candidate-discovere.txt",
+      "label": "human",
+      "source": "New dwarf planet candidate discovered by NSF–DOE Rubin Observatory | NSF - U.S. National Science Foundation",
+      "url": "https://www.nsf.gov/news/new-dwarf-planet-candidate-discovered-nsf-doe-rubin",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-037-noaa-noaa-fisheries-releases-reports-on-s.txt",
+      "label": "human",
+      "source": "NOAA Fisheries releases reports on status and trends of U.S. fisheries and economic impacts | NOAA Fisheries",
+      "url": "https://www.noaa.gov/stories/noaa-fisheries-releases-three-flagship-reports-2025-status-of-stocks-2024-fisheries-of-united-states",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-038-gutenberg-the-story-of-my-life.txt",
+      "label": "human",
+      "source": "The Story of My Life (Helen Keller), 1903",
+      "url": "https://www.gutenberg.org/ebooks/2397",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "3 consecutive paragraphs starting at paragraph index 1076 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-039-fda-fda-approves-first-of-its-kind-chron.txt",
+      "label": "human",
+      "source": "FDA Approves First-of-Its-Kind Chronic Hepatitis B Treatment | FDA",
+      "url": "https://www.fda.gov/news-events/press-announcements/fda-approves-first-its-kind-chronic-hepatitis-b-treatment",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "regulatory",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-040-whitehouse-remarks-by-the-vice-president-on-nuc.txt",
+      "label": "human",
+      "source": "Remarks by the Vice President on Nuclear Security | whitehouse.gov",
+      "url": "https://obamawhitehouse.archives.gov/the-press-office/2017/01/12/remarks-vice-president-nuclear-security",
+      "license": "US government work, public domain (17 U.S.C. 105); transcript stage directions such as (Applause.) removed",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate); (Applause.) style stage directions removed",
+      "set": "v2",
+      "genre": "speech",
+      "retrieved": "2026-11-15",
+      "era": "2017"
+    },
+    {
+      "file": "human/v2-041-gutenberg-riders-of-the-purple-sage.txt",
+      "label": "human",
+      "source": "Riders of the Purple Sage (Zane Grey), 1912",
+      "url": "https://www.gutenberg.org/ebooks/1300",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "1 consecutive paragraphs starting at paragraph index 1391 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-042-whitehouse-remarks-by-vice-president-joe-biden-.txt",
+      "label": "human",
+      "source": "Remarks by Vice President Joe Biden at the World Economic Forum | whitehouse.gov",
+      "url": "https://obamawhitehouse.archives.gov/the-press-office/2017/01/18/remarks-vice-president-joe-biden-world-economic-forum",
+      "license": "US government work, public domain (17 U.S.C. 105); transcript stage directions such as (Applause.) removed",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate); (Applause.) style stage directions removed",
+      "set": "v2",
+      "genre": "speech",
+      "retrieved": "2026-11-15",
+      "era": "2017"
+    },
+    {
+      "file": "human/v2-043-fda-fda-approves-first-plasmid-dna-based.txt",
+      "label": "human",
+      "source": "FDA Approves First Plasmid DNA-based Immunotherapy for Adults with Recurrent Respiratory Papillomatosis | FDA",
+      "url": "https://www.fda.gov/news-events/press-announcements/fda-approves-first-plasmid-dna-based-immunotherapy-adults-recurrent-respiratory-papillomatosis",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "regulatory",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-044-nist-new-fabric-test-material-could-help-.txt",
+      "label": "human",
+      "source": "New Fabric Test Material Could Help Strengthen Domestic Supply Chain for Textiles and Clothing | NIST",
+      "url": "https://www.nist.gov/news-events/news/2026/07/new-fabric-test-material-could-help-strengthen-domestic-supply-chain",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "technical-policy",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-045-gutenberg-anne-of-green-gables.txt",
+      "label": "human",
+      "source": "Anne of Green Gables (L. M. Montgomery), 1908",
+      "url": "https://www.gutenberg.org/ebooks/45",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "2 consecutive paragraphs starting at paragraph index 791 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-046-nih-oral-small-molecule-glp-1-drugs-pene.txt",
+      "label": "human",
+      "source": "Oral small-molecule GLP-1 drugs penetrate deep into the brain to suppress cravings | National Institutes of Health (NIH)",
+      "url": "https://www.nih.gov/news-events/news-releases/oral-small-molecule-glp-1-drugs-penetrate-deep-into-brain-suppress-cravings",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "health-science",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-047-gutenberg-the-souls-of-black-folk.txt",
+      "label": "human",
+      "source": "The Souls of Black Folk (W. E. B. Du Bois), 1903",
+      "url": "https://www.gutenberg.org/ebooks/408",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "2 consecutive paragraphs starting at paragraph index 131 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-048-nih-nih-makes-major-investments-to-advan.txt",
+      "label": "human",
+      "source": "NIH makes major investments to advance human-based research infrastructure and technologies | National Institutes of Health (NIH)",
+      "url": "https://www.nih.gov/news-events/news-releases/nih-makes-major-investments-advance-human-based-research-infrastructure-technologies",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "health-science",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-049-nasa-nasa-to-welcome-expedition-74-astron.txt",
+      "label": "human",
+      "source": "NASA to Welcome Expedition 74 Astronauts Home at Space Center Houston - NASA",
+      "url": "https://www.nasa.gov/news-release/nasa-to-welcome-expedition-74-astronauts-home-at-space-center-houston/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-050-nasa-rubies-on-mars-nasa-science.txt",
+      "label": "human",
+      "source": "Rubies on Mars? - NASA Science",
+      "url": "https://science.nasa.gov/blog/rubies-on-mars/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-051-gutenberg-the-problems-of-philosophy.txt",
+      "label": "human",
+      "source": "The Problems of Philosophy (Bertrand Russell), 1912",
+      "url": "https://www.gutenberg.org/ebooks/5827",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "2 consecutive paragraphs starting at paragraph index 66 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-052-nist-nist-finalizes-guidelines-on-protect.txt",
+      "label": "human",
+      "source": "NIST Finalizes Guidelines on Protecting Online Identity and Access Tokens From Misuse | NIST",
+      "url": "https://www.nist.gov/news-events/news/2026/09/nist-finalizes-guidelines-protecting-online-identity-and-access-tokens",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "technical-policy",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-053-gutenberg-the-secret-agent-a-simple-tale.txt",
+      "label": "human",
+      "source": "The Secret Agent: A Simple Tale (Joseph Conrad), 1907",
+      "url": "https://www.gutenberg.org/ebooks/974",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "5 consecutive paragraphs starting at paragraph index 1019 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-054-gutenberg-babbitt.txt",
+      "label": "human",
+      "source": "Babbitt (Sinclair Lewis), 1922",
+      "url": "https://www.gutenberg.org/ebooks/1156",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "5 consecutive paragraphs starting at paragraph index 808 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-055-whitehouse-remarks-by-vice-president-joe-biden-.txt",
+      "label": "human",
+      "source": "Remarks by Vice President Joe Biden With Ukrainian President Petro Poroshenko | whitehouse.gov",
+      "url": "https://obamawhitehouse.archives.gov/the-press-office/2017/01/17/remarks-vice-president-joe-biden-ukrainian-president-petro-poroshenko",
+      "license": "US government work, public domain (17 U.S.C. 105); transcript stage directions such as (Applause.) removed",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate); (Applause.) style stage directions removed",
+      "set": "v2",
+      "genre": "speech",
+      "retrieved": "2026-11-15",
+      "era": "2017"
+    },
+    {
+      "file": "human/v2-056-nasa-strive-nasa-science.txt",
+      "label": "human",
+      "source": "STRIVE - NASA Science",
+      "url": "https://science.nasa.gov/mission/strive/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-057-noaa-noaa-weather-modeling-hits-key-miles.txt",
+      "label": "human",
+      "source": "NOAA weather modeling hits key milestone with Rapid Refresh Forecast System debut | National Oceanic and Atmospheric Administration",
+      "url": "https://www.noaa.gov/news-release/noaa-weather-modeling-hits-key-milestone-with-rapid-refresh-forecast-system-debut",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-058-gutenberg-what-s-wrong-with-the-world.txt",
+      "label": "human",
+      "source": "What's Wrong with the World (G. K. Chesterton), 1910",
+      "url": "https://www.gutenberg.org/ebooks/1717",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "1 consecutive paragraphs starting at paragraph index 236 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-059-nasa-apod-2026-october-24-rosetta-s-selfi.txt",
+      "label": "human",
+      "source": "APOD: 2026 October 24 – Rosetta's Selfie - NASA Science",
+      "url": "https://science.nasa.gov/image-article/apod-2026-october-24-rosettas-selfie/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-060-gutenberg-howards-end.txt",
+      "label": "human",
+      "source": "Howards End (E. M. Forster), 1910",
+      "url": "https://www.gutenberg.org/ebooks/2946",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "1 consecutive paragraphs starting at paragraph index 1858 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-061-nsf-nsf-ukri-metascience-statement-nsf-u.txt",
+      "label": "human",
+      "source": "NSF–UKRI metascience statement | NSF - U.S. National Science Foundation",
+      "url": "https://www.nsf.gov/news/nsf-ukri-metascience-statement",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-062-gutenberg-democracy-and-education-an-introduct.txt",
+      "label": "human",
+      "source": "Democracy and Education: An Introduction to the Philosophy of Education (John Dewey), 1916",
+      "url": "https://www.gutenberg.org/ebooks/852",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "1 consecutive paragraphs starting at paragraph index 143 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-063-whitehouse-remarks-by-the-vice-president-on-nuc.txt",
+      "label": "human",
+      "source": "Remarks by the Vice President on Nuclear Security | whitehouse.gov",
+      "url": "https://obamawhitehouse.archives.gov/the-press-office/2017/01/12/remarks-vice-president-nuclear-security-0",
+      "license": "US government work, public domain (17 U.S.C. 105); transcript stage directions such as (Applause.) removed",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate); (Applause.) style stage directions removed",
+      "set": "v2",
+      "genre": "speech",
+      "retrieved": "2026-11-15",
+      "era": "2017"
+    },
+    {
+      "file": "human/v2-064-gutenberg-a-room-with-a-view.txt",
+      "label": "human",
+      "source": "A Room with a View (E. M. Forster), 1908",
+      "url": "https://www.gutenberg.org/ebooks/2641",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "6 consecutive paragraphs starting at paragraph index 1336 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-065-nist-nist-expands-ai-consortium-s-scope-c.txt",
+      "label": "human",
+      "source": "NIST Expands AI Consortium’s Scope, Calls for New Members | NIST",
+      "url": "https://www.nist.gov/news-events/news/2026/05/nist-expands-ai-consortiums-scope-calls-new-members",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "technical-policy",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-066-gutenberg-this-side-of-paradise.txt",
+      "label": "human",
+      "source": "This Side of Paradise (F. Scott Fitzgerald), 1920",
+      "url": "https://www.gutenberg.org/ebooks/805",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "4 consecutive paragraphs starting at paragraph index 1376 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-067-nih-brain-organoid-maturation-is-driven-.txt",
+      "label": "human",
+      "source": "Brain organoid maturation is driven by a lifelike developmental clock | National Institutes of Health (NIH)",
+      "url": "https://www.nih.gov/news-events/news-releases/brain-organoid-maturation-driven-lifelike-developmental-clock",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "health-science",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-068-nih-reported-use-of-most-drugs-remains-l.txt",
+      "label": "human",
+      "source": "Reported use of most drugs remains low among U.S. teens | National Institutes of Health (NIH)",
+      "url": "https://www.nih.gov/news-events/news-releases/reported-use-most-drugs-remains-low-among-us-teens",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "health-science",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-069-fda-fda-seeks-public-input-to-support-ib.txt",
+      "label": "human",
+      "source": "FDA Seeks Public Input to Support Ibogaine Research | FDA",
+      "url": "https://www.fda.gov/news-events/press-announcements/fda-seeks-public-input-support-ibogaine-research",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "regulatory",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-070-gutenberg-the-education-of-henry-adams.txt",
+      "label": "human",
+      "source": "The Education of Henry Adams (Henry Adams), 1907",
+      "url": "https://www.gutenberg.org/ebooks/2044",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "2 consecutive paragraphs starting at paragraph index 690 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-071-nih-chronic-inflammation-leaves-long-las.txt",
+      "label": "human",
+      "source": "Chronic inflammation leaves long-lasting impression on gut stem cells, increasing colorectal cancer risk | National Institutes of Health (NIH)",
+      "url": "https://www.nih.gov/news-events/news-releases/chronic-inflammation-leaves-long-lasting-impression-gut-stem-cells-increasing-colorectal-cancer-risk",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "health-science",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-072-gutenberg-rebecca-of-sunnybrook-farm.txt",
+      "label": "human",
+      "source": "Rebecca of Sunnybrook Farm (Kate Douglas Smith Wiggin), 1912",
+      "url": "https://www.gutenberg.org/ebooks/498",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "2 consecutive paragraphs starting at paragraph index 1023 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-073-whitehouse-remarks-by-the-president-in-farewell.txt",
+      "label": "human",
+      "source": "Remarks by the President in Farewell Address | whitehouse.gov",
+      "url": "https://obamawhitehouse.archives.gov/the-press-office/2017/01/10/remarks-president-farewell-address",
+      "license": "US government work, public domain (17 U.S.C. 105); transcript stage directions such as (Applause.) removed",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate); (Applause.) style stage directions removed",
+      "set": "v2",
+      "genre": "speech",
+      "retrieved": "2026-11-15",
+      "era": "2017"
+    },
+    {
+      "file": "human/v2-074-gutenberg-twenty-years-at-hull-house-with-auto.txt",
+      "label": "human",
+      "source": "Twenty Years at Hull House; with Autobiographical Notes (Jane Addams), 1910",
+      "url": "https://www.gutenberg.org/ebooks/1325",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "2 consecutive paragraphs starting at paragraph index 483 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-075-nih-study-measuring-changes-in-protein-s.txt",
+      "label": "human",
+      "source": "Study measuring changes in protein structure establishes new class of Alzheimer’s biomarkers | National Institutes of Health (NIH)",
+      "url": "https://www.nih.gov/news-events/news-releases/study-measuring-changes-protein-structure-establishes-new-class-alzheimers-biomarkers",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "health-science",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-076-nasa-vega-island-frozen-in-fright-nasa-sc.txt",
+      "label": "human",
+      "source": "Vega Island Frozen in Fright - NASA Science",
+      "url": "https://science.nasa.gov/earth/earth-observatory/vega-island-frozen-in-fright/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-077-fda-fda-approves-first-heart-valve-desig.txt",
+      "label": "human",
+      "source": "FDA Approves First Heart Valve Designed to Grow with Children | FDA",
+      "url": "https://www.fda.gov/news-events/press-announcements/fda-approves-first-heart-valve-designed-grow-children",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "regulatory",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-078-nasa-apod-2026-november-4-the-not-so-hidd.txt",
+      "label": "human",
+      "source": "APOD: 2026 November 4 - The Not-So-Hidden Galaxy, IC 342 - NASA Science",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-4-the-not-so-hidden-galaxy-ic-342/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-079-gutenberg-the-economic-consequences-of-the-pea.txt",
+      "label": "human",
+      "source": "The Economic Consequences of the Peace (John Maynard Keynes), 1919",
+      "url": "https://www.gutenberg.org/ebooks/15776",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "1 consecutive paragraphs starting at paragraph index 500 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-080-nasa-water-surges-into-navajo-reservoir-n.txt",
+      "label": "human",
+      "source": "Water Surges Into Navajo Reservoir - NASA Science",
+      "url": "https://science.nasa.gov/earth/earth-observatory/water-surges-into-navajo-reservoir/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-081-nasa-caltech-names-artemis-ii-commander-r.txt",
+      "label": "human",
+      "source": "Caltech Names Artemis II Commander Reid Wiseman as NASA JPL Deputy - NASA",
+      "url": "https://www.nasa.gov/centers-and-facilities/jpl/caltech-names-artemis-ii-commander-reid-wiseman-as-nasa-jpl-deputy/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-082-nasa-ghostly-cat-s-head-nebula-lurks-with.txt",
+      "label": "human",
+      "source": "Ghostly Cat’s Head Nebula Lurks Within Sight of NASA’s Hubble, Webb - NASA Science",
+      "url": "https://science.nasa.gov/missions/hubble/ghostly-cats-head-nebula-lurks-within-sight-of-nasas-hubble-webb/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-083-gutenberg-winesburg-ohio-a-group-of-tales-of-o.txt",
+      "label": "human",
+      "source": "Winesburg, Ohio: A Group of Tales of Ohio Small Town Life (Sherwood Anderson), 1919",
+      "url": "https://www.gutenberg.org/ebooks/416",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "1 consecutive paragraphs starting at paragraph index 344 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-084-nsf-nsf-invests-in-translating-low-dimen.txt",
+      "label": "human",
+      "source": "NSF invests in translating low-dimensional semiconductor technologies to establish U.S. leadership in microelectronics | NSF - U.S. National Science Foundation",
+      "url": "https://www.nsf.gov/news/nsf-invests-translating-low-dimensional-semiconductor",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-085-nasa-nasa-s-hubble-charts-path-for-roman-.txt",
+      "label": "human",
+      "source": "NASA’s Hubble Charts Path for Roman with Gravitational Lenses - NASA Science",
+      "url": "https://science.nasa.gov/missions/hubble/nasas-hubble-charts-path-for-roman-with-gravitational-lenses/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-086-nist-physicist-jun-ye-wins-wolf-prize-in-.txt",
+      "label": "human",
+      "source": "Physicist Jun Ye Wins Wolf Prize in Physics | NIST",
+      "url": "https://www.nist.gov/news-events/news/2026/10/physicist-jun-ye-wins-wolf-prize-physics",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "technical-policy",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-087-gutenberg-the-wind-in-the-willows.txt",
+      "label": "human",
+      "source": "The Wind in the Willows (Kenneth Grahame), 1908",
+      "url": "https://www.gutenberg.org/ebooks/289",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "4 consecutive paragraphs starting at paragraph index 265 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-088-nasa-a-81-reaches-south-georgia-nasa-scie.txt",
+      "label": "human",
+      "source": "A-81 Reaches South Georgia - NASA Science",
+      "url": "https://science.nasa.gov/earth/earth-observatory/a-81-reaches-south-georgia/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-089-fda-fda-updates-regulations-to-advance-i.txt",
+      "label": "human",
+      "source": "FDA Updates Regulations to Advance Innovative Alternatives to Animal Testing | FDA",
+      "url": "https://www.fda.gov/news-events/press-announcements/fda-updates-regulations-advance-innovative-alternatives-animal-testing",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "regulatory",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-090-nasa-nasa-s-chandra-finds-source-of-star-.txt",
+      "label": "human",
+      "source": "NASA’s Chandra Finds Source of Star’s Mysterious Outbursts - NASA Science",
+      "url": "https://science.nasa.gov/missions/chandra/nasas-chandra-finds-source-of-stars-mysterious-outbursts/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-091-nasa-how-a-johnson-mentor-shapes-the-next.txt",
+      "label": "human",
+      "source": "How a Johnson Mentor Shapes the Next Generation of NASA Talent - NASA",
+      "url": "https://www.nasa.gov/general/how-a-johnson-mentor-shapes-the-next-generation-of-nasa-talent/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-092-nasa-slice-of-martian-meteorite-teghaza-0.txt",
+      "label": "human",
+      "source": "Slice of Martian Meteorite Teghaza 001 - NASA Science",
+      "url": "https://science.nasa.gov/photojournal/slice-of-martian-meteorite-teghaza-001/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-093-nist-2-health-care-organizations-will-rec.txt",
+      "label": "human",
+      "source": "2 Health Care Organizations Will Receive 2025 Baldrige National Quality Awards | NIST",
+      "url": "https://www.nist.gov/news-events/news/2026/02/2-health-care-organizations-will-receive-2025-baldrige-national-quality",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "technical-policy",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-094-nih-dr-jonathan-m-green-selected-as-ceo-.txt",
+      "label": "human",
+      "source": "Dr. Jonathan M. Green selected as CEO of the NIH Clinical Center | National Institutes of Health (NIH)",
+      "url": "https://www.nih.gov/news-events/news-releases/dr-jonathan-m-green-selected-ceo-nih-clinical-center",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "health-science",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-095-nist-nist-joins-white-house-effort-to-dri.txt",
+      "label": "human",
+      "source": "NIST Joins White House Effort to Drive ‘A New Golden Age of Science’ | NIST",
+      "url": "https://www.nist.gov/news-events/news/2026/10/nist-joins-white-house-effort-drive-new-golden-age-science",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "technical-policy",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-096-nih-nih-supported-trial-reduces-hiv-inci.txt",
+      "label": "human",
+      "source": "NIH-supported trial reduces HIV incidence by 70% in rural populations | National Institutes of Health (NIH)",
+      "url": "https://www.nih.gov/news-events/news-releases/nih-supported-trial-reduces-hiv-incidence-70-rural-populations",
+      "license": "US government work, public domain (17 U.S.C. 105)",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "health-science",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-097-gutenberg-the-jungle.txt",
+      "label": "human",
+      "source": "The Jungle (Upton Sinclair), 1906",
+      "url": "https://www.gutenberg.org/ebooks/140",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "6 consecutive paragraphs starting at paragraph index 879 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-098-gutenberg-the-new-freedom.txt",
+      "label": "human",
+      "source": "The new freedom (Woodrow Wilson), 1913",
+      "url": "https://www.gutenberg.org/ebooks/14811",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "1 consecutive paragraphs starting at paragraph index 255 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-099-gutenberg-the-theory-of-the-leisure-class.txt",
+      "label": "human",
+      "source": "The Theory of the Leisure Class (Thorstein Veblen), 1899",
+      "url": "https://www.gutenberg.org/ebooks/833",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "1 consecutive paragraphs starting at paragraph index 223 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "human/v2-100-nasa-nasa-astrophysics-town-hall-13-novem.txt",
+      "label": "human",
+      "source": "NASA Astrophysics Town Hall, 13 November 2026 - NASA Science",
+      "url": "https://science.nasa.gov/astrophysics/programs/physics-of-the-cosmos/community/nasa-astrophysics-town-hall-13-nov-2026/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-101-nasa-ir-stig-seminar-10-nov-2026-nasa-sci.txt",
+      "label": "human",
+      "source": "IR STIG Seminar, 10 Nov 2026 - NASA Science",
+      "url": "https://science.nasa.gov/astrophysics/programs/cosmic-origins/community/ir-stig-seminar-10-nov-2026/",
+      "license": "US government work, public domain (17 U.S.C. 105); NASA pages may embed third-party material that is not covered",
+      "note": "contiguous whole paragraphs from one page, no other edits (paragraph filter drops captions, credits and boilerplate)",
+      "set": "v2",
+      "genre": "science-news",
+      "retrieved": "2026-11-15",
+      "era": "2026"
+    },
+    {
+      "file": "human/v2-102-gutenberg-my-life-and-work.txt",
+      "label": "human",
+      "source": "My Life and Work (Henry Ford), 1922",
+      "url": "https://www.gutenberg.org/ebooks/7213",
+      "license": "public domain in the US (published before 1929; Project Gutenberg header/footer removed)",
+      "note": "1 consecutive paragraphs starting at paragraph index 379 of the body, line wraps joined; no other edits",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "retrieved": "2026-11-15",
+      "era": "1899-1925"
+    },
+    {
+      "file": "ai/v2-001-science-news-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a space agency news-release excerpt about a lander team finishing a test campaign.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-002-science-news-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a casual blog post from a rover operations team member about a rock the rover drove past this week.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-003-science-news-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical summary of how a space telescope images a nebula using multiple filters.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-004-science-news-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short narrative piece about astronauts returning to Earth after months on a space station.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-005-science-news-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a news-release excerpt announcing a new international agreement on lunar exploration.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: smart quotes applied by script; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-006-science-news-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a friendly explainer for kids about why the sky is blue and sunsets are red.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-007-science-news-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical note on how a satellite instrument measures sea surface height.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-008-science-news-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a news item about a university and space agency collaboration on student mentoring.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-009-science-news-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short descriptive piece about a research team traveling to a remote polar island.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-010-science-news-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short blog post about how a team names the instruments and software on a mission.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: smart quotes applied by script; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-011-science-news-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical explanation of a gravitational lens and how it magnifies distant galaxies.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-012-science-news-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a news release excerpt on a satellite measurement of the ozone layer.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: smart quotes applied by script; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-013-science-news-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a scene of a weather forecaster watching a storm model update in the middle of the night.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-014-science-news-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short, upbeat post about a fisheries report for a general audience.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-015-science-news-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical paragraph on how an ensemble weather forecast system works.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-016-science-news-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write an announcement for a public viewing event of a spacecraft milestone.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-017-science-news-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short historical narrative about early astronauts photographing Earth.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-018-science-news-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a quick, informal post about an astronomy picture of the day with a galaxy.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-019-science-news-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short summary of a space agency science seminar announcement.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-020-science-news-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical caption describing a slice of a meteorite as seen under a microscope.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-021-science-news-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a vivid description of a research ship arriving at a glacier front.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-022-science-news-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a news item about a nationwide measurement standards award.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-023-science-news-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a post about a surprising discovery of a small icy world beyond Neptune.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-024-science-news-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical paragraph about the commercialization of research via a funding program.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-025-science-news-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a news item about a seismic and water-level monitoring finding at a coast.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-026-science-news-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short scene about a scientist testing a new instrument in a cold lab at night.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-027-science-news-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short post about a space photo of a distant moon of Mars.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-028-science-news-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical summary of an X-ray telescope observation of a variable star.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-029-health-science-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a news release excerpt announcing a new research center director.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-030-health-science-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a plain-language health explainer about why sleep matters for memory.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-031-health-science-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical paragraph summarizing a study of a blood biomarker for neurodegenerative disease.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-032-health-science-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short narrative about a patient taking part in a clinical trial.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-033-health-science-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a news release excerpt about a study linking environmental chemicals to cancer risk.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: smart quotes applied by script; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-034-health-science-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a plain-language explainer on what \"gut stem cells\" are and why inflammation matters.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-035-health-science-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical summary of a machine-learning model for predicting cancer survival.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-036-health-science-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short narrative about a researcher watching brain cells grow in a dish.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-037-health-science-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a news item announcing a federal investment in research infrastructure.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: smart quotes applied by script; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-038-health-science-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short, friendly explainer about GLP-1 drugs and how they affect appetite.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-039-health-science-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical paragraph describing a survey of teen substance use.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-040-health-science-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a news release excerpt describing results of a prevention trial in rural communities.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: smart quotes applied by script; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-041-health-science-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a friendly explainer on what a \"clinical trial\" is and how people can join one.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-042-health-science-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a news release excerpt on a new chief of staff appointment at a health agency.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-043-health-science-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical paragraph on protein structure changes measured in a new class of drug target.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-044-health-science-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a plain-language piece on how researchers map the brain’s decision-making circuits.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-045-health-science-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short narrative of a physician delivering news to a family.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-046-health-science-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a news item about an early career grants program.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-047-health-science-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical paragraph about organoid maturation timing.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-048-health-science-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short explainer on what NIH-style \"research matters\" updates mean for readers who aren’t scientists.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "health-science",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-049-technical-policy-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a news item about a measurement science agency developing new test materials for protective clothing.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "technical-policy",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-050-technical-policy-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical paragraph about measuring chemical contamination in textiles after repeated wear.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "technical-policy",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-051-technical-policy-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a government report summary excerpt on annual progress to Congress.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "technical-policy",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-052-technical-policy-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical explanation of why scientists disagree about measuring the gravitational constant.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "technical-policy",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-053-technical-policy-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a news item about researchers correcting a common error in nanoscale measurements.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "technical-policy",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-054-technical-policy-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a brief profile piece on a physicist who just won a major international prize.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "technical-policy",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-055-technical-policy-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a news item on an AI consortium expanding its membership and scope.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "technical-policy",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-056-technical-policy-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical paragraph on quantum entanglement distribution over a fiber network.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "technical-policy",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-057-technical-policy-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a news item about a new chip-based device for timekeeping.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "technical-policy",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-058-technical-policy-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical note on finalizing digital identity guidelines.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "technical-policy",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-059-technical-policy-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short, friendly overview of the history of solar power technology.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "technical-policy",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-060-regulatory-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a drug-regulator press announcement about the approval of a hepatitis treatment.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "regulatory",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-061-regulatory-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical regulatory paragraph about accelerated approval of a cancer drug.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "regulatory",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-062-regulatory-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a regulatory press item about updating rules to encourage alternatives to animal testing.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "regulatory",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-063-regulatory-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a consumer-friendly note on what it means when a drug is \"approved\" by a regulator.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "regulatory",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-064-regulatory-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical paragraph on an approved medical device for pediatric patients.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "regulatory",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-065-regulatory-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a regulator notice about seeking public comment on research into a psychedelic compound.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "regulatory",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-066-regulatory-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical paragraph about an immunotherapy approval for a viral lesion.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "regulatory",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-067-speech-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short excerpt of a farewell address by a departing national leader.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "speech",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-068-speech-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short excerpt of a weekly radio address thanking citizens.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "speech",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-069-speech-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short excerpt of a speech on nuclear security by a senior official.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "speech",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-070-speech-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short excerpt of a speech announcing a national cancer research effort.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "speech",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-071-speech-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short excerpt of a conversational speech to a business audience about global economic cooperation.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "speech",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-072-speech-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short excerpt of remarks during a visit with a foreign head of state.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "speech",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-073-speech-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a short excerpt of a heartfelt thank-you speech to a staff team.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "speech",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-074-essay-nonfiction-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a reflective essay paragraph on the duties of a settlement house in a growing industrial city.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-075-essay-nonfiction-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write an essay paragraph on how citizens form mental pictures of events they cannot witness.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-076-essay-nonfiction-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write an essay paragraph about a visit to a rural school and its meaning for a community.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-077-essay-nonfiction-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a chatty opinion piece on why people stick to their beliefs even when shown evidence.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-078-essay-nonfiction-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a historical-narrative paragraph describing the day of a political uprising in a capital city.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-079-essay-nonfiction-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical explanation of a philosophical question about how we know that physical objects exist.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-080-essay-nonfiction-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write an essay paragraph on the effect of a harsh peace settlement on a defeated nation’s economy.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-081-essay-nonfiction-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a first-person memoir paragraph about a factory owner explaining how he thinks about waste.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-082-essay-nonfiction-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a reflective paragraph by a writer who is deaf and blind describing learning that things have names.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-083-essay-nonfiction-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write an essay paragraph on the philosophy of education and the growth of the young.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-084-essay-nonfiction-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write an essay paragraph on the leisure class and conspicuous consumption.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-085-essay-nonfiction-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a chatty paragraph defending an unfashionable opinion about modern progress.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-086-essay-nonfiction-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write an essay paragraph about an immigrant woman’s first impression of crossing a continent by rail.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-087-essay-nonfiction-technical.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a technical paragraph about industrial management and measuring the time of a task.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: technical; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "register": "technical"
+    },
+    {
+      "file": "ai/v2-088-essay-nonfiction-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write an essay paragraph on the clash between prevailing orthodoxy and personal conviction.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "essay-nonfiction",
+      "register": "formal"
+    },
+    {
+      "file": "ai/v2-089-narrative-fiction-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a fiction paragraph in which a man in a small midwestern city wakes on an ordinary morning.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-090-narrative-fiction-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a fiction paragraph set in a stockyard district showing a family’s hardship.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-091-narrative-fiction-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a fiction paragraph in which a young woman considers a proposal under a hot afternoon sky.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-092-narrative-fiction-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a fiction paragraph set on a river bank featuring talking animals planning an outing.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-093-narrative-fiction-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a fiction paragraph from a detective story in which the investigator reviews the household.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-094-narrative-fiction-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a fiction paragraph about a young sailor writing late at night with ambition.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-095-narrative-fiction-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a fiction paragraph on prairie farm life and a childhood friendship.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-096-narrative-fiction-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a fiction paragraph set in a small town in which a reporter wanders the streets at dusk.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-097-narrative-fiction-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a fiction paragraph in a drawing-room novel about a social slight at a dinner.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-098-narrative-fiction-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a fiction paragraph about a mother-and-daughter conversation in a kitchen on the frontier.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-099-narrative-fiction-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a fiction paragraph in a fable style about an animal who learns a lesson.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-100-narrative-fiction-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a fiction paragraph in a tense espionage style about a man in a shop late at night.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-101-narrative-fiction-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a fiction paragraph in a western about a rider approaching a settlement at dawn.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-102-narrative-fiction-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a fiction paragraph in which a young man in a boarding school feels adrift.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-103-narrative-fiction-narrative.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a fiction paragraph about a girl arriving at a new home in the countryside.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: narrative; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "register": "narrative"
+    },
+    {
+      "file": "ai/v2-104-narrative-fiction-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a casual first-person story about a night out gone slightly wrong.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "narrative-fiction",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-105-science-news-casual.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a casual blog post from a ship’s crew member about the first week of a polar voyage.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: casual; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "casual"
+    },
+    {
+      "file": "ai/v2-106-science-news-formal.txt",
+      "label": "ai",
+      "source": "Claude (Sonnet 5.5), written in the Phase 7 calibration-v2 session; same model as the v1 AI samples",
+      "prompt": "Write a news item on a government agency releasing a new data set on forest and land cover change.",
+      "license": "original text written for this repository; no third-party material",
+      "note": "register: formal; typography: as written; written before any v2 scoring was run",
+      "set": "v2",
+      "genre": "science-news",
+      "register": "formal"
     }
   ]
 }
