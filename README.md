@@ -53,7 +53,7 @@ With Anthropic instead: `export ANTHROPIC_API_KEY=...` and `generate --author an
 | `ghostwriter authors` | List every ingested author with their profile. |
 | `ghostwriter config get` | Show the effective config, redacted (endpoint hosts, key variable NAMES, never values). Read-only. |
 | `ghostwriter capabilities` | List the operations and any planned but not built (none at present). |
-| `ghostwriter serve [--token-env NAME] [--mcp]` | HTTP API on `127.0.0.1:8787` with `GET /openapi.json`: [docs/API.md](docs/API.md). Without a token any local process can use it; set one. |
+| `ghostwriter serve [--token-env NAME] [--mcp]` | HTTP API on `127.0.0.1:8787` with `GET /openapi.json`: [docs/API.md](docs/API.md). Without a token any local process can use it; set one. Also serves the web UI at `/` once built (`npm run ui:install && npm run ui:build`; two themes, fully offline): [docs/UI.md](docs/UI.md). |
 | `ghostwriter mcp [--stdio\|--http]` | MCP server exposing the same operations as tools: [docs/MCP.md](docs/MCP.md). |
 
 Every command takes `--config <file.json>` (default `$GHOSTWRITER_CONFIG`), `--state-dir <dir>` (default `$GHOSTWRITER_STATE_DIR`, else `$XDG_STATE_HOME/ghostwriter`, else `~/.local/state/ghostwriter`) and `--json`. The result goes to stdout and nothing else does; warnings and errors go to stderr. With `--json` stdout is exactly one document, `{ok:true,...}` or `{ok:false,error:{code,message}}`.
@@ -141,6 +141,7 @@ Also: the model's answer is redacted again before you see it; the state director
 npm run build           # tsc -> dist/
 scripts/verify.sh       # typecheck + every tier: smoke unit integration system security torture
 scripts/verify.sh --coverage   # also enforce >= 90% line coverage on src/filters and src/registry
+npm run ui:install      # once: the web UI (ui/) is its own package; verify.sh also runs its tests (--no-ui / --no-e2e skip them)
 ```
 
 Tests are offline: the LLM is `MockLlmClient` or a local `127.0.0.1` stub server.

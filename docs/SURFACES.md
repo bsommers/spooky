@@ -1,13 +1,13 @@
 # Surfaces (milestone v3)
 
-Status: Phases 8 (humanize) and 9 built (registry, CLI, HTTP API, MCP, OpenAPI). Phases 10 and 11 (UI) are planned. Rule: every capability is available on every surface; one registry declares operations, adapters never re-declare them.
+Status: Phases 8 (humanize), 9 (registry, CLI, HTTP API, MCP, OpenAPI) and 10 (web UI foundation and theming, [UI.md](UI.md)) built. Phase 11 (the UI feature screens) is planned. Rule: every capability is available on every surface; one registry declares operations, adapters never re-declare them.
 
 ```mermaid
 flowchart LR
   CLI[CLI ghostwriter] --> REG
   HTTP[HTTP API + OpenAPI 3.1] --> REG
   MCP[MCP server stdio / streamable HTTP] --> REG
-  UI[React SPA ui/ - Phase 10/11] -->|HTTP only| HTTP
+  UI[React SPA ui/ - shell Phase 10, screens Phase 11] -->|HTTP only| HTTP
   LIB[Library imports] --> ENG
   REG[Operations registry src/service zod schemas + error table] --> ENG[Engine]
   ENG --> PIPE[Filters / Orchestrator / SourceManager / LLM]
@@ -29,7 +29,7 @@ flowchart LR
 
 **Pending capabilities.** A capability planned but not built is listed in `PENDING_CAPABILITIES` (`src/service/operations.ts`) and in the `pending` array of every `capabilities` call, so clients can tell "not built yet" from "does not exist"; it has no CLI command, route, tool or OpenAPI path, and the parity test fails the moment the Engine gains the method without a registry entry. The list is empty since Phase 8 built `humanize` ([HUMANIZING.md](HUMANIZING.md)): one registry entry gave it the CLI command, route, tool and OpenAPI path, and `generate` gained `humanize` and `target` on every surface. Its scores come from a weak, confounded heuristic (held-out AUC 0.694); every surface returns that caveat in the result.
 
-Serve the UI from the API server: one process, one origin, no CORS needed. `startApiServer({ staticHandler })` is the mount hook for Phase 10; it runs before the token check and sets its own CSP (`applySecurityHeaders(res, csp)`). Because it is unauthenticated it may serve public assets only: it is offered GET/HEAD for paths outside `/api/*`, `/openapi.json` and `/mcp` (all token-protected), and the request target can never begin with `//`.
+Serve the UI from the API server: one process, one origin, no CORS needed. `startApiServer({ staticHandler })` is the mount hook; `src/api/static.ts` is the Phase 10 handler for `ui/dist` ([UI.md](UI.md)); it runs before the token check and sets its own CSP (`applySecurityHeaders(res, csp)`). Because it is unauthenticated it may serve public assets only: it is offered GET/HEAD for paths outside `/api/*`, `/openapi.json` and `/mcp` (all token-protected), and the request target can never begin with `//`.
 
 ## How it is built
 - `src/service/operations.ts`: the registry. `{ name, description, input (strict zod), output (zod), mutates, openWorld, readsState, engineMethod, http, cli, render, handler }`. `invokeOperation` validates and runs; every surface calls it.
