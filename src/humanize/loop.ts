@@ -135,11 +135,12 @@ export async function runHumanizeLoop(input: string, deps: HumanizeLoopDeps, opt
     }
 
     if (options.useLlm && deps.llm !== undefined && bestScore.score > options.target + EPS) {
-      llmCalls++;
       const t0 = performance.now();
       let answer: string | undefined;
       try {
-        answer = await rewriteWithLlm(deps.llm(), { text: best, features, profile: deps.profile }, { maxTokens: options.maxTokens, temperature: options.temperature, ...(deps.retry === undefined ? {} : { retry: deps.retry }) });
+        const client = deps.llm(); // a missing key throws here: no request was made, so it is not counted
+        llmCalls++; // one logical call; the transport may retry it (RetryOptions) without counting again
+        answer = await rewriteWithLlm(client, { text: best, features, profile: deps.profile }, { maxTokens: options.maxTokens, temperature: options.temperature, ...(deps.retry === undefined ? {} : { retry: deps.retry }) });
       } catch (err) {
         record(
           { iteration, step: 'llm', features, scoreBefore: bestScore.score, scoreAfter: bestScore.score, kept: false, outcome: 'llm_error', redacted: false, guard: [], featureDeltas: {}, error: errorClass(err) },

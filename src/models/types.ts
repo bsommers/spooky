@@ -312,7 +312,7 @@ export interface HumanizeResult {
   reachedTarget: boolean;
   /** Loop passes started (0 when the text was already at or below the target). */
   iterations: number;
-  /** Model calls made (at most one per iteration). */
+  /** Logical model calls made (at most one per iteration; a transport retry of the same call is not counted; none when no client could be created, e.g. no API key). */
   llmCalls: number;
   /** Candidates the meaning guard rejected. */
   guardRejections: number;

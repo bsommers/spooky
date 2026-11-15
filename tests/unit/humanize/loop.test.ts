@@ -5,6 +5,7 @@ import { runHumanizeLoop } from '../../../src/humanize/loop.js';
 import type { HumanizeLoopDeps, HumanizeLoopOptions } from '../../../src/humanize/loop.js';
 import { buildRewritePrompt } from '../../../src/humanize/rewriteLlm.js';
 import { MockLlmClient } from '../../../src/llm/mockClient.js';
+import { LlmTransportError } from '../../../src/llm/retry.js';
 import type { MockStep } from '../../../src/llm/mockClient.js';
 import type { ScoreBreakdown } from '../../../src/models/types.js';
 import { fastRetry } from '../../helpers/rig.js';
@@ -77,6 +78,16 @@ describe('humanizer loop', () => {
     expect(r.steps[0]?.error).toBeTypeOf('string');
     expect(JSON.stringify(r)).not.toContain('AKIA');
     expect(r.trace[0]?.error).toBe(r.steps[0]?.error);
+  });
+
+  it('llmCalls counts a call only once a client exists, and a transport retry is still one call', async () => {
+    const none = await runHumanizeLoop('alpha beta', { score: table({ 'alpha beta': 0.9 }), redact: noRedact, llm: () => { throw new Error('no key'); }, retry: fastRetry }, opts({ maxIterations: 2 }));
+    expect(none.llmCalls).toBe(0);
+    expect(none.steps.map((s) => s.outcome)).toEqual(['llm_error', 'llm_error']);
+    const { client, llm } = llmOf([new LlmTransportError('network'), 'alpha gamma']);
+    const r = await runHumanizeLoop('alpha beta', { score: table({ 'alpha beta': 0.9, 'alpha gamma': 0.1 }), redact: noRedact, llm, retry: fastRetry }, opts({ maxIterations: 1 }));
+    expect(client.requests.length).toBe(2);
+    expect(r.llmCalls).toBe(1);
   });
 
   it('an empty or oversized model answer is a skipped model failure, not a result', async () => {

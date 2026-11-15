@@ -92,6 +92,7 @@ describe('Engine.humanize', () => {
     const r = await e.humanize(aiTexts[1] as string);
     expect(r.finalScore).toBeLessThan(r.initialScore);
     expect(r.steps.some((s) => s.step === 'llm' && s.outcome === 'llm_error')).toBe(true);
+    expect(r.llmCalls, 'no key: no request was made, so no call is counted').toBe(0);
   });
 
   it('llm:false never calls the model', async () => {
