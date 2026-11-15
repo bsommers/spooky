@@ -23,12 +23,12 @@ describe('Personas screen', () => {
     renderScreen('#/personas');
     const list = await screen.findByRole('listbox', { name: 'Personas' });
     await user.click(within(list).getByRole('option', { name: 'Engineer' }));
-    const detail = screen.getByRole('region', { name: 'Engineer' });
+    const detail = await screen.findByRole('region', { name: 'Engineer' });
     expect(detail).toHaveTextContent('Banned phrases (0)');
     expect(within(detail).getAllByText('None.')).toHaveLength(2);
     await user.click(within(list).getByRole('option', { name: 'Executive' }));
     await user.keyboard('{ArrowDown}');
-    expect(screen.getByRole('region', { name: 'Engineer' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Engineer' })).toBeInTheDocument();
   });
 
   it('is read-only: no edit controls', async () => {

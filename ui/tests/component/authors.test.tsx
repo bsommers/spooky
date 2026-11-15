@@ -190,7 +190,7 @@ describe('Authors and ingest screen', () => {
     await ready();
     await user.tab(); // skip link is first in the shell; the page controls follow the header
     const seen: Array<[string, string]> = [];
-    for (let i = 0; i < 20 && seen.length < 12; i++) {
+    for (let i = 0; i < 30 && seen.length < 30; i++) {
       await user.tab();
       const a = document.activeElement as HTMLElement;
       const r = a.getAttribute('role') ?? a.tagName.toLowerCase();

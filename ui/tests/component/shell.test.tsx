@@ -9,7 +9,7 @@ describe('app shell', () => {
     renderApp();
     expect(screen.getByRole('banner')).toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: 'Primary' });
-    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['Overview', 'Authors', 'Personas', 'Settings', 'Kitchen sink']);
+    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['Overview', 'Generate', 'Authors', 'Personas', 'Settings', 'Kitchen sink']);
     expect(screen.getByRole('main')).toBeInTheDocument();
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
     const links = screen.getAllByRole('link');

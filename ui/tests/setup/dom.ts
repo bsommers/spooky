@@ -1,6 +1,9 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterEach } from 'vitest';
+
+// The full suite runs many jsdom files at once; a lazy screen plus a popover can take longer than the 1 s default under load.
+configure({ asyncUtilTimeout: 5000 });
 
 afterEach(() => {
   cleanup();
