@@ -22,6 +22,9 @@ export function makeUiFixture(): UiFixture {
   writeFileSync(join(root, 'assets', 'app-AbCdEf12.js'), 'console.log(1)');
   writeFileSync(join(root, 'assets', 'app-AbCdEf12.css'), 'body{margin:0}');
   writeFileSync(join(root, 'assets', 'font-AbCdEf12.woff2'), Buffer.from([0x77, 0x4f, 0x46, 0x32]));
+  writeFileSync(join(root, 'assets', 'font-regular.woff2'), Buffer.from([0x77, 0x4f, 0x46, 0x32])); // hyphenated, but not a Vite hash
+  writeFileSync(join(root, 'assets', 'my-notes.txt'), 'notes');
+  symlinkSync(join(root, 'assets', 'app-AbCdEf12.js'), join(root, 'assets', 'plain.js')); // an unhashed name pointing at a hashed file
   writeFileSync(join(root, 'favicon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
   writeFileSync(join(root, 'theme-init.js'), '/* init */');
   writeFileSync(join(root, '.hidden'), 'dotfile');

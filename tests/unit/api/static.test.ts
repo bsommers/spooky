@@ -66,6 +66,13 @@ describe('static handler: serving', () => {
     expect((await raw(target, '/sub/')).text).toContain('sub index'); // a directory serves its index.html
   });
 
+  it('only Vite-hashed names under assets/ are immutable: judged by the requested name, not by hyphens or the symlink target', async () => {
+    for (const p of ['/assets/font-regular.woff2', '/assets/my-notes.txt', '/assets/plain.js']) {
+      const r = await raw(target, p);
+      expect([p, r.status, r.headers['cache-control']], p).toEqual([p, 200, 'no-store']);
+    }
+  });
+
   it('HEAD answers headers and length with no body; other methods are not handled', async () => {
     const head = await raw(target, '/', { method: 'HEAD' });
     expect([head.status, head.text, Number(head.headers['content-length']) > 0]).toEqual([200, '', true]);

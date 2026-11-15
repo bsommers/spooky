@@ -141,8 +141,9 @@ export async function createStaticHandler(options: StaticHandlerOptions): Promis
 
     const ext = extname(found.file).toLowerCase();
     applySecurityHeaders(res, UI_CSP);
-    // Hashed bundle files never change under the same name; everything else is re-checked.
-    if (segments[0] === 'assets' && /-[A-Za-z0-9_-]{6,}\.[a-z0-9]+$/.test(found.file)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    // Hashed bundle files never change under the same name; everything else is re-checked. Judge the REQUESTED name (a symlink
+    // must not borrow a hashed target name) and use Vite's hash shape: exactly eight base64url characters before the extension.
+    if (segments[0] === 'assets' && /-[A-Za-z0-9_-]{8}\.[a-z0-9]+$/.test(segments[segments.length - 1] ?? '')) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     res.setHeader('Content-Type', TYPES[ext] ?? 'application/octet-stream');
     res.setHeader('Content-Length', String(found.size));
     res.statusCode = 200;
