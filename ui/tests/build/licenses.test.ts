@@ -20,6 +20,16 @@ describe('classifyLicense', () => {
   });
 });
 
+describe('classifyLicense: parenthesised expressions', () => {
+  it('judges AND and OR by the real expression structure, not by stripping parentheses', () => {
+    const bad = ['(MIT OR GPL-3.0) AND LGPL-3.0', '(MIT OR Apache-2.0) AND GPL-3.0', 'MIT AND (GPL-3.0 OR AGPL-3.0)', '(MIT', 'MIT)', 'MIT OR', 'AND MIT', '()'];
+    for (const b of bad) expect(classifyLicense(b).ok, b).toBe(false);
+    expect(classifyLicense('(MIT OR GPL-3.0) AND LGPL-3.0').reason).toMatch(/"LGPL-3.0" is not an allowed license/);
+    const good = ['(MIT OR GPL-3.0) AND Apache-2.0', 'MIT AND (GPL-3.0 OR ISC)', '((MIT))', 'MIT OR GPL-3.0 AND LGPL-3.0', 'Apache-2.0 WITH LLVM-exception'];
+    for (const g of good) expect(classifyLicense(g).ok, g).toBe(true);
+  });
+});
+
 describe('production dependencies', () => {
   const packages = collectProductionPackages(UI_ROOT);
   const fonts = inspectFonts(UI_ROOT);

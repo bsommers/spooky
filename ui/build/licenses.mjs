@@ -17,20 +17,57 @@ export function declaredLicense(pkgJson) {
 }
 
 /**
- * Is an SPDX expression acceptable? `A OR B`: one acceptable alternative is enough (we may pick it); `A AND B`: both must be.
+ * Is an SPDX expression acceptable? `A OR B`: one acceptable alternative is enough (we may pick it); `A AND B`: both must be;
+ * AND binds tighter than OR and parentheses group (a small recursive-descent parser, so `(MIT OR GPL-3.0) AND LGPL-3.0`
+ * fails on the LGPL it requires). `X WITH exception` is judged by X. An expression that does not parse is rejected.
  * @param {string} expr
  * @returns {{ ok: boolean, reason: string }}
  */
 export function classifyLicense(expr) {
   const text = String(expr).trim();
   if (text === '' || /unknown|unlicensed|see license|custom/i.test(text)) return { ok: false, reason: `license is ${text === '' ? 'missing' : `"${text}"`}` };
-  const ors = text.replace(/[()]/g, ' ').split(/\s+OR\s+/i);
-  const verdicts = ors.map((alt) => {
-    const ands = alt.split(/\s+AND\s+/i).map((s) => s.trim()).filter(Boolean);
-    const bad = ands.find((id) => !ALLOWED.has(id));
-    return bad === undefined ? { ok: true, reason: '' } : { ok: false, reason: `"${bad}" is not an allowed license` };
-  });
-  return verdicts.find((v) => v.ok) ?? { ok: false, reason: verdicts.map((v) => v.reason).join('; ') };
+  const tokens = text.match(/\(|\)|[^\s()]+/g) ?? [];
+  let i = 0;
+  let malformed = false;
+  const fail = (reason) => ({ ok: false, reason });
+  const syntax = () => {
+    malformed = true;
+    return fail(`"${text}" is not a valid license expression`);
+  };
+  const peek = () => tokens[i];
+  const isOp = (t, op) => t !== undefined && t.toUpperCase() === op;
+  function parseOr() {
+    const verdicts = [parseAnd()];
+    while (isOp(peek(), 'OR')) {
+      i += 1;
+      verdicts.push(parseAnd());
+    }
+    return verdicts.find((v) => v.ok) ?? fail(verdicts.map((v) => v.reason).join('; '));
+  }
+  function parseAnd() {
+    const verdicts = [parseAtom()];
+    while (isOp(peek(), 'AND')) {
+      i += 1;
+      verdicts.push(parseAtom());
+    }
+    return verdicts.find((v) => !v.ok) ?? { ok: true, reason: '' };
+  }
+  function parseAtom() {
+    const t = peek();
+    if (t === undefined || t === ')' || isOp(t, 'AND') || isOp(t, 'OR')) return syntax();
+    i += 1;
+    if (t === '(') {
+      const inner = parseOr();
+      if (peek() !== ')') return syntax();
+      i += 1;
+      return inner;
+    }
+    if (isOp(peek(), 'WITH')) i += 2; // the exception id only ever widens what the license permits
+    return ALLOWED.has(t) ? { ok: true, reason: '' } : fail(`"${t}" is not an allowed license`);
+  }
+  const verdict = parseOr();
+  if (malformed || i < tokens.length) return fail(`"${text}" is not a valid license expression`);
+  return verdict;
 }
 
 /** Packages installed for production (everything in the lock file not marked dev-only), with their declared license. */
