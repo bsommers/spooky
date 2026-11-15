@@ -129,7 +129,10 @@ license, note) and the harness refuses a file without an entry or an entry witho
 - **Human.** Excerpts of whole paragraphs, line wraps joined, no other edits (excerpt offsets are not recorded, so that
   claim cannot be audited from the manifest). The literary samples are public-domain prose from Project Gutenberg
   published 1787 to 1907 (essays, novels, memoir, natural history). The RFC samples are sections of IETF RFCs from 1995
-  to 2020 (informational and process documents). All of it predates widespread LLM text.
+  to 2020 (informational and process documents). All of it predates widespread LLM text. **Licensing:** RFCs published
+  before November 2008 may permit verbatim reproduction only, and these excerpts have their line wraps joined, so the
+  manifest does not call them freely reproducible; see `NOTICE` for what is bundled and under which terms. Swapping the
+  pre-2008 RFCs for later ones would change the corpus and every number above, so it was not done here.
 - **AI.** Written by Claude (Sonnet 5.5) in the session that built this phase, one text per prompt, no style steering
   beyond the genre named in the prompt (essay, explainer, email, blog post, product copy, fiction scene, README, speech,
   review, newsletter, plain Q&A answer). The prompt is stored per file.

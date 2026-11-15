@@ -214,104 +214,104 @@
       "label": "human",
       "source": "RFC 1855, Netiquette Guidelines (1995)",
       "url": "https://www.rfc-editor.org/rfc/rfc1855.txt",
-      "license": "IETF Trust RFC text (reproduction permitted)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
     },
     {
       "file": "human/28-rfc1925-twelve-truths.txt",
       "label": "human",
       "source": "RFC 1925, The Twelve Networking Truths (1996)",
       "url": "https://www.rfc-editor.org/rfc/rfc1925.txt",
-      "license": "IETF Trust RFC text (reproduction permitted)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
     },
     {
       "file": "human/29-rfc3935-ietf-mission.txt",
       "label": "human",
       "source": "RFC 3935, A Mission Statement for the IETF (2004)",
       "url": "https://www.rfc-editor.org/rfc/rfc3935.txt",
-      "license": "IETF Trust RFC text (reproduction permitted)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
     },
     {
       "file": "human/30-rfc5218-successful-protocol.txt",
       "label": "human",
       "source": "RFC 5218, What Makes for a Successful Protocol? (2008)",
       "url": "https://www.rfc-editor.org/rfc/rfc5218.txt",
-      "license": "IETF Trust RFC text (reproduction permitted)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
     },
     {
       "file": "human/31-rfc7282-consensus.txt",
       "label": "human",
       "source": "RFC 7282, On Consensus and Humming in the IETF (2014)",
       "url": "https://www.rfc-editor.org/rfc/rfc7282.txt",
-      "license": "IETF Trust RFC text (reproduction permitted)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "license": "IETF Trust RFC text (BCP 78 / IETF Trust Legal Provisions: reproduction permitted with attribution); see NOTICE",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
     },
     {
       "file": "human/32-rfc8890-end-users.txt",
       "label": "human",
       "source": "RFC 8890, The Internet is for End Users (2020)",
       "url": "https://www.rfc-editor.org/rfc/rfc8890.txt",
-      "license": "IETF Trust RFC text (reproduction permitted)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "license": "IETF Trust RFC text (BCP 78 / IETF Trust Legal Provisions: reproduction permitted with attribution); see NOTICE",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
     },
     {
       "file": "human/33-rfc1958-architecture.txt",
       "label": "human",
       "source": "RFC 1958, Architectural Principles of the Internet (1996)",
       "url": "https://www.rfc-editor.org/rfc/rfc1958.txt",
-      "license": "IETF Trust RFC text (reproduction permitted)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
     },
     {
       "file": "human/34-rfc3439-guidelines.txt",
       "label": "human",
       "source": "RFC 3439, Some Internet Architectural Guidelines and Philosophy (2002)",
       "url": "https://www.rfc-editor.org/rfc/rfc3439.txt",
-      "license": "IETF Trust RFC text (reproduction permitted)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
     },
     {
       "file": "human/35-rfc2775-transparency.txt",
       "label": "human",
       "source": "RFC 2775, Internet Transparency (2000)",
       "url": "https://www.rfc-editor.org/rfc/rfc2775.txt",
-      "license": "IETF Trust RFC text (reproduction permitted)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
     },
     {
       "file": "human/36-rfc8170-planning.txt",
       "label": "human",
       "source": "RFC 8170, Planning for Protocol Adoption and Subsequent Transitions (2017)",
       "url": "https://www.rfc-editor.org/rfc/rfc8170.txt",
-      "license": "IETF Trust RFC text (reproduction permitted)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "license": "IETF Trust RFC text (BCP 78 / IETF Trust Legal Provisions: reproduction permitted with attribution); see NOTICE",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
     },
     {
       "file": "human/37-rfc2551-roman.txt",
       "label": "human",
       "source": "RFC 2551, The Roman Standard Version of the Internet Engineering Task Force (1999)",
       "url": "https://www.rfc-editor.org/rfc/rfc2551.txt",
-      "license": "IETF Trust RFC text (reproduction permitted)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
     },
     {
       "file": "human/38-rfc4677-tao.txt",
       "label": "human",
       "source": "RFC 4677, The Tao of IETF (2006)",
       "url": "https://www.rfc-editor.org/rfc/rfc4677.txt",
-      "license": "IETF Trust RFC text (reproduction permitted)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
     },
     {
       "file": "human/39-rfc3552-security-text.txt",
       "label": "human",
       "source": "RFC 3552, Guidelines for Writing RFC Text on Security Considerations (2003)",
       "url": "https://www.rfc-editor.org/rfc/rfc3552.txt",
-      "license": "IETF Trust RFC text (reproduction permitted)",
-      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+      "license": "IETF Trust RFC text, published before the Nov 2008 RFC 5378 terms: may be verbatim-reproduction only (see NOTICE); kept as a research/test excerpt",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits; excerpt offsets within the RFC not recorded"
     },
     {
       "file": "ai/01-remote-work.txt",
