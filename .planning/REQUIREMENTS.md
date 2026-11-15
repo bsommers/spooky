@@ -64,7 +64,40 @@
 - [ ] **HUM-03**: Confidentiality filter runs again after humanizing; protected spans (code/URLs) untouched.
 - [ ] **HUM-04**: Report before/after score and per-feature deltas in the trace. Goal is to lower the score on the local scorer and any plugged-in detectors; no guarantee against any specific third-party detector, and docs state the measured results per detector.
 
-## v3 (deferred)
+## v3: Surfaces and UI (milestone v3)
+
+Uniform-surface rule: every capability exists on every surface (library, CLI, HTTP API, MCP, UI where it is user-facing). Operations: generate, ingest, profile, list authors, list personas, list filters, score, humanize, config get.
+
+### Service layer, HTTP API, MCP
+
+- [ ] **API-01**: `src/service/operations.ts` declares each operation once (name, zod input/output schema, error mapping, handler over `Engine`); CLI, HTTP and MCP are generated/derived from it, none re-declares schemas.
+- [ ] **API-02**: Local HTTP server (`ghostwriter serve`): binds 127.0.0.1 by default; non-loopback bind requires explicit `--host` plus a bearer token; optional bearer token (constant-time compare, token from env var, never logged); no `Access-Control-Allow-Origin: *` (same-origin only, optional explicit origin allowlist); Host/Origin header checks against DNS rebinding.
+- [ ] **API-03**: Request limits: body size cap (default 1 MiB, ingest 10 MiB, configurable), JSON only, content-type enforced, request timeout, bounded concurrency; over-limit -> 413 before parsing.
+- [ ] **API-04**: Typed error -> HTTP status mapping mirrors CLI exit codes (usage/config/profile 400/422, unknown persona/author 404, filter failed 422, LLM failed 502, input too large 413, store corrupt 500, state locked 423/503) in one table shared with `EXIT_CODES`; body `{ok:false,error:{code,message}}`; unexpected errors by class name only.
+- [ ] **API-05**: `GET /openapi.json` serves an OpenAPI 3.1 document generated from the zod schemas; test validates it and fails on drift from the registered operations. `config get` never returns secrets (env var names only).
+- [ ] **API-06**: Parity test: enumerates the operations registry and fails when any operation lacks a library method, CLI command, HTTP route or MCP tool (and when a surface has a capability the registry lacks). Adds missing CLI commands (`authors`, `config get`; `score`/`humanize` arrive with Phases 7-8).
+- [ ] **MCP-01**: MCP server using the official `@modelcontextprotocol/sdk`; transports stdio and streamable HTTP (the latter under the API-02 auth/bind rules); one tool per operation with zod-derived input schema.
+- [ ] **MCP-02**: Tool inputs are untrusted: validated with the operation schema, size-capped, no path/shell interpolation, no file-system paths accepted (text only); tool output is data, errors map to MCP error results with the same codes.
+- [ ] **MCP-03**: Tool annotations (readOnlyHint/destructiveHint) set correctly; ingest is the only state-mutating tool; secrets never in tool results or logs; stdio server writes nothing but protocol to stdout.
+
+### UI
+
+- [ ] **UI-01**: `ui/` is a Vite + React + TypeScript (strict) SPA built to static files served by the API server at `/`; dev proxy to the API; `ui/` has its own tsconfig and tests and does not import from `src/` except generated API types.
+- [ ] **UI-02**: Component library: React Aria Components (Apache-2.0); all interactive widgets from it; no second UI kit.
+- [ ] **UI-03**: Theme system: CSS custom properties on `[data-theme]`, runtime switch, choice persisted (localStorage, try/catch), default follows `prefers-color-scheme`, `prefers-reduced-motion` disables animation; theme contract = one token file per theme validated by a schema test.
+- [ ] **UI-04**: Themes "Black Cat" and "Tron Neon" shipped; every text/background token pair used meets WCAG AA (4.5:1 text, 3:1 UI) asserted by a unit test over the token files.
+- [ ] **UI-05**: Original SVG logo and icon set (no third-party art); favicon set.
+- [ ] **UI-06**: Offline: no runtime request to any external origin (fonts self-hosted, OFL/compatible licenses recorded in `ui/THIRD_PARTY.md`); test asserts built HTML/CSS/JS reference only same-origin URLs.
+- [ ] **UI-07**: Generate screen: persona + author pickers, input, output, trace view, banned-phrase and confidentiality indicators (counts only).
+- [ ] **UI-08**: Ingest/Authors screen: ingest text/file, list authors, stylometric profile view.
+- [ ] **UI-09**: Personas viewer.
+- [ ] **UI-10**: Settings: provider, theme, state dir (read-only display); the API key is never displayed, stored in the browser, or present in the client bundle; token for the API held in memory only.
+- [ ] **UI-11**: Score and Humanize panels with before/after score and per-feature deltas; feature-flagged off until Phases 7/8 are present (capability discovered via `GET /api/capabilities`).
+- [ ] **UI-12**: Security: model output rendered as text only (no `dangerouslySetInnerHTML`, lint rule enforces), strict CSP (`default-src 'self'`, no inline script, no `unsafe-eval`) set by the API server and asserted in tests; secret-scan of the built bundle in CI.
+- [ ] **UI-13**: Tests: Vitest + Testing Library component tests, axe checks per screen in both themes, full keyboard navigation tests, Playwright screenshots in both themes (baselines committed, deterministic).
+- [ ] **UI-14**: Every UI action goes through the same HTTP operations (no UI-only capability), verified by the parity test.
+
+## v4 (deferred)
 
 Real vector DB adapter, real embedder, streaming, PII classifier filter (NER).
 
@@ -78,3 +111,6 @@ Real vector DB adapter, real embedder, streaming, PII classifier filter (NER).
 | SRC-* | 4 |
 | LLM-*, ORC-* | 5 |
 | SCR-*, HUM-* | 7-8 (milestone v2) |
+| API-*, MCP-* | 9 (milestone v3) |
+| UI-01..UI-06 | 10 |
+| UI-07..UI-14 | 11 |
