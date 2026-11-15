@@ -14,7 +14,8 @@ curl -s -H "Authorization: Bearer $GHOSTWRITER_API_TOKEN" -H 'Content-Type: appl
 | Operation | Request | Success body (`{ "ok": true, ... }`) |
 |---|---|---|
 | `ingest` (writes state) | `POST /api/ingest` `{authorId, name, text}` | `profile` |
-| `generate` | `POST /api/generate` `{authorId, persona, text, exemplars?, maxTokens?, temperature?}` | `text`, `trace`, `promptTokensEstimate` |
+| `generate` | `POST /api/generate` `{authorId, persona, text, exemplars?, maxTokens?, temperature?, humanize?, target?}` | `text`, `trace`, `promptTokensEstimate` |
+| `humanize` | `POST /api/humanize` `{text, authorId?, target?, maxIterations?, llm?}` | `text`, `initialScore`, `finalScore`, `reachedTarget`, `iterations`, `llmCalls`, `guardRejections`, `featureDeltas`, `featuresBefore`, `featuresAfter`, `steps`, `trace`, `caveat` |
 | `score` | `POST /api/score` `{text, detectors?}` | `score`, `local`, `members`, `excluded`, `trace`, `localOnly?` |
 | `profile` | `GET /api/profile?authorId=ann` | `profile` |
 | `authors` | `GET /api/authors` | `authors` |
@@ -27,7 +28,7 @@ curl -s -H "Authorization: Bearer $GHOSTWRITER_API_TOKEN" -H 'Content-Type: appl
 
 `GET /openapi.json` is generated per running server: `servers` is the address it actually bound (`--host/--port`, so `--port 0` shows the real port), `security` is `[{bearer: []}]` with a `bearer` scheme and 401/429 responses when `--token-env` is set (and empty, with no scheme, when it is not), and `408/413/415` are listed for the POST operations only. The document is behind the token like every other route.
 
-`humanize` (Phase 8) is not built; it appears under `pending` in `capabilities` and has no route. Request fields are the registry's strict schemas: an unknown field, a path-like author id, a control character or a wrong type is `400 USAGE` with a path-qualified message. Text length limits are the engine's (`limits.maxInputChars`, 10 M characters for a corpus), reported as `413 INPUT_TOO_LARGE`.
+`humanize` (Phase 8, [HUMANIZING.md](HUMANIZING.md)) sends the redacted text to the configured model unless `llm` is `false`, so it costs up to `maxIterations` model calls; its `caveat` field states that the scores are from a weak local heuristic (held-out AUC 0.694), not a detector verdict. `pending` in `capabilities` is empty now that nothing is planned-but-unbuilt. Request fields are the registry's strict schemas: an unknown field, a path-like author id, a control character or a wrong type is `400 USAGE` with a path-qualified message. Text length limits are the engine's (`limits.maxInputChars`, 10 M characters for a corpus), reported as `413 INPUT_TOO_LARGE`.
 
 ## Errors
 Body: `{ "ok": false, "error": { "code": "UNKNOWN_AUTHOR", "message": "..." } }`. The status comes from the one error table (`src/service/errors.ts`), shared with the CLI exit code and the MCP error result:

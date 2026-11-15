@@ -1,6 +1,6 @@
 # Surfaces (milestone v3)
 
-Status: Phase 9 built (registry, CLI, HTTP API, MCP, OpenAPI). Phases 10 and 11 (UI) are planned. Rule: every capability is available on every surface; one registry declares operations, adapters never re-declare them.
+Status: Phases 8 (humanize) and 9 built (registry, CLI, HTTP API, MCP, OpenAPI). Phases 10 and 11 (UI) are planned. Rule: every capability is available on every surface; one registry declares operations, adapters never re-declare them.
 
 ```mermaid
 flowchart LR
@@ -17,7 +17,7 @@ flowchart LR
 | Operation | Library | CLI | HTTP | MCP tool | UI |
 |---|---|---|---|---|---|
 | ingest | `engine.ingest` | `ghostwriter ingest` | `POST /api/ingest` | `ingest` | P11 |
-| generate | `engine.generate` | `ghostwriter generate` | `POST /api/generate` | `generate` | P11 |
+| generate (`humanize?`, `target?`) | `engine.generate` | `ghostwriter generate [--humanize --target]` | `POST /api/generate` | `generate` | P11 |
 | score | `engine.score` | `ghostwriter score` | `POST /api/score` | `score` | P11 (gated) |
 | profile | `engine.getProfile` | `ghostwriter profile <id>` | `GET /api/profile?authorId=` | `profile` | P11 |
 | list authors | `engine.listAuthors` | `ghostwriter authors` | `GET /api/authors` | `authors` | P11 |
@@ -25,9 +25,9 @@ flowchart LR
 | list filters | `engine.listFilters` | `ghostwriter filters` | `GET /api/filters` | `filters` | P11 (trace/settings) |
 | config get (redacted) | `engine.getConfigView` | `ghostwriter config get` | `GET /api/config` | `config_get` | P11 |
 | capabilities | `describeCapabilities()` | `ghostwriter capabilities` | `GET /api/capabilities` | `capabilities` | P11 |
-| humanize | PENDING (Phase 8) | PENDING | PENDING | PENDING | P11 (gated) |
+| humanize | `engine.humanize` | `ghostwriter humanize` | `POST /api/humanize` | `humanize` | P11 (gated) |
 
-**Pending capability, not faked.** Phase 8 (humanize) is not built. It is listed in `PENDING_CAPABILITIES` (`src/service/operations.ts`) and in the output of every `capabilities` call (`pending: [{name:'humanize', phase:8}]`), so clients can tell "not built yet" from "does not exist". It has no CLI command, route, tool or OpenAPI path. When Phase 8 adds `Engine.humanize()`, the parity test (`tests/integration/surfaces-parity.test.ts`) fails until the registry has an `humanize` operation; adding that one registry entry creates its CLI command (if declared `derived` or hand-wired like `score`), HTTP route, MCP tool and OpenAPI path, and the entry moves out of `PENDING_CAPABILITIES`.
+**Pending capabilities.** A capability planned but not built is listed in `PENDING_CAPABILITIES` (`src/service/operations.ts`) and in the `pending` array of every `capabilities` call, so clients can tell "not built yet" from "does not exist"; it has no CLI command, route, tool or OpenAPI path, and the parity test fails the moment the Engine gains the method without a registry entry. The list is empty since Phase 8 built `humanize` ([HUMANIZING.md](HUMANIZING.md)): one registry entry gave it the CLI command, route, tool and OpenAPI path, and `generate` gained `humanize` and `target` on every surface. Its scores come from a weak, confounded heuristic (held-out AUC 0.694); every surface returns that caveat in the result.
 
 Serve the UI from the API server: one process, one origin, no CORS needed. `startApiServer({ staticHandler })` is the mount hook for Phase 10; it runs before the token check and sets its own CSP (`applySecurityHeaders(res, csp)`). Because it is unauthenticated it may serve public assets only: it is offered GET/HEAD for paths outside `/api/*`, `/openapi.json` and `/mcp` (all token-protected), and the request target can never begin with `//`.
 

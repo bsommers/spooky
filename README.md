@@ -44,14 +44,15 @@ With Anthropic instead: `export ANTHROPIC_API_KEY=...` and `generate --author an
 | Command | What it does |
 |---|---|
 | `ghostwriter ingest --author <id> --name <name> [file]` | Profile and store an author's corpus (file, `--file <path>` or stdin). |
-| `ghostwriter generate --author <id> --persona <key> [file]` | Rewrite a draft (file, `--file <path>` or stdin). Options: `--exemplars <0-20>`, `--max-tokens`, `--temperature <0-1>`, `--model`, `--provider anthropic\|openai-compat`, `--base-url`, `--api-key-env <NAME>`. |
+| `ghostwriter generate --author <id> --persona <key> [file]` | Rewrite a draft (file, `--file <path>` or stdin). Options: `--exemplars <0-20>`, `--max-tokens`, `--temperature <0-1>`, `--humanize [--target <0-1>]`, `--model`, `--provider anthropic\|openai-compat`, `--base-url`, `--api-key-env <NAME>`. |
 | `ghostwriter score [file] [--detector <name>]...` | Rate how machine-written a text reads, 0 to 1, with a per-feature breakdown (file, `--file <path>` or stdin). Local, offline, deterministic; needs no model or key. `--detector` also asks a detector you declared under `scorer.detectors` and **sends the redacted text to it**; nothing is sent unless you name one. A heuristic proxy, not a detector verdict: [docs/CALIBRATION.md](docs/CALIBRATION.md) has the measured numbers (AUC 0.73 on a small corpus, wide interval, chance level against modern technical prose). |
+| `ghostwriter humanize [file] [--author <id>] [--target <0-1>] [--max-iterations <n>] [--no-llm]` | Rewrite a text to score lower on the local heuristic while a guard keeps numbers, names, quotes, code and URLs unchanged; bounded loop (default target 0.3, 3 iterations), each edit re-redacted and kept only if it scores lower. `generate --humanize [--target]` runs it on the result. The scores come from a weak, confounded heuristic (held-out AUC 0.694) and nothing here is claimed against any real detector: [docs/HUMANIZING.md](docs/HUMANIZING.md) has the measured results, including that the mean drop on the corpus is small (0.593 to 0.543). |
 | `ghostwriter profile <id>` | Show the stored stylometric profile. |
 | `ghostwriter personas` | List target personas (`engineer`, `executive`, `newcomer` by default). |
 | `ghostwriter filters` | List the filter pipeline in execution order. |
 | `ghostwriter authors` | List every ingested author with their profile. |
 | `ghostwriter config get` | Show the effective config, redacted (endpoint hosts, key variable NAMES, never values). Read-only. |
-| `ghostwriter capabilities` | List the operations and the ones planned but not built (`humanize`). |
+| `ghostwriter capabilities` | List the operations and any planned but not built (none at present). |
 | `ghostwriter serve [--token-env NAME] [--mcp]` | HTTP API on `127.0.0.1:8787` with `GET /openapi.json`: [docs/API.md](docs/API.md). Without a token any local process can use it; set one. |
 | `ghostwriter mcp [--stdio\|--http]` | MCP server exposing the same operations as tools: [docs/MCP.md](docs/MCP.md). |
 
@@ -70,7 +71,8 @@ Config (JSON, unknown keys are rejected; every key is optional except `llm.model
   "personas": [{ "key": "board", "name": "Board member", "cognitiveLoad": "low", "informationDensity": "medium",
                  "structuralMandates": ["first sentence is the recommendation"], "bannedPhrases": ["deep dive"] }],
   "scorer": { "weights": { "cliche": 0.4, "repetition": 0 },
-              "detectors": [{ "name": "acme", "url": "https://detector.example/v1/score", "apiKeyEnv": "ACME_DETECTOR_KEY" }] }
+              "detectors": [{ "name": "acme", "url": "https://detector.example/v1/score", "apiKeyEnv": "ACME_DETECTOR_KEY" }] },
+  "humanize": { "targetScore": 0.3, "maxIterations": 3 }
 }
 ```
 
@@ -90,6 +92,13 @@ const withDetector = await engine.score(text, { detectors: ['acme'] });         
 ```
 
 `score` is in [0,1] (0 reads human, 1 reads machine-generated) and `local.features` explains it: each feature's `value`, applied `weight` and `contribution`, summing to the score. A detector speaks `POST {"text"}` -> `{"score": 0..1}` (or implement `DetectorAdapter` and pass `detectors` to `Engine`); one that fails or answers outside [0,1] is listed in `excluded`, never fatal.
+
+```ts
+const r = await engine.humanize(text, { authorId: 'ann', target: 0.3, maxIterations: 3 });   // bounded, guarded rewrite; r.initialScore -> r.finalScore, r.steps
+const g = await engine.generate('ann', 'executive', draft, { humanize: true });              // generate, then the same loop on the result
+```
+
+`humanize` lowers the LOCAL heuristic score, which is weak and confounded (held-out AUC 0.694); read [docs/HUMANIZING.md](docs/HUMANIZING.md) for what it does, the guard, and the measured results before relying on it.
 
 `trace` lists one entry per stage (`confidentiality`, `llm`, `style`, `confidentiality`, and `persona-banned` when a banned phrase survived) with `modified`, `ms` and counts. It never contains matched text.
 
@@ -141,7 +150,7 @@ Tests are offline: the LLM is `MockLlmClient` or a local `127.0.0.1` stub server
 | Milestone | Phases |
 |---|---|
 | v1 (built) | 1 Foundation, 2 Filters, 3 Target axis, 4 Source axis, 5 Orchestration/LLM/CLI, 6 Hardening |
-| v2 | 7 AI-likeness scorer (0..1, explainable, pluggable detector adapters; built, measured in [docs/CALIBRATION.md](docs/CALIBRATION.md)), 8 Score-driven humanizer (planned) |
+| v2 | 7 AI-likeness scorer (0..1, explainable, pluggable detector adapters; built, measured in [docs/CALIBRATION.md](docs/CALIBRATION.md)), 8 Score-driven humanizer (built, measured in [docs/HUMANIZING.md](docs/HUMANIZING.md)) |
 
 The scorer and the humanizer report measured results only; a score from the local scorer is a proxy, and results against any third-party detector will be published as measured, including where it does not work. Plans: [`.planning/`](.planning/).
 

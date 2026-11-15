@@ -59,10 +59,10 @@
 - [x] **SCR-02**: Scorer returns a per-feature breakdown so every score is explainable.
 - [x] **SCR-03**: Pluggable `DetectorAdapter` interface (`score(text): Promise<number>` normalized to [0,1]) so external detector APIs or local classifiers can be added; ensemble = configurable weighted mean.
 - [x] **SCR-04**: Calibration harness: labeled human/AI fixture corpus, reports AUC and score distributions; ships numbers in docs. No claim beyond measured results.
-- [ ] **HUM-01**: `HumanizeFilter` runs a bounded loop: score -> targeted rewrite of the worst-scoring features (rhythm variation, cliche removal, voice-profile-consistent phrasing via LLM pass) -> rescore; stops at `targetScore` (default 0.3) or `maxIterations` (default 3).
-- [ ] **HUM-02**: Meaning preservation guard: entities, numbers, and quoted spans must be unchanged (diff check); on violation revert that iteration.
-- [ ] **HUM-03**: Confidentiality filter runs again after humanizing; protected spans (code/URLs) untouched.
-- [ ] **HUM-04**: Report before/after score and per-feature deltas in the trace. Goal is to lower the score on the local scorer and any plugged-in detectors; no guarantee against any specific third-party detector, and docs state the measured results per detector.
+- [x] **HUM-01**: `HumanizeFilter` runs a bounded loop: score -> targeted rewrite of the worst-scoring features (rhythm variation, cliche removal, voice-profile-consistent phrasing via LLM pass) -> rescore; stops at `targetScore` (default 0.3) or `maxIterations` (default 3).
+- [x] **HUM-02**: Meaning preservation guard: entities, numbers, and quoted spans must be unchanged (diff check); on violation revert that iteration.
+- [x] **HUM-03**: Confidentiality filter runs again after humanizing; protected spans (code/URLs) untouched.
+- [x] **HUM-04**: Report before/after score and per-feature deltas in the trace. Goal is to lower the score on the local scorer and any plugged-in detectors; no guarantee against any specific third-party detector, and docs state the measured results per detector.
 
 ## v3: Surfaces and UI (milestone v3)
 
