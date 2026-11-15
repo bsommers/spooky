@@ -26,11 +26,13 @@ import { buildPipeline } from './filters/registry.js';
 import type { FilterFactories } from './filters/registry.js';
 import { createLlmClient } from './llm/factory.js';
 import { DEFAULT_DETECTOR_TIMEOUT_MS } from '../config/scorer.js';
+import { DEFAULT_HUMANIZE, MAX_HUMANIZE_ITERATIONS } from '../config/humanize.js';
+import { HumanizeFilter } from './filters/humanize.js';
 import type { FetchLike } from './llm/http.js';
 import type { CreateLlmClientOptions } from './llm/factory.js';
 import type { RetryOptions } from './llm/retry.js';
 import { ConfigError, FilterFailedError, InputTooLargeError } from './models/errors.js';
-import type { Config, DetectorAdapter, Embedder, FilterSpec, GenerateOptions, GenerateResult, LlmClient, ProviderConfig, ScoreOptions, ScoreResult, StylometricProfile, TargetPersonaConfig, VectorStore } from './models/types.js';
+import type { Config, DetectorAdapter, Embedder, EngineGenerateOptions, FilterSpec, GenerateResult, HumanizeOptions, HumanizeResult, LlmClient, ProviderConfig, ScoreOptions, ScoreResult, StylometricProfile, TargetPersonaConfig, VectorStore } from './models/types.js';
 import { Orchestrator } from './orchestration/orchestrator.js';
 import { HttpDetectorAdapter, assertDetectorAdapter } from './scoring/detectorAdapter.js';
 import { runEnsemble } from './scoring/ensemble.js';
@@ -99,6 +101,8 @@ export class Engine {
   readonly #detectors = new Map<string, DetectorAdapter>();
   readonly #detectorWeights = new Map<string, number>(); // a Map: a detector may legally be named like an Object.prototype key
   readonly #detectorTimeouts = new Map<string, number>();
+  readonly #getLlm: () => LlmClient;
+  readonly #retry: RetryOptions | undefined;
 
   /** Builds the engine without touching the disk. Prefer `Engine.create`, which also restores persisted state. */
   constructor(options: EngineOptions) {
@@ -139,18 +143,20 @@ export class Engine {
     }
 
     let client = options.llm;
+    this.#getLlm = () =>
+      (client ??= createLlmClient(providerConfig(config), {
+        ...options.llmClientOptions,
+        env,
+        retry: { maxRetries: config.llm.maxRetries, ...options.llmClientOptions?.retry },
+      }));
+    this.#retry = options.retry;
     this.#orchestrator = new Orchestrator({
       config,
       sources: this.#sources,
       targets: this.#targets,
       pre,
       post,
-      llm: () =>
-        (client ??= createLlmClient(providerConfig(config), {
-          ...options.llmClientOptions,
-          env,
-          retry: { maxRetries: config.llm.maxRetries, ...options.llmClientOptions?.retry },
-        })),
+      llm: this.#getLlm,
       ...(options.retry === undefined ? {} : { retry: options.retry }),
     });
   }
@@ -252,9 +258,86 @@ export class Engine {
     return { score: r.score, local: r.local, members: r.members, excluded: r.excluded, trace: pre.trace };
   }
 
-  /** Rewrite `input` in the voice of `authorId` for `personaKey`. See `Orchestrator.generate` for the flow and errors. */
-  generate(authorId: string, personaKey: string, input: string, options: GenerateOptions = {}): Promise<GenerateResult> {
-    return this.#orchestrator.generate(authorId, personaKey, input, options);
+  /**
+   * Rewrite `input` in the voice of `authorId` for `personaKey`. See `Orchestrator.generate` for the flow and errors.
+   * `options.humanize` then runs the humanizer loop (`humanize()`) on the generated text, targeting `options.target`; the
+   * result's trace gains the humanizer's entries. The humanizer never fails the generation: if it cannot improve the text it
+   * returns it unchanged.
+   */
+  async generate(authorId: string, personaKey: string, input: string, options: EngineGenerateOptions = {}): Promise<GenerateResult> {
+    const { humanize, target, ...rest } = options;
+    if (humanize === true || target !== undefined) this.#humanizeSettings({ ...(target === undefined ? {} : { target }) }); // validate before the model is called
+    const r = await this.#orchestrator.generate(authorId, personaKey, input, rest);
+    if (humanize !== true) return r;
+    // The generated text already went through the post pipeline (style, then confidentiality). The humanizer runs on it and
+    // re-runs confidentiality on every candidate and on its result, so the text returned here is redacted last.
+    const h = await this.#humanizeRedacted(r.text, { authorId, ...(target === undefined ? {} : { target }), ...(rest.maxTokens === undefined ? {} : { maxTokens: rest.maxTokens }), ...(rest.temperature === undefined ? {} : { temperature: rest.temperature }) });
+    return { text: h.text, trace: [...r.trace, ...h.trace], promptTokensEstimate: r.promptTokensEstimate };
+  }
+
+  /**
+   * Lower the AI-likeness score of `text` without changing what it says (docs/HUMANIZING.md). A bounded loop: score, edit
+   * the two worst-scoring features (deterministic edits first, then one model call per iteration), then confidentiality,
+   * the meaning guard (numbers, names, quotes, code and URLs must be unchanged) and a rescore; an edit is kept only when it
+   * passed the guard and scored strictly lower. Stops at `target` (default `humanize.targetScore`, 0.3) or after
+   * `maxIterations` (default 3); the best-scoring version is returned, not the last. The score that drives it is the local
+   * heuristic, a weak and confounded proxy (docs/CALIBRATION.md): a lower score is not evidence about any real detector.
+   *
+   * The model is called only when `llm` is not false, and a model failure keeps the prior text (recorded in the trace).
+   * The text goes through the PRE pipeline (confidentiality) first, so the model never sees a secret.
+   *
+   * `ConfigError` for a bad option, `InputTooLargeError` above `limits.maxInputChars`, `UnknownAuthorError` for an
+   * unknown `authorId`, `FilterFailedError` if the redaction cannot be shown to have run.
+   */
+  async humanize(text: string, options: HumanizeOptions = {}): Promise<HumanizeResult> {
+    if (typeof text !== 'string') throw new ConfigError('humanize: text must be a string');
+    if (text.length > this.#maxInputChars) throw new InputTooLargeError(text.length, this.#maxInputChars);
+    if (text.trim() === '') throw new ConfigError('humanize: text must not be blank');
+    this.#humanizeSettings(options); // before anything else: a typo costs nothing
+    if (options.authorId !== undefined) this.#sources.getProfile(options.authorId); // UnknownAuthorError
+    const pre = await this.#pre.run(text, { authorId: options.authorId ?? '(humanize)', personaKey: '(humanize)', stage: 'pre' });
+    requireConfidentiality(pre.trace);
+    const r = await this.#humanizeRedacted(pre.text, options);
+    return { ...r, trace: [...pre.trace, ...r.trace] };
+  }
+
+  /** Validated target / maxIterations / sampling settings, defaults from `config.humanize`. */
+  #humanizeSettings(o: HumanizeOptions): { target: number; maxIterations: number; maxTokens: number; temperature: number } {
+    const cfg = this.#config.humanize ?? DEFAULT_HUMANIZE;
+    const target = o.target ?? cfg.targetScore;
+    const maxIterations = o.maxIterations ?? cfg.maxIterations;
+    const maxTokens = o.maxTokens ?? this.#config.llm.maxTokens;
+    const temperature = o.temperature ?? this.#config.llm.temperature;
+    if (typeof target !== 'number' || !Number.isFinite(target) || target < 0 || target > 1) throw new ConfigError('humanize: target must be a number in [0, 1]');
+    if (!Number.isInteger(maxIterations) || maxIterations < 0 || maxIterations > MAX_HUMANIZE_ITERATIONS) throw new ConfigError(`humanize: maxIterations must be an integer in [0, ${MAX_HUMANIZE_ITERATIONS}]`);
+    if (!Number.isInteger(maxTokens) || maxTokens < 1) throw new ConfigError('humanize: maxTokens must be a positive integer');
+    if (typeof temperature !== 'number' || !Number.isFinite(temperature) || temperature < 0 || temperature > 1) throw new ConfigError('humanize: temperature must be a number in [0, 1]');
+    if (o.llm !== undefined && typeof o.llm !== 'boolean') throw new ConfigError('humanize: llm must be a boolean');
+    return { target, maxIterations, maxTokens, temperature };
+  }
+
+  /** The loop on text that already went through confidentiality. Every candidate is redacted again by the same pre pipeline. */
+  async #humanizeRedacted(redacted: string, o: HumanizeOptions): Promise<HumanizeResult> {
+    const settings = this.#humanizeSettings(o);
+    const profile = o.authorId === undefined ? undefined : this.#sources.getProfile(o.authorId);
+    const redact = async (t: string): Promise<{ text: string; modified: boolean }> => {
+      const out = await this.#pre.run(t, { authorId: o.authorId ?? '(humanize)', personaKey: '(humanize)', stage: 'pre' });
+      requireConfidentiality(out.trace);
+      return { text: out.text, modified: out.text !== t };
+    };
+    const filter = new HumanizeFilter({
+      deps: { score: (t) => this.#scorer.score(t), redact, llm: this.#getLlm, ...(this.#retry === undefined ? {} : { retry: this.#retry }) },
+      ...settings,
+      useLlm: o.llm !== false,
+    });
+    return filter.run(redacted, profile);
+  }
+}
+
+/** A pipeline run without a successful confidentiality entry did not demonstrably redact: fail closed. */
+function requireConfidentiality(trace: readonly { filter: string; error?: string }[]): void {
+  if (!trace.some((t) => t.filter === 'confidentiality' && t.error === undefined)) {
+    throw new FilterFailedError('confidentiality', new Error('no successful confidentiality entry in the trace'));
   }
 }
 

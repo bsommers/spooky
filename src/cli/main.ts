@@ -3,6 +3,8 @@
 //   ghostwriter ingest   --author <id> --name <name> [file | --file <path>]   (stdin when no file)
 //   ghostwriter generate --author <id> --persona <key> [file | --file <path>] (stdin when no file)
 //   ghostwriter score    [file | --file <path>] [--detector <name>]...        (stdin when no file)
+//   ghostwriter humanize [file | --file <path>] [--author <id>] [--target <t>] [--max-iterations <n>] [--no-llm]
+//   ghostwriter generate ... [--humanize [--target <t>]]                      (humanizer loop on the result)
 //   ghostwriter personas | filters | authors | profile <id> | config get | capabilities
 //   ghostwriter serve [--host --port --token-env --allow-origin --max-body --mcp]   (HTTP API, src/api)
 //   ghostwriter mcp [--stdio | --http]                                              (MCP server, src/mcp)
@@ -257,6 +259,8 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
       .option('--exemplars <n>', 'writing samples to include in the prompt (0-20)', parseInt10)
       .option('--max-tokens <n>', 'maximum output tokens', parseInt10)
       .option('--temperature <t>', 'sampling temperature, 0 to 1', parseUnit)
+      .option('--humanize', 'then run the humanizer loop on the result (more model calls; scored by a weak local heuristic, docs/HUMANIZING.md)')
+      .option('--target <t>', 'humanizer target score, 0 to 1 (default humanize.targetScore, 0.3); needs --humanize', parseUnit)
       .option('--model <name>', 'model id (overrides llm.model; or $GHOSTWRITER_MODEL)')
       .option('--provider <name>', 'anthropic | openai-compat')
       .option('--base-url <url>', 'endpoint for openai-compat, e.g. http://localhost:11434/v1')
@@ -264,9 +268,10 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
   ).action(
     async (
       file: string | undefined,
-      opts: CommonOpts & LlmOpts & { author: string; persona: string; file?: string; exemplars?: number; maxTokens?: number; temperature?: number },
+      opts: CommonOpts & LlmOpts & { author: string; persona: string; file?: string; exemplars?: number; maxTokens?: number; temperature?: number; humanize?: boolean; target?: number },
     ) => {
       const op = operation('generate');
+      if (opts.target !== undefined && opts.humanize !== true) throw new ConfigError('--target needs --humanize');
       const config = await resolveConfig(io, opts, true);
       const input = await readInput(io, file, opts.file, config.limits.maxInputChars * 4);
       const engine = await engineFor(config, opts, true);
@@ -277,6 +282,8 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
         ...(opts.exemplars === undefined ? {} : { exemplars: opts.exemplars }),
         ...(opts.maxTokens === undefined ? {} : { maxTokens: opts.maxTokens }),
         ...(opts.temperature === undefined ? {} : { temperature: opts.temperature }),
+        ...(opts.humanize === true ? { humanize: true } : {}),
+        ...(opts.target === undefined ? {} : { target: opts.target }),
       });
       const banned = (data.trace as { filter: string; metadata: Record<string, unknown> }[]).find((t) => t.filter === 'persona-banned');
       if (banned) io.stderr(`warning: the output still contains ${String(banned.metadata.count)} phrase(s) banned for persona "${opts.persona}"\n`);
@@ -306,6 +313,43 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
     }
     emit(op, data);
   });
+
+  common(
+    program
+      .command('humanize')
+      .description('rewrite a text to score lower on the local AI-likeness heuristic, keeping numbers, names, quotes and code (a weak proxy, not a detector verdict; docs/HUMANIZING.md)')
+      .argument('[file]', 'text file (default: stdin)')
+      .option('--file <path>', 'text file; "-" is stdin')
+      .option('--author <id>', 'author whose voice profile steers the model pass (must have been ingested)')
+      .option('--target <t>', 'stop at or below this score, 0 to 1 (default humanize.targetScore, 0.3)', parseUnit)
+      .option('--max-iterations <n>', 'at most this many iterations (default humanize.maxIterations, 3)', parseInt10)
+      .option('--no-llm', 'deterministic edits only: no model call')
+      .option('--model <name>', 'model id (overrides llm.model; or $GHOSTWRITER_MODEL)')
+      .option('--provider <name>', 'anthropic | openai-compat')
+      .option('--base-url <url>', 'endpoint for openai-compat, e.g. http://localhost:11434/v1')
+      .option('--api-key-env <NAME>', 'NAME of the environment variable holding the API key (never the key itself)'),
+  ).action(
+    async (
+      file: string | undefined,
+      opts: CommonOpts & LlmOpts & { file?: string; author?: string; target?: number; maxIterations?: number; llm: boolean },
+    ) => {
+      const op = operation('humanize');
+      const config = await resolveConfig(io, opts, false);
+      const text = await readInput(io, file, opts.file, config.limits.maxInputChars * 4);
+      const engine = await engineFor(config, opts, opts.author !== undefined);
+      const data = await invokeOperation(op, engine, {
+        text,
+        ...(opts.author === undefined ? {} : { authorId: opts.author }),
+        ...(opts.target === undefined ? {} : { target: opts.target }),
+        ...(opts.maxIterations === undefined ? {} : { maxIterations: opts.maxIterations }),
+        ...(opts.llm ? {} : { llm: false }),
+      });
+      for (const s of data.steps as { outcome: string; step: string; error?: string }[]) {
+        if (s.outcome === 'llm_error') io.stderr(`warning: the model pass failed (${s.error ?? 'error'}); the earlier text was kept\n`);
+      }
+      emit(op, data);
+    },
+  );
 
   // The remaining operations are fully described by their registry entry: the command, its arguments and its text
   // rendering all come from `OPERATIONS` (src/service/operations.ts), so a new registry entry gets a CLI command.

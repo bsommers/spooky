@@ -5,6 +5,7 @@
 // limits, the filter pipeline, persona keys, and the scorer settings. What it never shows: any env value, the
 // confidentiality blocklist or custom-rule patterns (counts only), persona prose. A name that is not shaped like an
 // environment variable name is withheld, so a key pasted into `apiKeyEnv` cannot leak through this view.
+import { DEFAULT_HUMANIZE } from '../../config/humanize.js';
 import type { Config, FilterSpec } from '../models/types.js';
 
 export interface DetectorView {
@@ -36,6 +37,7 @@ export interface ConfigView {
   personas: string[];
   confidentiality: { blocklistTerms: number; customRules: number };
   scorer: { localWeight: number; weights: Record<string, number>; detectors: DetectorView[] };
+  humanize: { targetScore: number; maxIterations: number };
 }
 
 /** Shown in place of a name that does not look like an environment variable name. */
@@ -94,5 +96,6 @@ export function buildConfigView(config: Config, env: Readonly<Record<string, str
         timeoutMs: d.timeoutMs,
       })),
     },
+    humanize: { targetScore: config.humanize?.targetScore ?? DEFAULT_HUMANIZE.targetScore, maxIterations: config.humanize?.maxIterations ?? DEFAULT_HUMANIZE.maxIterations },
   };
 }

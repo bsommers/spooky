@@ -2,6 +2,7 @@
 // The output schemas document and test the data every surface returns; they are the source of the OpenAPI and MCP
 // output schemas. Inputs are strict objects: an unknown field is an error, never ignored.
 import { z } from 'zod';
+import { MAX_HUMANIZE_ITERATIONS } from '../../config/humanize.js';
 import { AUTHOR_ID, MAX_DISPLAY_NAME } from '../registry/profileFile.js';
 
 // eslint-disable-next-line no-control-regex
@@ -45,8 +46,20 @@ export const generateInput = z.strictObject({
   exemplars: z.number().int().min(0).max(20).optional(),
   maxTokens: z.number().int().min(1).max(200_000).optional(),
   temperature: z.number().min(0).max(1).optional(),
+  /** Phase 8: run the humanizer loop on the generated text. */
+  humanize: z.boolean().optional(),
+  /** Phase 8: humanizer target score (needs `humanize`). */
+  target: z.number().min(0).max(1).optional(),
 });
 export const profileInput = z.strictObject({ authorId: authorIdSchema });
+export const humanizeInput = z.strictObject({
+  text: textSchema,
+  authorId: authorIdSchema.optional(),
+  target: z.number().min(0).max(1).optional(),
+  maxIterations: z.number().int().min(0).max(MAX_HUMANIZE_ITERATIONS).optional(),
+  /** `false`: deterministic edits only, no model call. */
+  llm: z.boolean().optional(),
+});
 export const scoreInput = z.strictObject({ text: textSchema, detectors: z.array(detectorNameSchema).max(16).optional() });
 
 // ---------- outputs ----------
@@ -122,6 +135,7 @@ export const configViewSchema = z.object({
   personas: z.array(z.string()),
   confidentiality: z.object({ blocklistTerms: z.number(), customRules: z.number() }),
   scorer: z.object({ localWeight: z.number(), weights: z.record(z.string(), z.number()), detectors: z.array(detectorViewSchema) }),
+  humanize: z.object({ targetScore: z.number(), maxIterations: z.number() }),
 });
 
 export const ingestOutput = z.object({ profile: profileSchema });
@@ -139,6 +153,35 @@ export const scoreOutput = z.object({
   trace: z.array(traceEntrySchema),
   /** True when named detectors were requested, none answered, and `score` is the local heuristic alone. */
   localOnly: z.boolean().optional(),
+});
+const humanizeStepSchema = z.object({
+  iteration: z.number(),
+  step: z.enum(['deterministic', 'llm']),
+  features: z.array(z.string()),
+  scoreBefore: z.number(),
+  scoreAfter: z.number(),
+  kept: z.boolean(),
+  outcome: z.enum(['improved', 'no_improvement', 'guard_rejected', 'llm_error']),
+  redacted: z.boolean(),
+  guard: z.array(z.string()),
+  featureDeltas: z.record(z.string(), z.number()),
+  error: z.string().optional(),
+});
+export const humanizeOutput = z.object({
+  text: z.string(),
+  initialScore: z.number(),
+  finalScore: z.number(),
+  reachedTarget: z.boolean(),
+  iterations: z.number(),
+  llmCalls: z.number(),
+  guardRejections: z.number(),
+  featureDeltas: z.record(z.string(), z.number()),
+  featuresBefore: z.record(z.string(), z.number()),
+  featuresAfter: z.record(z.string(), z.number()),
+  steps: z.array(humanizeStepSchema),
+  trace: z.array(traceEntrySchema),
+  /** Fixed reminder, on every surface: what the scores are and are not. */
+  caveat: z.string(),
 });
 export const capabilitiesOutput = z.object({
   operations: z.array(

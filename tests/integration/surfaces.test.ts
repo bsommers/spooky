@@ -3,21 +3,26 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadConfig } from '../../src/config/load.js';
 import { Engine } from '../../src/engine.js';
 import { MockLlmClient } from '../../src/llm/mockClient.js';
 import { LlmTransportError } from '../../src/llm/retry.js';
 import { ERROR_TABLE } from '../../src/service/errors.js';
-import { OPERATIONS, invokeOperation } from '../../src/service/operations.js';
+import { HUMANIZE_CAVEAT, OPERATIONS, invokeOperation } from '../../src/service/operations.js';
+import { readFileSync } from 'node:fs';
 import type { ApiServer } from '../../src/api/server.js';
 import { runCli } from '../helpers/cli.js';
 import { PERSONA, corpus } from '../helpers/rig.js';
 import { CLEAN_ANSWER, connectMcp, makeRuntime, postJson, raw, startTestServer } from '../helpers/surfaces.js';
 import type { Rigged } from '../helpers/surfaces.js';
 
+const __dirname_ = dirname(fileURLToPath(import.meta.url));
 const CONFIG = { llm: { model: 'm', maxRetries: 0 }, personas: [PERSONA], limits: { maxInputChars: 5000 } };
 const DRAFT = 'Please rewrite this short draft so it reads plainly. We ship on Friday. The team agrees.';
+const AI_TEXT = readFileSync(join(__dirname_, '..', 'fixtures', 'corpus', 'ai', '08-social-media.txt'), 'utf8');
 const SCORE_TEXT = 'This is a plain paragraph. It has a few sentences, some short and some a little longer than the others. Then it ends.';
 
 /** Wall-clock fields differ between runs; everything else must be equal. */
@@ -99,6 +104,13 @@ const cases: Case[] = [
     },
   },
   {
+    op: 'humanize',
+    http: (s) => postJson(s, '/api/humanize', { text: AI_TEXT, llm: false }),
+    cli: { argv: ['humanize', '--no-llm'], stdin: AI_TEXT },
+    mcp: { text: AI_TEXT, llm: false },
+    engine: async () => ({ ...(await rig.engine.humanize(AI_TEXT, { llm: false })), caveat: HUMANIZE_CAVEAT }),
+  },
+  {
     op: 'generate',
     http: (s) => postJson(s, '/api/generate', { authorId: 'terse', persona: 'exec', text: DRAFT }),
     cli: { argv: ['generate', '--author', 'terse', '--persona', 'exec'], stdin: DRAFT },
@@ -154,7 +166,7 @@ describe('golden equality across surfaces', () => {
     }
   });
 
-  it('capabilities lists every registry operation on every surface and humanize as pending', async () => {
+  it('capabilities lists every registry operation (humanize included) on every surface and nothing pending', async () => {
     const http = (await raw(server, '/api/capabilities')).json();
     const cli = JSON.parse((await runCli(['capabilities', ...cliArgs()])).out);
     const mcp = await connectMcp(rig);
@@ -162,7 +174,8 @@ describe('golden equality across surfaces', () => {
       const viaMcp = (await mcp.client.callTool({ name: 'capabilities', arguments: {} })).structuredContent;
       for (const doc of [http, cli, viaMcp] as any[]) {
         expect(doc.operations.map((o: any) => o.name)).toEqual(OPERATIONS.map((o) => o.name));
-        expect(doc.pending).toEqual([{ name: 'humanize', phase: 8, summary: expect.any(String) }]);
+        expect(doc.pending).toEqual([]);
+        expect(doc.operations.map((o: any) => o.name)).toContain('humanize');
       }
     } finally {
       await mcp.close();
@@ -202,6 +215,13 @@ describe('the same failure, the same code, the table status on each surface', ()
       http: (s) => postJson(s, '/api/score', { text: SCORE_TEXT, detectors: ['nope'] }),
       cli: { argv: ['score', '--detector', 'nope'], stdin: SCORE_TEXT },
       mcp: ['score', { text: SCORE_TEXT, detectors: ['nope'] }],
+    },
+    {
+      name: 'humanize with an unknown author',
+      code: 'UNKNOWN_AUTHOR',
+      http: (s) => postJson(s, '/api/humanize', { text: DRAFT, authorId: 'nobody', llm: false }),
+      cli: { argv: ['humanize', '--author', 'nobody', '--no-llm'], stdin: DRAFT },
+      mcp: ['humanize', { text: DRAFT, authorId: 'nobody', llm: false }],
     },
     {
       name: 'invalid author id (usage)',

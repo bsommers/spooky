@@ -1,7 +1,7 @@
 // Uniform surfaces (Phase 9): for EVERY operation in the registry there must be an Engine method, a CLI command with
 // its flags, an HTTP route, an MCP tool and an OpenAPI path; and no surface may offer a capability the registry lacks.
-// A capability that is planned but not built (humanize, Phase 8) is enumerated as PENDING: it must have no adapter
-// anywhere yet, and the test fails the moment the Engine gains it without a registry entry.
+// A capability that is planned but not built is enumerated as PENDING (none since Phase 8 built humanize): it must have
+// no adapter anywhere yet, and the test fails the moment the Engine gains it without a registry entry.
 //
 // The descriptors are OBSERVED, not read back from the code under test: the HTTP routes and accepted input fields are
 // probed on a live server (a 404/405 is "no such route", "unknown field" is "not accepted"), the MCP tools and their
@@ -51,6 +51,7 @@ const CLI_ONLY_FLAGS: Record<string, Record<string, string>> = {
   // They override the LLM endpoint for ONE process. A running service takes its model and endpoint from its own config
   // file; letting a remote caller redirect it (and the API key) to another host would be a hole, not a feature.
   generate: { '--model': 'config override', '--provider': 'config override', '--base-url': 'config override', '--api-key-env': 'config override' },
+  humanize: { '--model': 'config override', '--provider': 'config override', '--base-url': 'config override', '--api-key-env': 'config override' },
 };
 
 /**
@@ -60,7 +61,8 @@ const CLI_ONLY_FLAGS: Record<string, Record<string, string>> = {
  */
 const CLI_FIELDS: Record<string, Record<string, string>> = {
   ingest: { authorId: '--author', name: '--name', text: '--file' },
-  generate: { authorId: '--author', persona: '--persona', text: '--file', exemplars: '--exemplars', maxTokens: '--max-tokens', temperature: '--temperature' },
+  generate: { authorId: '--author', persona: '--persona', text: '--file', exemplars: '--exemplars', maxTokens: '--max-tokens', temperature: '--temperature', humanize: '--humanize', target: '--target' },
+  humanize: { text: '--file', authorId: '--author', target: '--target', maxIterations: '--max-iterations', llm: '--no-llm' },
   score: { text: '--file', detectors: '--detector' },
   profile: { authorId: '<id>' },
 };
@@ -156,7 +158,7 @@ let real: Surfaces;
 let program: Command;
 
 const camel = (flag: string): string => flag.replace(/^--/, '').replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
-const DECOYS = ['purge', 'export', 'remove', 'delete', 'humanize', 'admin', 'shell', 'exec'];
+const DECOYS = ['purge', 'export', 'remove', 'delete', 'translate', 'admin', 'shell', 'exec'];
 
 /** Does the server answer on this path/method? (404 = no such route; 405 = the path exists, the method does not.) */
 async function probeRoute(srv: Pick<ApiServer, 'host' | 'port'>, name: string): Promise<string[]> {
@@ -262,23 +264,31 @@ describe('surface parity over the operations registry', () => {
     }
   });
 
-  it('humanize is enumerated as a pending capability with no adapter on any surface (not faked)', () => {
-    expect(PENDING_CAPABILITIES).toEqual([expect.objectContaining({ name: 'humanize', phase: 8, engineMethod: 'humanize' })]);
-    expect(real.engineMethods.has('humanize')).toBe(false);
-    expect(real.cli.has('humanize')).toBe(false);
-    expect(real.mcp.has('humanize')).toBe(false);
-    expect([...real.http].some((r) => r.includes('humanize'))).toBe(false);
-    expect(OPERATIONS.some((o) => o.name === ('humanize' as string))).toBe(false);
+  it('humanize (Phase 8) is a registry operation on every surface and no longer pending', () => {
+    expect(PENDING_CAPABILITIES).toEqual([]);
+    const op = operation('humanize');
+    expect(op.engineMethod).toBe('humanize');
+    expect(real.engineMethods.has('humanize')).toBe(true);
+    expect(real.cli.has('humanize')).toBe(true);
+    expect(real.mcp.has('humanize')).toBe(true);
+    expect(real.http.has('POST /api/humanize')).toBe(true);
+    expect(real.openapi.has('/api/humanize')).toBe(true);
+    expect(OPERATIONS.some((o) => o.name === 'humanize')).toBe(true);
   });
 
   it('a pending capability that gains an adapter or an Engine method without a registry entry FAILS the check', () => {
-    const [p] = PENDING_CAPABILITIES as [PendingCapability];
+    // The pending list is empty now; the check is exercised with a synthetic planned capability.
+    const p: PendingCapability = { name: 'translate', phase: 99, summary: 'planned', engineMethod: 'translate' };
+    const pending = [p];
+    expect(gaps(OPERATIONS, pending, real)).toEqual([]);
     const withEngine = { ...real, engineMethods: new Set([...real.engineMethods, p.engineMethod]) };
-    expect(gaps(OPERATIONS, PENDING_CAPABILITIES, withEngine).join('\n')).toContain('add a registry operation');
+    expect(gaps(OPERATIONS, pending, withEngine).join('\n')).toContain('add a registry operation');
     const withTool = { ...real, mcp: new Set([...real.mcp, p.name]) };
-    expect(gaps(OPERATIONS, PENDING_CAPABILITIES, withTool).join('\n')).toContain('humanize');
+    expect(gaps(OPERATIONS, pending, withTool).join('\n')).toContain('translate');
     const withCli = { ...real, cli: new Map([...real.cli, [p.name, { flags: new Set<string>(), args: new Set<string>() }]]) };
-    expect(gaps(OPERATIONS, PENDING_CAPABILITIES, withCli).join('\n')).toContain('humanize');
+    expect(gaps(OPERATIONS, pending, withCli).join('\n')).toContain('translate');
+    const registered = { ...OPERATIONS[0], name: 'translate' } as unknown as AnyOperation;
+    expect(gaps([...OPERATIONS, registered], pending, real).join('\n')).toContain('pending capability is already registered');
   });
 
   describe('mutation check: deleting any one adapter entry makes the check fail', () => {

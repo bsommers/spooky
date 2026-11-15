@@ -68,6 +68,7 @@ async function exerciseAllTools(client: Client): Promise<void> {
     ingest: { authorId: 'sys', name: 'System Author', text: corpus() },
     generate: { authorId: 'sys', persona: 'exec', text: `Deploy using ${SECRET} tonight.` },
     score: { text: 'A plain text to rate. It has a second sentence. And then a third one to end.' },
+    humanize: { text: 'A plain text to rewrite. It has a second sentence. And then a third one to end it here.', llm: false },
     profile: { authorId: 'sys' },
   };
   for (const op of OPERATIONS) {

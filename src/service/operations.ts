@@ -17,7 +17,7 @@ import type { StylometricProfile } from '../models/types.js';
 import { InputError } from './errors.js';
 import * as S from './schemas.js';
 
-export type OperationName = 'ingest' | 'generate' | 'score' | 'profile' | 'authors' | 'personas' | 'filters' | 'config_get' | 'capabilities';
+export type OperationName = 'ingest' | 'generate' | 'score' | 'humanize' | 'profile' | 'authors' | 'personas' | 'filters' | 'config_get' | 'capabilities';
 
 /** How an operation appears on the command line (the parity test checks the real commander program against this). */
 export interface CliBinding {
@@ -62,14 +62,12 @@ export interface PendingCapability {
   readonly engineMethod: string;
 }
 
-export const PENDING_CAPABILITIES: readonly PendingCapability[] = [
-  {
-    name: 'humanize',
-    phase: 8,
-    summary: 'rewrite a text to read less machine-generated, verified by re-scoring (not built yet)',
-    engineMethod: 'humanize',
-  },
-];
+/** Planned but not built. Empty since Phase 8 built `humanize`; kept so the next planned capability has a place to be listed. */
+export const PENDING_CAPABILITIES: readonly PendingCapability[] = [];
+
+/** Said on every surface next to a humanizer result: what the scores mean. */
+export const HUMANIZE_CAVEAT =
+  'Scores are from the local heuristic, a weak and confounded proxy (held-out AUC 0.694, docs/CALIBRATION.md), not a detector verdict. A lower score is not evidence that any real detector would pass the text. Results against detectors are in docs/HUMANIZING.md.';
 
 function define<I extends z.ZodObject, O extends z.ZodObject>(op: Operation<I, O>): Operation<I, O> {
   return op;
@@ -122,7 +120,8 @@ const ingest = define({
 
 const generate = define({
   name: 'generate',
-  description: "Rewrite a draft in an ingested author's voice for a target persona. Calls the configured language model; the draft is redacted first and the result is checked again.",
+  description:
+    "Rewrite a draft in an ingested author's voice for a target persona. Calls the configured language model; the draft is redacted first and the result is checked again. With humanize, the result is then run through the humanizer loop (up to maxIterations more model calls; scored by a weak local heuristic).",
   input: S.generateInput,
   output: S.generateOutput,
   mutates: false,
@@ -130,13 +129,15 @@ const generate = define({
   readsState: true,
   engineMethod: 'generate',
   http: { method: 'POST', path: '/api/generate' },
-  cli: { command: ['generate'], arguments: [], flags: ['--author', '--persona', '--file', '--exemplars', '--max-tokens', '--temperature'], derived: false },
+  cli: { command: ['generate'], arguments: [], flags: ['--author', '--persona', '--file', '--exemplars', '--max-tokens', '--temperature', '--humanize', '--target'], derived: false },
   render: (o) => o.text,
   async handler(engine, input) {
     const r = await engine.generate(input.authorId, input.persona, input.text, {
       ...(input.exemplars === undefined ? {} : { exemplarCount: input.exemplars }),
       ...(input.maxTokens === undefined ? {} : { maxTokens: input.maxTokens }),
       ...(input.temperature === undefined ? {} : { temperature: input.temperature }),
+      ...(input.humanize === true ? { humanize: true } : {}),
+      ...(input.target === undefined ? {} : { target: input.target }),
     });
     return { text: r.text, trace: r.trace, promptTokensEstimate: r.promptTokensEstimate };
   },
@@ -175,6 +176,37 @@ const score = define({
     // The caller asked for an external opinion and got none: the local result is still returned, but flagged.
     const localOnly = detectors.length > 0 && r.members.every((m) => m.name === 'local') && r.excluded.some((e) => e.reason !== 'empty_text');
     return { score: r.score, local: r.local, members: r.members, excluded: r.excluded, trace: r.trace, ...(localOnly ? { localOnly: true } : {}) };
+  },
+});
+
+const humanize = define({
+  name: 'humanize',
+  description:
+    'Rewrite a text to score lower on the local AI-likeness heuristic while keeping numbers, names, quotes, code and URLs unchanged. Bounded loop (target score or max iterations), at most one model call per iteration unless llm is false; every edit is checked by a meaning guard and the confidentiality filter and kept only if it scores lower. The score is a weak, confounded proxy (held-out AUC 0.694), not a detector verdict; no guarantee against any real detector.',
+  input: S.humanizeInput,
+  output: S.humanizeOutput,
+  mutates: false,
+  openWorld: true,
+  readsState: true,
+  engineMethod: 'humanize',
+  http: { method: 'POST', path: '/api/humanize' },
+  cli: { command: ['humanize'], arguments: [], flags: ['--file', '--author', '--target', '--max-iterations', '--no-llm'], derived: false },
+  render(o) {
+    const lines = [o.text, ''];
+    lines.push(`score: ${o.initialScore.toFixed(3)} -> ${o.finalScore.toFixed(3)} (${o.reachedTarget ? 'target reached' : 'target not reached'}; ${o.iterations} iteration(s), ${o.llmCalls} model call(s), ${o.guardRejections} guard rejection(s))`);
+    const moved = Object.entries(o.featureDeltas).filter(([, d]) => d !== 0);
+    if (moved.length > 0) lines.push(`feature changes: ${moved.map(([k, d]) => `${k} ${d > 0 ? '+' : ''}${d.toFixed(3)}`).join(', ')}`);
+    lines.push(`note: ${o.caveat}`);
+    return lines.join('\n');
+  },
+  async handler(engine, input) {
+    const r = await engine.humanize(input.text, {
+      ...(input.authorId === undefined ? {} : { authorId: input.authorId }),
+      ...(input.target === undefined ? {} : { target: input.target }),
+      ...(input.maxIterations === undefined ? {} : { maxIterations: input.maxIterations }),
+      ...(input.llm === undefined ? {} : { llm: input.llm }),
+    });
+    return { ...r, caveat: HUMANIZE_CAVEAT };
   },
 });
 
@@ -274,7 +306,7 @@ const capabilities = define({
 });
 
 /** The registry: ordered, unique names, the single declaration every adapter reads. */
-export const OPERATIONS: readonly AnyOperation[] = [ingest, generate, score, profile, authors, personas, filters, configGet, capabilities] as unknown as readonly AnyOperation[];
+export const OPERATIONS: readonly AnyOperation[] = [ingest, generate, score, humanize, profile, authors, personas, filters, configGet, capabilities] as unknown as readonly AnyOperation[];
 
 const BY_NAME = new Map(OPERATIONS.map((o) => [o.name as string, o]));
 

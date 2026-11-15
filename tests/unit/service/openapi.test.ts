@@ -30,7 +30,7 @@ describe('OpenAPI 3.1 document', () => {
     }
     const apiPaths = Object.keys(doc.paths).filter((p) => p.startsWith('/api/'));
     expect(apiPaths.sort()).toEqual(OPERATIONS.map((o) => o.http.path).sort());
-    expect(doc.paths['/api/humanize']).toBeUndefined();
+    expect(doc.paths['/api/humanize']?.post.operationId).toBe('humanize');
   });
 
   it('GET operations use query parameters, POST operations a JSON body, and both document the error statuses', () => {
@@ -75,7 +75,7 @@ describe('OpenAPI 3.1 document', () => {
       expect(served.servers).toEqual([{ url: server.url }]); // the address it actually bound, not a hard-coded one
       // a route that is in the document answers; one that is not does not
       expect((await raw(server, '/api/personas')).status).toBe(200);
-      expect((await raw(server, '/api/humanize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status).toBe(404);
+      expect((await raw(server, '/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status).toBe(404);
     } finally {
       await server.close();
       rig.cleanup();

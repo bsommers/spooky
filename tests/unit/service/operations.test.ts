@@ -11,7 +11,7 @@ describe('operations registry', () => {
   it('has unique names, and every operation has a strict object input and an object output schema', () => {
     const names = OPERATIONS.map((o) => o.name);
     expect(new Set(names).size).toBe(names.length);
-    expect(names).toEqual(['ingest', 'generate', 'score', 'profile', 'authors', 'personas', 'filters', 'config_get', 'capabilities']);
+    expect(names).toEqual(['ingest', 'generate', 'score', 'humanize', 'profile', 'authors', 'personas', 'filters', 'config_get', 'capabilities']);
     for (const op of OPERATIONS) {
       expect(op.input, op.name).toBeInstanceOf(z.ZodObject);
       expect(op.output, op.name).toBeInstanceOf(z.ZodObject);
@@ -65,10 +65,24 @@ describe('operations registry', () => {
     expect(() => parseInput(operation('ingest'), [1])).toThrow(InputError);
   });
 
-  it('humanize is pending, not registered: no operation of that name exists', () => {
-    expect(PENDING_CAPABILITIES.map((p) => p.name)).toEqual(['humanize']);
-    expect(findOperation('humanize')).toBeUndefined();
-    expect(describeCapabilities().pending).toEqual([{ name: 'humanize', phase: 8, summary: expect.any(String) }]);
+  it('humanize (Phase 8) is registered and no longer pending; a planned capability is reported by describeCapabilities', () => {
+    expect(PENDING_CAPABILITIES).toEqual([]);
+    expect(findOperation('humanize')).toMatchObject({ name: 'humanize', engineMethod: 'humanize', mutates: false, openWorld: true, http: { method: 'POST', path: '/api/humanize' } });
+    expect(describeCapabilities().pending).toEqual([]);
+    const planned = [{ name: 'translate', phase: 99, summary: 'planned', engineMethod: 'translate' }];
+    expect(describeCapabilities(OPERATIONS, planned).pending).toEqual([{ name: 'translate', phase: 99, summary: 'planned' }]);
+  });
+
+  it('humanize says what its score is: the description and every result carry the weak-scorer caveat', async () => {
+    expect(operation('humanize').description).toContain('0.694');
+    const rig = await makeRuntime();
+    try {
+      const out = await invokeOperation(operation('humanize'), rig.engine, { text: 'A short text to rewrite. It has two sentences and then a third one. And a fourth one ends it.', llm: false });
+      expect(out.caveat).toContain('0.694');
+      expect(operation('humanize').render(out as never)).toContain('weak and confounded');
+    } finally {
+      rig.cleanup();
+    }
   });
 
   it('every operation runs against a real Engine and its output satisfies its own schema', async () => {
@@ -78,6 +92,7 @@ describe('operations registry', () => {
         ingest: { authorId: 'b', name: 'B', text: 'First sentence here. Second sentence follows it. Third one ends the paragraph.' },
         generate: { authorId: 'terse', persona: 'exec', text: 'Please rewrite this short draft.' },
         score: { text: 'A short text to score. It has two sentences and then a third one.' },
+        humanize: { text: 'A short text to rewrite. It has two sentences and then a third one. And a fourth one ends it.', llm: false },
         profile: { authorId: 'terse' },
       };
       for (const op of OPERATIONS) {

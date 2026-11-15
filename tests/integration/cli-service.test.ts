@@ -71,12 +71,12 @@ describe('ghostwriter config get', () => {
 });
 
 describe('ghostwriter capabilities', () => {
-  it('lists every operation and humanize as pending', async () => {
+  it('lists every operation (humanize included) and nothing pending', async () => {
     const doc = JSON.parse((await runCli(['capabilities', '--json'])).out);
-    expect(doc.operations.map((o: { name: string }) => o.name)).toEqual(['ingest', 'generate', 'score', 'profile', 'authors', 'personas', 'filters', 'config_get', 'capabilities']);
-    expect(doc.pending).toEqual([{ name: 'humanize', phase: 8, summary: expect.any(String) }]);
+    expect(doc.operations.map((o: { name: string }) => o.name)).toEqual(['ingest', 'generate', 'score', 'humanize', 'profile', 'authors', 'personas', 'filters', 'config_get', 'capabilities']);
+    expect(doc.pending).toEqual([]);
     const text = (await runCli(['capabilities'])).out;
-    expect(text).toContain('humanize\tpending (phase 8)');
+    expect(text).toContain('humanize\tPOST /api/humanize\tghostwriter humanize');
     expect(text).toContain('config_get\tGET /api/config\tghostwriter config get');
   });
 });

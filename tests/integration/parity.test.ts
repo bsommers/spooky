@@ -23,7 +23,7 @@ const program = buildProgram({ stdout: () => undefined, stderr: () => undefined,
 const commands = new Map(program.commands.map((c) => [c.name(), c]));
 
 describe('surface parity (CONTRACTS.md)', () => {
-  it('the table is parsed (9 capabilities)', () => {
+  it('the table is parsed (10 capabilities)', () => {
     expect(rows.map((r) => r.capability)).toEqual([
       'ingest corpus',
       'show profile',
@@ -31,6 +31,7 @@ describe('surface parity (CONTRACTS.md)', () => {
       'list filters',
       'generate',
       'score',
+      'humanize',
       'list authors',
       'config get',
       'capabilities',
