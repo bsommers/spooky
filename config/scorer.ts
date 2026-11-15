@@ -1,5 +1,6 @@
-// AI-likeness scorer settings as data (SCR-01). Every number here was chosen BEFORE the calibration corpus was
-// measured (see docs/CALIBRATION.md for what was measured and what was changed afterwards, if anything).
+// AI-likeness scorer settings as data (SCR-01). The feature weights and curve constants were committed before the
+// calibration corpus was added and have not changed since (self-attested ordering). The stock-phrase list below is NOT
+// independent of the corpus; docs/CALIBRATION.md says what that does to the numbers.
 // Higher feature value = reads more machine-generated; every feature value is in [0,1].
 
 /** The six interpretable features, in the fixed order used for breakdowns and sums. */
@@ -47,9 +48,9 @@ export const FEATURE_PARAMS = {
 /**
  * Connectives and stock phrases (literal, lower-case, matched on word boundaries; apostrophes may be straight or
  * curly): commonly cited "assistant prose" tells. NOT independent of the calibration corpus: the list was written by
- * the same model that wrote the AI fixtures, after them, with them in context. Phrases that appeared to be echoes of a
- * specific fixture were removed, but the `cliche` feature's measured AUC is optimistic for that reason
- * (docs/CALIBRATION.md).
+ * the same model that wrote the AI fixtures, after them, with them in context, and phrases that appeared to be echoes
+ * of a specific fixture were removed (tuning on the corpus). The `cliche` feature is test-set contaminated by
+ * construction: its measured AUC, and the headline AUC that includes it, are optimistic (docs/CALIBRATION.md).
  */
 export const CLICHE_PHRASES: readonly string[] = [
   // connectives / signposts
