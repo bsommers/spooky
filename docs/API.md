@@ -25,6 +25,8 @@ curl -s -H "Authorization: Bearer $GHOSTWRITER_API_TOKEN" -H 'Content-Type: appl
 | (document) | `GET /openapi.json` | the OpenAPI 3.1 document |
 | (opt-in) | `POST /mcp` with `serve --mcp` | MCP over streamable HTTP, see [MCP.md](MCP.md) |
 
+`GET /openapi.json` is generated per running server: `servers` is the address it actually bound (`--host/--port`, so `--port 0` shows the real port), `security` is `[{bearer: []}]` with a `bearer` scheme and 401/429 responses when `--token-env` is set (and empty, with no scheme, when it is not), and `408/413/415` are listed for the POST operations only. The document is behind the token like every other route.
+
 `humanize` (Phase 8) is not built; it appears under `pending` in `capabilities` and has no route. Request fields are the registry's strict schemas: an unknown field, a path-like author id, a control character or a wrong type is `400 USAGE` with a path-qualified message. Text length limits are the engine's (`limits.maxInputChars`, 10 M characters for a corpus), reported as `413 INPUT_TOO_LARGE`.
 
 ## Errors

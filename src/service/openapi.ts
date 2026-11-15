@@ -56,15 +56,27 @@ export function errorStatuses(): number[] {
   return [...new Set(Object.values(ERROR_TABLE).map((s) => s.http))].sort((a, b) => a - b);
 }
 
-function pathItem(op: AnyOperation): Json {
+/** Statuses a GET never produces: it has no request body to be too large, mistyped or late. */
+const BODY_ONLY_STATUSES: ReadonlySet<number> = new Set([408, 413, 415]);
+/** Statuses that only exist when a bearer token is enforced. */
+const TOKEN_ONLY_STATUSES: ReadonlySet<number> = new Set([401, 429]);
+
+/** Error statuses one operation can produce on a server with (or without) a token. */
+export function operationErrorStatuses(op: AnyOperation, tokenRequired: boolean): number[] {
+  return errorStatuses().filter((s) => (op.http.method === 'POST' || !BODY_ONLY_STATUSES.has(s)) && (tokenRequired || !TOKEN_ONLY_STATUSES.has(s)));
+}
+
+const securityOf = (tokenRequired: boolean): Json[] => (tokenRequired ? [{ bearer: [] }] : []);
+
+function pathItem(op: AnyOperation, tokenRequired: boolean): Json {
   const input = jsonSchemaOf(op.input, 'input');
   const responses: Json = {
     '200': { description: 'Success', content: { 'application/json': { schema: successSchemaOf(op) } } },
   };
-  for (const status of errorStatuses()) {
+  for (const status of operationErrorStatuses(op, tokenRequired)) {
     responses[String(status)] = { description: STATUS_TEXT[status] ?? 'Error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } };
   }
-  const base: Json = { operationId: op.name, summary: op.description, tags: [op.mutates ? 'write' : 'read'], responses, security: [{}, { bearer: [] }] };
+  const base: Json = { operationId: op.name, summary: op.description, tags: [op.mutates ? 'write' : 'read'], responses, security: securityOf(tokenRequired) };
   if (op.http.method === 'GET') {
     const props = (input.properties ?? {}) as Record<string, Json>;
     const required = new Set((input.required as string[] | undefined) ?? []);
@@ -78,18 +90,26 @@ function pathItem(op: AnyOperation): Json {
 export interface OpenApiOptions {
   version: string;
   title?: string;
+  /** Base URL the server actually listens on (`http://127.0.0.1:8787`). Omitted: the document names no server. */
+  serverUrl?: string;
+  /** The server enforces a bearer token on every route: documented as required, with 401/429 responses. Default false. */
+  tokenRequired?: boolean;
 }
 
 export function buildOpenApi(options: OpenApiOptions, ops: readonly AnyOperation[] = OPERATIONS): Json {
+  const tokenRequired = options.tokenRequired === true;
   const paths: Json = {};
-  for (const op of ops) paths[op.http.path] = { ...(paths[op.http.path] as Json | undefined), ...pathItem(op) };
+  for (const op of ops) paths[op.http.path] = { ...(paths[op.http.path] as Json | undefined), ...pathItem(op, tokenRequired) };
   paths['/openapi.json'] = {
     get: {
       operationId: 'openapi',
       summary: 'This document, generated from the operations registry.',
       tags: ['read'],
-      responses: { '200': { description: 'The OpenAPI 3.1 document', content: { 'application/json': { schema: { type: 'object' } } } } },
-      security: [{}, { bearer: [] }],
+      responses: {
+        '200': { description: 'The OpenAPI 3.1 document', content: { 'application/json': { schema: { type: 'object' } } } },
+        ...(tokenRequired ? { '401': { description: STATUS_TEXT[401], content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } } } : {}),
+      },
+      security: securityOf(tokenRequired),
     },
   };
   return {
@@ -98,15 +118,16 @@ export function buildOpenApi(options: OpenApiOptions, ops: readonly AnyOperation
       title: options.title ?? 'ghostwriter service',
       version: options.version,
       description:
-        'Generated from the operations registry (src/service/operations.ts). The same operations exist on the CLI and as MCP tools. Binds to loopback by default; an optional bearer token protects every route.',
+        'Generated from the operations registry (src/service/operations.ts). The same operations exist on the CLI and as MCP tools. Binds to loopback by default; ' +
+        (tokenRequired ? 'this server requires a bearer token on every route.' : 'this server has no token configured (any process that can reach it can use it).'),
       license: { name: 'Apache-2.0', identifier: 'Apache-2.0' },
     },
-    servers: [{ url: 'http://127.0.0.1:8787' }],
+    ...(options.serverUrl === undefined ? {} : { servers: [{ url: options.serverUrl }] }),
     tags: [{ name: 'read' }, { name: 'write' }],
     paths,
     components: {
       schemas: { Error: ERROR_SCHEMA },
-      securitySchemes: { bearer: { type: 'http', scheme: 'bearer' } },
+      ...(tokenRequired ? { securitySchemes: { bearer: { type: 'http', scheme: 'bearer' } } } : {}),
     },
   };
 }

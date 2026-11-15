@@ -162,7 +162,7 @@ export async function startApiServer(options: ApiServerOptions): Promise<ApiServ
   const serveApi = options.api !== false;
   const serveMcp = options.mcp === true;
   const routes = new Map<string, AnyOperation>(ops.map((o) => [o.http.path, o]));
-  const openapi = serveApi ? serializeOpenApi(buildOpenApi({ version: packageVersion() }, ops)) : '';
+  let openapi = ''; // built once the server is bound: it names the real base URL
   const gate = new ConcurrencyGate(limits.maxConcurrent);
   const throttle = new AuthThrottle(options.authThrottle);
   const log = options.log ?? ((): void => undefined);
@@ -323,6 +323,9 @@ export async function startApiServer(options: ApiServerOptions): Promise<ApiServ
   });
   const addr = server.address() as AddressInfo;
   const shownHost = host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
+  if (serveApi) {
+    openapi = serializeOpenApi(buildOpenApi({ version: packageVersion(), serverUrl: `http://${shownHost}:${addr.port}`, tokenRequired: token !== undefined }, ops));
+  }
   return {
     server,
     host,
