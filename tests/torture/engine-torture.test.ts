@@ -105,7 +105,8 @@ describe(`torture: ${RUNS} random generate() calls never throw an untyped error`
           const s = planted();
           planting.push(s);
           const at = Math.floor(rnd() * (input.length + 1));
-          input = `${input.slice(0, at)}${s}${input.slice(at)}`; // glued: secrets are planted with no padding
+          const pad = rnd() < 0.5 ? ' ' : ''; // half planted padded (anchored path), half glued (no padding)
+          input = `${input.slice(0, at)}${pad}${s}${pad}${input.slice(at)}`;
         }
       }
       const authorId = rnd() < 0.05 ? pick(rnd, ['nobody', '', '__proto__', 'x'.repeat(300), planted()]) : 'terse';

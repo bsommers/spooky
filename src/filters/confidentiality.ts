@@ -163,13 +163,20 @@ const BUILTIN_RULES: readonly Rule[] = [
     type: 'github_token',
     rx: /(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,})/gu, // distinctive prefix: no left boundary, so `x<ZWSP>ghp_...` is still caught
   },
-  // Short prefixes (sk-, sk_live_, npm_, hf_, SG., eyJ) match two ways: after a non-alphanumeric (or at the start) with
-  // the normal length floor, or GLUED to a preceding letter/digit/underscore only when the body is as long as a real
-  // token (sk-: also carries a digit; SG./eyJ: real-token segment lengths). That keeps `risk-assessment-framework` and
-  // `desk_live_streaming` untouched. All lookaheads are bounded, so scanning stays linear.
+  // Short prefixes (sk-, sk_live_, npm_, hf_, SG., eyJ) match after a non-alphanumeric (or at the start) with the normal
+  // length floor, and, for sk-/Stripe/hf_/SG./eyJ, a second way: GLUED to a preceding letter/digit, only when the body
+  // looks like a real token. The glued sk- shape is: 32+ chars of [A-Za-z0-9_-] after an optional `proj-`/`ant-xxx-`
+  // style infix, with an upper-case letter, a lower-case letter and a digit in the first 64, and fewer than four `-`
+  // separators with short gaps (a kebab-case slug such as `task-prioritization-matrix-for-2024-planning` has many).
+  // SG. needs the real 22/43 segment lengths; eyJ a real-looking header. That keeps `risk-assessment-framework` and
+  // `desk_live_streaming` untouched. All lookaheads are bounded and free of nested open-ended quantifiers, so scanning
+  // stays linear. npm_ has a fixed 36-char body, so one alternative serves both cases.
   {
     type: 'api_key',
-    rx: new RegExp(`${B}sk-[A-Za-z0-9_-]{20,}|sk-(?=[A-Za-z0-9_-]{32})(?=[A-Za-z_-]{0,80}[0-9])[A-Za-z0-9_-]{32,}`, 'gu'),
+    rx: new RegExp(
+      `${B}sk-[A-Za-z0-9_-]{20,}|sk-(?:proj-|svcacct-|admin-|ant-[A-Za-z0-9]{2,8}-)?(?=[A-Za-z0-9_-]{32})(?!(?:[A-Za-z0-9_]{0,15}-){4})(?=[A-Za-z0-9_-]{0,63}[A-Z])(?=[A-Za-z0-9_-]{0,63}[a-z])(?=[A-Za-z0-9_-]{0,63}[0-9])[A-Za-z0-9_-]{32,}`,
+      'gu',
+    ),
   },
   { type: 'slack_token', rx: /(?:xox[abprs]|xapp)-[A-Za-z0-9-]{10,}/gu },
   // Provider formats (CR-06). Short prefixes get a left boundary so `mask_...` / `pdf_...` words are not hit.
@@ -182,9 +189,9 @@ const BUILTIN_RULES: readonly Rule[] = [
   },
   { type: 'google_api_key', rx: /AIza[0-9A-Za-z_-]{35}/gu },
   { type: 'gitlab_token', rx: /glpat-[A-Za-z0-9_-]{20,}/gu },
-  { type: 'npm_token', rx: new RegExp(`${B}npm_[A-Za-z0-9]{36}|npm_[A-Za-z0-9]{36}`, 'gu') },
+  { type: 'npm_token', rx: /npm_[A-Za-z0-9]{36}/gu },
   { type: 'hf_token', rx: new RegExp(`${B}hf_[A-Za-z0-9]{30,}|hf_[A-Za-z0-9]{34,}`, 'gu') },
-  { type: 'sendgrid_key', rx: new RegExp(`${B}SG\\.[A-Za-z0-9_-]{16,}\\.[A-Za-z0-9_-]{16,}|SG\\.[A-Za-z0-9_-]{22,}\\.[A-Za-z0-9_-]{43,}`, 'gu') },
+  { type: 'sendgrid_key', rx: new RegExp(`${B}SG\\.[A-Za-z0-9_-]{16,}\\.[A-Za-z0-9_-]{16,}|SG\\.[A-Za-z0-9_-]{22}\\.[A-Za-z0-9_-]{43}`, 'gu') },
   { type: 'jwt', rx: /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]*|eyJ[A-Za-z0-9_-]{14,100}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]*/gu },
   { type: 'bearer_token', rx: new RegExp(
       `${B}bearer[ \\t]{1,20}[A-Za-z0-9._~+/=-]{6,}|bearer[ \\t]{1,20}(?=[A-Za-z0-9._~+/=-]{20})(?=[A-Za-z._~+/=-]{0,80}[0-9])[A-Za-z0-9._~+/=-]{20,}`,

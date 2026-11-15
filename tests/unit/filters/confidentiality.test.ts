@@ -642,8 +642,43 @@ describe('ConfidentialityFilter: tokens glued to a preceding character', () => {
     expect((await run(text)).content).toBe(text);
   });
 
+  it('false-positive guard: digit-bearing kebab-case slugs, branch names and filenames are left alone (WR-01)', async () => {
+    const text = [
+      '/blog/task-prioritization-matrix-for-2024-planning',
+      'disk-usage-report-2024-q1-final-version.csv',
+      'risk-management-best-practices-v2-guide',
+      'feature/ask-the-team-about-release-2-0-candidate',
+      '.mask-image-gradient-2x-retina-display-fallback { }',
+      'fix/task-123-handle-null-pointer-in-parser-module',
+      'Risk-Management-Best-Practices-2024-Guide-Final-Version',
+    ].join('\n');
+    expect((await run(text)).content).toBe(text);
+  });
+
+  it('false-positive guard: dotted identifiers ending in SG/MSG are not SendGrid keys (WR-03)', async () => {
+    const text = [
+      'MSG.NotificationPreferencesManagerImpl.getDefaultConfigurationForTenantWithExtrasAndMore',
+      'config.MSG.' + 'a'.repeat(23) + '.' + 'b'.repeat(44),
+      'ASG.' + 'a'.repeat(21) + '.' + 'b'.repeat(42),
+    ].join('\n');
+    expect((await run(text)).content).toBe(text);
+  });
+
+  it('a real-shaped glued sendgrid key (22/43) is redacted; the unglued 16+ form still works', async () => {
+    const k = secret('sendgrid');
+    expect((await run(`MSG${k.text}`)).content).toBe('MSG[REDACTED:sendgrid_key]');
+    expect((await run(`key ${k.text}!`)).content).toBe('key [REDACTED:sendgrid_key]!');
+  });
+
+  it('known limit: glued letters-only sk- keys and the tail of a glued npm token are not fully redacted', async () => {
+    const letters = 'xsk-' + 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN';
+    expect((await run(letters)).content).toBe(letters);
+    const k = secret('npm');
+    expect((await run(`ab${k.text}bbbb`)).content).toBe('ab[REDACTED:npm_token]bbbb');
+  });
+
   it('adversarial glued repetition completes quickly', async () => {
-    for (const unit of ['a' + 'sk-', 'npm_', 'hf_', 'SG.', 'eyJ', 'sk_live_']) {
+    for (const unit of ['a' + 'sk-', 'npm_', 'hf_', 'SG.', 'eyJ', 'sk_live_', 'bearer ', 'risk-', 'Rsk-aA1-', 'xSG.' + 'a'.repeat(22) + '.']) {
       const text = unit.repeat(Math.ceil(1_000_000 / unit.length));
       const start = performance.now();
       await run(text);
