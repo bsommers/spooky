@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" width="200" height="240">
+  <!-- Original artwork for Spooky: a sitting cat seen from the side, used as a 5% watermark by the Black Cat theme. -->
+  <g opacity="0.05" fill="#ece7dc" stroke="#ece7dc" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M66 50 L62 8 L94 34 Q100 33 106 34 L138 8 L134 50 Q142 62 140 78 Q138 100 124 104 C158 128 160 196 142 226 L58 226 C40 196 42 128 76 104 Q62 100 60 78 Q58 62 66 50 Z" stroke-width="2"/>
+    <path d="M140 216 C192 218 200 160 172 146" fill="none" stroke-width="14"/>
+  </g>
+</svg>
