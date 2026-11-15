@@ -1,7 +1,7 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { parseHash } from '../../src/app/route';
+import { NOT_FOUND_ROUTE, parseHash } from '../../src/app/route';
 import { renderApp } from '../helpers/app';
 
 describe('app shell', () => {
@@ -60,11 +60,24 @@ describe('app shell', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Kitchen sink' })).toBeInTheDocument();
   });
 
-  it('parseHash only accepts simple lowercase paths and treats anything else as home', () => {
+  it('parseHash maps only an empty hash, #/ and the skip target to home; anything malformed is not-found, not Overview', async () => {
     expect(parseHash('')).toBe('/');
+    expect(parseHash('#')).toBe('/');
+    expect(parseHash('#/')).toBe('/');
+    expect(parseHash('#main')).toBe('/');
+    for (const bad of ['#/Kitchen-Sink', '#/foo.bar', '#other', '#/a b']) expect(parseHash(bad), bad).toBe(NOT_FOUND_ROUTE);
+    renderApp('#/Kitchen-Sink');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Nothing here');
+    expect(within(screen.getByRole('navigation', { name: 'Primary' })).queryByRole('link', { current: 'page' })).toBeNull();
+    // a bypassed skip link lands on #main: that keeps the current page
+    act(() => {
+      window.location.hash = '#main';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Nothing here');
     expect(parseHash('#/kitchen-sink')).toBe('/kitchen-sink');
     expect(parseHash('#/a/b')).toBe('/a/b'); // unknown, so the not-found page
-    expect(parseHash('#/<script>')).toBe('/');
-    expect(parseHash('#//evil.example')).toBe('/');
+    expect(parseHash('#/<script>')).toBe(NOT_FOUND_ROUTE);
+    expect(parseHash('#//evil.example')).toBe(NOT_FOUND_ROUTE);
   });
 });

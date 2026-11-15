@@ -12,15 +12,24 @@ export const ROUTES: readonly RouteDef[] = [
   { path: '/kitchen-sink', label: 'Kitchen sink', title: 'Kitchen sink' },
 ];
 
+/** Matches no route, so a malformed hash renders the not-found page instead of quietly showing Overview. */
+export const NOT_FOUND_ROUTE = '/-not-found-';
+/** The skip link's in-page target: it names the content area, never a page. */
+const SKIP_TARGET = '#main';
+
 export function parseHash(hash: string): string {
-  const m = /^#(\/[a-z0-9/-]*)?$/.exec(hash);
-  return m?.[1] ?? '/';
+  if (hash === '' || hash === '#' || hash === SKIP_TARGET) return '/';
+  const m = /^#(\/[a-z0-9/-]*)$/.exec(hash);
+  return m?.[1] ?? NOT_FOUND_ROUTE;
 }
 
 export function useHashRoute(): string {
   const [route, setRoute] = useState(() => parseHash(window.location.hash));
   useEffect(() => {
-    const on = (): void => setRoute(parseHash(window.location.hash));
+    // The skip link's own `#main` (when its click handler is bypassed) is not a navigation: keep the current page.
+    const on = (): void => {
+      if (window.location.hash !== SKIP_TARGET) setRoute(parseHash(window.location.hash));
+    };
     window.addEventListener('hashchange', on);
     return () => window.removeEventListener('hashchange', on);
   }, []);
