@@ -68,3 +68,42 @@ describe('target selection', () => {
     expect(selectTargets({ features: {} })).toEqual([]);
   });
 });
+
+describe('cliche replacements keep the text intact (MD-02)', () => {
+  const cl = (t: string) => deterministicRewrite(t, ['cliche']).text;
+
+  it('fixes a/an agreement after a replacement', () => {
+    expect(cl('We chose an intricate design.')).toBe('We chose a complex design.');
+    expect(cl('An intricate design helps.')).toBe('A complex design helps.');
+    expect(cl('It was a valuable tool.')).toBe('It was a useful tool.');
+    expect(cl('That was an pivotal step.')).toBe('That was a key step.');
+    expect(cl('Hers was a garnered prize.')).toBe('Hers was an earned prize.');
+  });
+
+  it('does not rewrite ambiguous words that were removed from the table', () => {
+    for (const t of ['Add an underscore between words.', 'We are aligning with the plan.', 'The exhibited flaw shows.']) expect(cl(t)).toBe(t);
+  });
+
+  it('leaves dotted names, paths, hyphenated compounds, emails and snake_case alone', () => {
+    for (const t of ['See the realm.property field.', 'Set config.realm to 1.', 'Open docs/realm/notes.', 'Mail realm@example.org now.', 'Use the key-pivotal rule and crucial_path.']) expect(cl(t)).toBe(t);
+  });
+
+  it('still replaces a word that ends a sentence', () => {
+    expect(cl('We explore the realm. Then we go.')).toBe('We explore the area. Then we go.');
+  });
+
+  it('leaves quoted spans alone, and still edits the rest of the text', () => {
+    const t = 'She said "this is crucial" and we delve in. The “pivotal” moment came; we delve again.';
+    const r = cl(t);
+    expect(r).toContain('"this is crucial"');
+    expect(r).toContain('“pivotal”');
+    expect(r).toContain('we dig in');
+    expect(r).toContain('we dig again');
+  });
+
+  it('a quoted cliche word no longer fails the guard for the whole candidate', async () => {
+    const { checkMeaning } = await import('../../../src/humanize/guard.js');
+    const t = 'She said "this is crucial" and we delve in today with the whole team present.';
+    expect(checkMeaning(t, cl(t)).ok).toBe(true);
+  });
+});

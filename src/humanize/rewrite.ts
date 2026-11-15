@@ -22,8 +22,11 @@ export interface RewriteResult {
 // ---------------------------------------------------------------- cliche words
 
 const escape = (s: string): string => s.replace(/[\\^$.*+?()[\]{}|/]/g, '\\$&');
-const WORD_EDGE_BEFORE = '(?<![\\p{L}\\p{N}_])';
-const WORD_EDGE_AFTER = '(?![\\p{L}\\p{N}_])';
+// A match must stand alone as a word: not inside a dotted name (realm.property, config.realm), a path, a hyphenated
+// compound, an email or a snake_case identifier. A sentence-final "realm." (a dot then a space) is still a word.
+const WORD_EDGE_BEFORE = '(?<![\\p{L}\\p{N}_.\\-/@])';
+const WORD_EDGE_AFTER = '(?![\\p{L}\\p{N}_]|[.\\-/@][\\p{L}\\p{N}_])';
+const QUOTED = /"[^"\n]{1,500}"|“[^”\n]{1,500}”/g;
 
 const REPLACE_KEYS = Object.keys(HUMANIZE_CLICHE_REPLACEMENTS).filter((k) => HUMANIZE_CLICHE_REPLACEMENTS[k] !== null).sort((a, b) => b.length - a.length);
 const DELETE_KEYS = Object.keys(HUMANIZE_CLICHE_REPLACEMENTS).filter((k) => HUMANIZE_CLICHE_REPLACEMENTS[k] === null);
@@ -39,14 +42,32 @@ function matchCase(original: string, replacement: string): string {
 
 const SENTENCE_END_BEFORE = /(?:^|[.!?…]["')\]”’]*[ \t]+|\n[ \t]*)$/;
 
-/** Replace / delete the stock words in one unprotected segment. `startsSentence`: the segment begins a sentence. */
+/** True when the word starts with a vowel SOUND (an approximation: "useful", "unit" and "one" start with a consonant sound). */
+const vowelSound = (w: string): boolean => /^(?:[aeio]|u(?!s[aeiou]|ni|ti|ro|k))/i.test(w) && !/^one\b/i.test(w);
+
+/** `article` ("a", "An", ...) agreed with `word`, keeping the capital. */
+function agreeArticle(article: string, word: string): string {
+  const an = vowelSound(word);
+  const base = an ? 'an' : 'a';
+  return article[0] === article[0]?.toUpperCase() ? capitalize(base) : base;
+}
+
+/** Replace / delete the stock words in one unprotected segment, outside quoted spans. `startsSentence`: the segment begins a sentence. */
 function clicheSegment(text: string, startsSentence: boolean, applied: Record<string, number>): string {
+  // A quoted span is quoted text: the guard requires it byte-identical, so it is not edited.
+  const parts = text.split(new RegExp(`(${QUOTED.source})`, 'g'));
+  return parts.map((part, i) => (i % 2 === 1 ? part : clicheText(part, i === 0 && startsSentence, applied))).join('');
+}
+
+function clicheText(text: string, startsSentence: boolean, applied: Record<string, number>): string {
   let out = text;
   if (REPLACE_KEYS.length > 0) {
-    const re = new RegExp(`${WORD_EDGE_BEFORE}(?:${REPLACE_KEYS.map(escape).join('|')})${WORD_EDGE_AFTER}`, 'giu');
-    out = out.replace(re, (m) => {
+    const re = new RegExp(`(?:\\b(an?)([ \\t]+))?${WORD_EDGE_BEFORE}(?:${REPLACE_KEYS.map(escape).join('|')})${WORD_EDGE_AFTER}`, 'giu');
+    out = out.replace(re, (m, article: string | undefined, space: string | undefined) => {
       applied.replaced = (applied.replaced ?? 0) + 1;
-      return matchCase(m, HUMANIZE_CLICHE_REPLACEMENTS[m.toLowerCase()] as string);
+      const word = article === undefined ? m : m.slice(article.length + (space as string).length);
+      const replacement = matchCase(word, HUMANIZE_CLICHE_REPLACEMENTS[word.toLowerCase()] as string);
+      return article === undefined ? replacement : `${agreeArticle(article, replacement)}${space as string}${replacement}`;
     });
   }
   if (DELETE_KEYS.length > 0) {

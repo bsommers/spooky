@@ -44,23 +44,22 @@ export const HUMANIZE_RHYTHM = {
  * Plain replacements for the stock words the `cliche` feature counts (config/scorer.ts CLICHE_PHRASES). A word with no
  * entry here is left to the model pass: replacing it blindly would change its meaning ("significant", "across").
  * `null` deletes the word (an adverb whose removal leaves a grammatical sentence).
+ * Left out on purpose: `underscore` (also the `_` character and a noun), `aligning` ("aligning with" is not "matching with")
+ * and `exhibited` (adjective, verb and noun). A replacement that starts with a vowel sound where the word did not (or the
+ * reverse) gets its article fixed ("an intricate" -> "a complex").
  */
 export const HUMANIZE_CLICHE_REPLACEMENTS: Readonly<Record<string, string | null>> = {
   delve: 'dig',
   delves: 'digs',
   delved: 'dug',
   delving: 'digging',
-  underscore: 'stress',
-  underscores: 'stresses',
   showcasing: 'showing',
   grappling: 'struggling',
   garnered: 'earned',
-  aligning: 'matching',
   pivotal: 'key',
   notably: null,
   additionally: 'also',
   crucial: 'key',
-  exhibited: 'showed',
   enhancing: 'improving',
   valuable: 'useful',
   excels: 'does well',
