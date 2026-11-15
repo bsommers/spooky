@@ -35,6 +35,7 @@ Body: `{ "ok": false, "error": { "code": "UNKNOWN_AUTHOR", "message": "..." } }`
 | `USAGE` | 400 | 2 | input rejected by the schema, malformed JSON, bad query |
 | `CONFIG_INVALID` | 400 | 2 | for example an unknown detector name |
 | `UNAUTHORIZED` | 401 | - | missing or wrong bearer token (`WWW-Authenticate: Bearer`) |
+| `RATE_LIMITED` | 429 | - | too many wrong tokens from this address; `Retry-After` says when to retry |
 | `FORBIDDEN` | 403 | - | `Origin` not allowed |
 | `UNKNOWN_AUTHOR`, `UNKNOWN_PERSONA`, `NOT_FOUND` | 404 | 3 | |
 | `METHOD_NOT_ALLOWED` | 405 | - | `Allow` header names the method |
@@ -51,7 +52,7 @@ Body: `{ "ok": false, "error": { "code": "UNKNOWN_AUTHOR", "message": "..." } }`
 `ghostwriter serve [--host 127.0.0.1] [--port 8787] [--token-env NAME] [--allow-origin URL]... [--allow-host NAME]... [--max-body BYTES] [--max-ingest-body BYTES] [--mcp] [--config FILE] [--state-dir DIR] [--json]`
 
 - `--port 0` picks a free port; with `--json` the startup document `{"ok":true,"listening":{"host","port","url","api","mcp","auth"}}` is printed on stdout (the "listening on" line goes to stderr).
-- `--token-env NAME`: the NAME of the environment variable holding the bearer token (16 to 512 printable characters). The token is never taken from the command line. If the variable is unset or empty the server does not start (it never silently falls back to "no token").
+- `--token-env NAME`: the NAME of the environment variable holding the bearer token (16 to 512 printable characters with at least 8 distinct characters and some variety, so `aaaaaaaaaaaaaaaa` is refused; make one with `openssl rand -hex 24`). The token is never taken from the command line. The name must be upper-case words joined by underscores (`GHOSTWRITER_API_TOKEN`; never `PATH`, `HOME`), and may not be another system's credential (`AWS_*`, `GITHUB_*`, `*_SECRET`, ...), a model/provider key (`ANTHROPIC_*`, `OPENAI_*`) or the variable the config names as an LLM or detector `apiKeyEnv`. If the variable is unset or empty the server does not start (it never silently falls back to "no token"). Error messages never repeat the name, so a token pasted in its place is not copied into a log.
 - `--host`: anything but a loopback address needs `--token-env`, otherwise the server refuses to start (`CONFIG_INVALID`, exit 2).
 - `--allow-origin`: an exact browser origin (`http://localhost:5173`) that may call the API cross-origin. Never `*`, never `null`, no paths.
 - `--max-body`: request body cap in bytes for every route except ingest (default 1 MiB); `--max-ingest-body`: cap for `ingest` and for an MCP `tools/call` of `ingest` (default 10 MiB); any other `/mcp` message is held to `--max-body` after it is read. Both range from 1 KiB to 256 MiB. A body over the cap is 413 before it is read. (The engine accepts corpora up to 10 M characters, up to 40 MB of UTF-8; raise `--max-ingest-body` if you ingest more than 10 MiB through the API, or ingest with the CLI.)
@@ -64,6 +65,7 @@ The service sits in front of an LLM key and a private corpus. Threats and what s
 |---|---|
 | A web page in your browser calls `http://127.0.0.1:8787` (CSRF) | `Origin` must be absent, this server, or allow-listed (else 403); POST must be `application/json` (a cross-site form post is 415); no `Access-Control-Allow-Origin` unless allow-listed, never `*` |
 | DNS rebinding (a hostile name resolving to 127.0.0.1) | `Host` must be `localhost`, `127.0.0.1`, `[::1]`, the bind host or `--allow-host`, else 421 |
+| Guessing the token | the token is compared in constant time; after 3 wrong tokens from one address each further answer is delayed (250 ms, doubling, up to 4 s) and 20 wrong tokens within 60 s lock that address out for 60 s with `429` + `Retry-After` (even the right token is refused meanwhile). A request with no `Authorization` header is not counted. Every local process shares `127.0.0.1`, so a local guesser also locks out the local user for that minute |
 | Network exposure | bind `127.0.0.1` by default; a non-loopback bind requires a token |
 | Probing for what exists | with a token, `/api/*`, `/openapi.json` and `/mcp` answer `401` to every caller without it, whether the route exists or `--mcp` is on; only then 404. A request target must be a single-slash absolute path: `//host/path` and backslashes are `400`, so a path is never read differently from what the client sent |
 | Huge or slow bodies | `Content-Length` over the cap is 413 before a byte is read; streamed bodies are counted and cut at the cap; 408 for a stalled body; 503 beyond the concurrency limit |

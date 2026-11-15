@@ -45,6 +45,7 @@ const STATUS_TEXT: Readonly<Record<number, string>> = {
   415: 'Content-Type must be application/json (UNSUPPORTED_MEDIA_TYPE)',
   421: 'Host header does not name this server (MISDIRECTED_REQUEST)',
   422: 'Corpus yields no profile (PROFILE_INVALID)',
+  429: 'Too many failed token attempts from this address; see Retry-After (RATE_LIMITED)',
   500: 'Internal failure (FILTER_FAILED, STORE_CORRUPT, INTERNAL)',
   502: 'Language model or detector failed (LLM_FAILED, DETECTORS_FAILED)',
   503: 'Busy or state locked (OVERLOADED, STATE_LOCKED)',

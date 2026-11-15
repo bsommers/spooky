@@ -29,6 +29,7 @@ export type SurfaceErrorCode =
   | 'REQUEST_TIMEOUT'
   | 'UNSUPPORTED_MEDIA_TYPE'
   | 'MISDIRECTED_REQUEST'
+  | 'RATE_LIMITED'
   | 'OVERLOADED';
 
 export const ERROR_TABLE: Readonly<Record<string, ErrorSpec>> = {
@@ -52,6 +53,7 @@ export const ERROR_TABLE: Readonly<Record<string, ErrorSpec>> = {
   REQUEST_TIMEOUT: { exit: 1, http: 408, mcp: 'unavailable' },
   UNSUPPORTED_MEDIA_TYPE: { exit: 2, http: 415, mcp: 'invalid_request' },
   MISDIRECTED_REQUEST: { exit: 1, http: 421, mcp: 'denied' },
+  RATE_LIMITED: { exit: 1, http: 429, mcp: 'unavailable' },
   OVERLOADED: { exit: 1, http: 503, mcp: 'unavailable' },
   IO_ERROR: { exit: 1, http: 500, mcp: 'internal' },
   INTERNAL: { exit: 1, http: 500, mcp: 'internal' },

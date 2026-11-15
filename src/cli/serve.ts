@@ -8,6 +8,7 @@
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
 import { DEFAULT_HOST, isLoopbackBind } from '../api/auth.js';
+import { isOtherSystemsEnvName } from '../llm/endpoint.js';
 import { DEFAULT_PORT, startApiServer } from '../api/server.js';
 import type { ApiServer } from '../api/server.js';
 import { DEFAULT_API_LIMITS } from '../api/limits.js';
@@ -58,12 +59,25 @@ export const untilAborted = (signal: AbortSignal): Promise<void> =>
     else signal.addEventListener('abort', () => resolve(), { once: true });
   });
 
-/** Token from the environment variable the flag names. A named but empty variable is an error, never "no token". */
-export function resolveToken(tokenEnv: string | undefined, env: CliIo['env']): string | undefined {
+/** Names `--token-env` must not borrow: another system's credential (cloud, git, ...) or a model/provider API key. */
+const PROVIDER_KEY_ENV = /(?:^|_)(?:ANTHROPIC|OPENAI|CLAUDE|GEMINI|MISTRAL|COHERE|HUGGINGFACE|OLLAMA)(?:_|$)/;
+/** `GHOSTWRITER_API_TOKEN`: upper-case words joined by underscores, at least two of them (so never `PATH`, `HOME`, `USER`). */
+const TOKEN_ENV_NAME = /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+$/;
+
+/**
+ * Token from the environment variable the flag names. A named but empty variable is an error, never "no token". The
+ * NAME is never echoed in an error: a token pasted where the name belongs would otherwise be copied into a log.
+ */
+export function resolveToken(tokenEnv: string | undefined, env: CliIo['env'], forbiddenNames: readonly string[] = []): string | undefined {
   if (tokenEnv === undefined) return undefined;
-  if (!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(tokenEnv)) throw new ConfigError('--token-env must be the NAME of an environment variable, not the token');
+  if (tokenEnv.length > 64 || !TOKEN_ENV_NAME.test(tokenEnv)) {
+    throw new ConfigError('--token-env must be the NAME of an environment variable, upper-case with an underscore (for example GHOSTWRITER_API_TOKEN), not the token');
+  }
+  if (isOtherSystemsEnvName(tokenEnv) || PROVIDER_KEY_ENV.test(tokenEnv) || forbiddenNames.includes(tokenEnv)) {
+    throw new ConfigError('--token-env must name a variable made for this service, not another system\'s credential or a model/detector API key (for example GHOSTWRITER_API_TOKEN)');
+  }
   const v = env[tokenEnv];
-  if (v === undefined || v === '') throw new ConfigError(`--token-env ${tokenEnv}: that environment variable is not set`);
+  if (v === undefined || v === '') throw new ConfigError('the environment variable named by --token-env is not set');
   return v;
 }
 
@@ -74,8 +88,10 @@ export async function startListening(
   mode: { api: boolean; mcp: boolean },
 ): Promise<ApiServer> {
   const { io } = ctx;
-  const token = resolveToken(opts.tokenEnv, io.env);
   const { engine } = await ctx.start(opts, false, true);
+  const view = engine.getConfigView();
+  const configuredKeyEnvs = [view.llm.apiKeyEnv, ...view.scorer.detectors.map((d) => d.apiKeyEnv)].filter((n): n is string => n !== undefined);
+  const token = resolveToken(opts.tokenEnv, io.env, configuredKeyEnvs);
   const runtime = new ServiceRuntime(engine, { stateDir: opts.stateDir ?? defaultStateDir(io.env) });
   await runtime.markLoaded();
   const server = await startApiServer({
@@ -93,7 +109,7 @@ export async function startListening(
   io.stderr(`listening on ${server.url}${mode.api ? ' (HTTP API, GET /openapi.json)' : ''}${mode.mcp ? ' (MCP at /mcp)' : ''}\n`);
   if (token === undefined) {
     io.stderr(
-      `note: no API token: any process on this machine that can reach ${server.url} can use it${isLoopbackBind(server.host) ? '' : ' (and the network can)'}; set one with --token-env\n`,
+      `note: no API token: any process on this machine that can reach ${server.url} can use it${isLoopbackBind(server.host) ? '' : ' (and the network can)'}; set one with --token-env (a random value, for example: openssl rand -hex 24)\n`,
     );
   }
   if (!isLoopbackBind(server.host)) io.stderr('note: traffic is plain HTTP; put TLS in front before exposing this beyond a trusted network\n');

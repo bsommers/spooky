@@ -51,6 +51,11 @@ export function isDetectorKeyEnvName(name: string): boolean {
   return name.length <= 64 && DETECTOR_KEY_ENV.test(name) && !OTHER_SYSTEMS_ENV.test(name);
 }
 
+/** Does `name` look like another system's credential (cloud, git, ssh, secret/password variables)? */
+export function isOtherSystemsEnvName(name: string): boolean {
+  return OTHER_SYSTEMS_ENV.test(name);
+}
+
 export const DETECTOR_KEY_ENV_MESSAGE = 'must be an upper-case variable name ending in _KEY, _API_KEY or _TOKEN (for example ACME_DETECTOR_KEY), and not a cloud, git or secret/password variable';
 
 export const ENDPOINT_MESSAGES: Readonly<Record<EndpointProblem, string>> = {

@@ -21,6 +21,7 @@ import type { AnyOperation } from '../service/operations.js';
 import type { ServiceRuntime } from '../service/runtime.js';
 import { packageVersion } from '../service/version.js';
 import {
+  AuthThrottle,
   DEFAULT_HOST,
   assertBindAllowed,
   bearerMatches,
@@ -30,6 +31,7 @@ import {
   normalizeAllowedOrigin,
   validateToken,
 } from './auth.js';
+import type { AuthThrottleOptions } from './auth.js';
 import { ConcurrencyGate, DEFAULT_API_LIMITS, MAX_BODY_CEILING, checkDeclaredLength, isJsonContentType, readBody } from './limits.js';
 import type { ApiLimits } from './limits.js';
 
@@ -53,6 +55,8 @@ export interface ApiServerOptions {
   /** Extra Host header names accepted besides loopback and the bind host. */
   allowHosts?: readonly string[];
   limits?: Partial<ApiLimits>;
+  /** Failed-token delay and lockout per remote address (defaults in `DEFAULT_AUTH_THROTTLE`); tests shorten it. */
+  authThrottle?: Partial<AuthThrottleOptions>;
   /** Serve `/api/*` and `/openapi.json` (default true). */
   api?: boolean;
   /** Serve MCP over streamable HTTP at `/mcp` (default false). */
@@ -160,6 +164,7 @@ export async function startApiServer(options: ApiServerOptions): Promise<ApiServ
   const routes = new Map<string, AnyOperation>(ops.map((o) => [o.http.path, o]));
   const openapi = serveApi ? serializeOpenApi(buildOpenApi({ version: packageVersion() }, ops)) : '';
   const gate = new ConcurrencyGate(limits.maxConcurrent);
+  const throttle = new AuthThrottle(options.authThrottle);
   const log = options.log ?? ((): void => undefined);
   const runtime = options.runtime;
 
@@ -199,9 +204,19 @@ export async function startApiServer(options: ApiServerOptions): Promise<ApiServ
       throw new SurfaceError('NOT_FOUND', 'no such route');
     }
 
-    if (token !== undefined && !bearerMatches(req.headers.authorization, token)) {
-      res.setHeader('WWW-Authenticate', 'Bearer');
-      throw new SurfaceError('UNAUTHORIZED', 'a valid bearer token is required');
+    if (token !== undefined) {
+      const peer = req.socket.remoteAddress ?? '?';
+      const wait = throttle.lockedFor(peer);
+      if (wait !== undefined) throw new SurfaceError('RATE_LIMITED', 'too many failed attempts; retry later', { retryAfterSeconds: wait });
+      if (bearerMatches(req.headers.authorization, token)) {
+        throttle.succeeded(peer);
+      } else {
+        // A request with no credentials at all is not a guess, so it neither costs the caller nor counts toward a lockout.
+        const delay = req.headers.authorization === undefined ? 0 : throttle.failed(peer);
+        if (delay > 0) await new Promise<void>((resolve) => setTimeout(resolve, delay));
+        res.setHeader('WWW-Authenticate', 'Bearer');
+        throw new SurfaceError('UNAUTHORIZED', 'a valid bearer token is required');
+      }
     }
 
     const isApi = serveApi && (path.startsWith('/api/') || path === OPENAPI_PATH);

@@ -147,12 +147,36 @@ describe('ghostwriter serve', () => {
     const unset = await run(['--token-env', 'NOPE_TOKEN']);
     expect(unset.code).toBe(2);
     expect(JSON.parse(unset.out).error.message).toContain('not set');
-    const short = await run(['--token-env', 'T'], { T: 'short' });
+    const short = await run(['--token-env', 'GW_SHORT'], { GW_SHORT: 'short' });
     expect(short.code).toBe(2);
     expect(short.out).not.toContain('short"');
     const pasted = await run(['--token-env', 'sk-live-abcdefghijklmnop']);
     expect(pasted.code).toBe(2);
     expect(pasted.out).not.toContain('sk-live-abcdefghijklmnop');
+    // --token-env policy: a sane NAME, never another system's credential or a provider key, a token with some variety; the name is never echoed
+    const strong = 'tok-' + 'abcdef0123456789'.repeat(2);
+    for (const [name, env] of [
+      ['PATH', { PATH: strong }],
+      ['HOME', { HOME: strong }],
+      ['lower_case_token', { lower_case_token: strong }],
+      ['ANTHROPIC_API_KEY', { ANTHROPIC_API_KEY: strong }],
+      ['OPENAI_API_KEY', { OPENAI_API_KEY: strong }],
+      ['AWS_SESSION_TOKEN', { AWS_SESSION_TOKEN: strong }],
+      ['GITHUB_TOKEN', { GITHUB_TOKEN: strong }],
+      ['MY_SECRET', { MY_SECRET: strong }],
+      ['ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.repeat(3) + '_X', {}],
+    ] as [string, Record<string, string>][]) {
+      const r = await run(['--token-env', name], env);
+      expect(r.code, name).toBe(2);
+      expect(JSON.parse(r.out).error.code, name).toBe('CONFIG_INVALID');
+      expect(r.out + r.err, name).not.toContain(name);
+      expect(r.out + r.err, name).not.toContain(strong);
+    }
+    const repetitive = await run(['--token-env', 'GW_TOKEN'], { GW_TOKEN: 'a'.repeat(40) });
+    expect(repetitive.code).toBe(2);
+    expect(repetitive.out).not.toContain('aaaaaaaa');
+    const unsetNamed = await run(['--token-env', 'GW_NOT_SET_ANYWHERE']);
+    expect(unsetNamed.out).not.toContain('GW_NOT_SET_ANYWHERE');
     expect((await run(['--allow-origin', '*'])).code).toBe(2);
     expect((await run(['--max-body', '10'])).code).toBe(2);
     expect((await run(['--port', '70000'])).code).toBe(2);

@@ -13,12 +13,100 @@ export const MIN_TOKEN_LENGTH = 16;
 export const MAX_TOKEN_LENGTH = 512;
 export const DEFAULT_HOST = '127.0.0.1';
 
-/** A usable bearer token: printable ASCII, no whitespace, 16 to 512 characters. Throws `ConfigError` (never echoing it). */
+/** Distinct characters a token must use, and the empirical (Shannon) bits it must carry: rejects `aaaa...` and `abababab...`. */
+export const MIN_TOKEN_DISTINCT = 8;
+export const MIN_TOKEN_BITS = 48;
+
+/** Bits of information the character frequencies of `s` account for (empirical entropy x length). */
+function empiricalBits(s: string): number {
+  const counts = new Map<string, number>();
+  for (const ch of s) counts.set(ch, (counts.get(ch) ?? 0) + 1);
+  let bits = 0;
+  for (const n of counts.values()) bits -= n * Math.log2(n / s.length);
+  return bits;
+}
+
+/**
+ * A usable bearer token: printable ASCII, no whitespace, 16 to 512 characters, at least 8 distinct characters and a
+ * plausible amount of variety (not `aaaaaaaaaaaaaaaa`). Throws `ConfigError` (never echoing it).
+ */
 export function validateToken(token: string): string {
   if (token.length < MIN_TOKEN_LENGTH || token.length > MAX_TOKEN_LENGTH || !/^[\x21-\x7E]+$/.test(token)) {
-    throw new ConfigError(`the API token must be ${MIN_TOKEN_LENGTH}-${MAX_TOKEN_LENGTH} printable characters without spaces`);
+    throw new ConfigError(`the API token must be ${MIN_TOKEN_LENGTH}-${MAX_TOKEN_LENGTH} printable characters without spaces (generate one with: openssl rand -hex 24)`);
+  }
+  if (new Set(token).size < MIN_TOKEN_DISTINCT || empiricalBits(token) < MIN_TOKEN_BITS) {
+    throw new ConfigError('the API token is too repetitive to be a secret; generate one with: openssl rand -hex 24');
   }
   return token;
+}
+
+export interface AuthThrottleOptions {
+  /** Failures from one address that cost nothing (a mistyped token). */
+  freeFailures: number;
+  /** Delay before the 401 once the free failures are used up, doubling per further failure. */
+  baseDelayMs: number;
+  maxDelayMs: number;
+  /** This many failures inside `windowMs` lock the address out (429) for `lockoutMs`. */
+  lockoutFailures: number;
+  windowMs: number;
+  lockoutMs: number;
+  /** Addresses remembered at once; the oldest is dropped beyond this. */
+  maxTracked: number;
+  now?: () => number;
+}
+
+export const DEFAULT_AUTH_THROTTLE: Readonly<Omit<AuthThrottleOptions, 'now'>> = Object.freeze({
+  freeFailures: 3,
+  baseDelayMs: 250,
+  maxDelayMs: 4000,
+  lockoutFailures: 20,
+  windowMs: 60_000,
+  lockoutMs: 60_000,
+  maxTracked: 1024,
+});
+
+/**
+ * Slows and then stops guessing of the bearer token from one remote address: failures past a small allowance are
+ * answered after an exponentially growing delay, and enough of them lock the address out. A lockout refuses even the
+ * right token (the check is not run), so guessing cannot continue behind it. Note that every local process shares
+ * 127.0.0.1: a local guesser locks out the local user for the lockout period, which is the price of stopping it.
+ */
+export class AuthThrottle {
+  readonly #o: Omit<AuthThrottleOptions, 'now'>;
+  readonly #now: () => number;
+  readonly #entries = new Map<string, { failures: number; last: number; lockedUntil: number }>();
+
+  constructor(options: Partial<AuthThrottleOptions> = {}) {
+    this.#o = { ...DEFAULT_AUTH_THROTTLE, ...options };
+    this.#now = options.now ?? Date.now;
+  }
+
+  /** Seconds until the address may try again, or `undefined` when it is not locked out. */
+  lockedFor(key: string): number | undefined {
+    const e = this.#entries.get(key);
+    if (e === undefined) return undefined;
+    const now = this.#now();
+    if (e.lockedUntil > now) return Math.max(1, Math.ceil((e.lockedUntil - now) / 1000));
+    if (e.lockedUntil > 0 || now - e.last > this.#o.windowMs) this.#entries.delete(key);
+    return undefined;
+  }
+
+  /** Record a failed attempt; returns the milliseconds to wait before answering it. */
+  failed(key: string): number {
+    const now = this.#now();
+    const prev = this.#entries.get(key);
+    const fresh = prev === undefined || now - prev.last > this.#o.windowMs || prev.lockedUntil > 0;
+    const failures = (fresh ? 0 : prev.failures) + 1;
+    this.#entries.delete(key); // re-insert last: Map order = least recently failed first
+    if (this.#entries.size >= this.#o.maxTracked) this.#entries.delete(this.#entries.keys().next().value as string);
+    this.#entries.set(key, { failures, last: now, lockedUntil: failures >= this.#o.lockoutFailures ? now + this.#o.lockoutMs : 0 });
+    const over = failures - this.#o.freeFailures;
+    return over <= 0 ? 0 : Math.min(this.#o.maxDelayMs, this.#o.baseDelayMs * 2 ** Math.min(over - 1, 20));
+  }
+
+  succeeded(key: string): void {
+    this.#entries.delete(key);
+  }
 }
 
 const digest = (s: string): Buffer => createHash('sha256').update(s, 'utf8').digest();

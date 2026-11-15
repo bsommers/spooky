@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AuthThrottle,
   assertBindAllowed,
   bearerMatches,
   buildHostPolicy,
@@ -31,6 +32,22 @@ describe('token', () => {
       expect(message, JSON.stringify(bad)).not.toBe('');
       if (bad.length > 4) expect(message).not.toContain(bad);
     }
+  });
+
+  it('refuses a repetitive token (aaaa..., abab..., a short alphabet) and suggests how to make a good one, without echoing it', () => {
+    for (const bad of ['a'.repeat(32), 'ab'.repeat(16), '1234'.repeat(8), 'abcabcabcabcabcabc', 'x'.repeat(16)]) {
+      let message = '';
+      try {
+        validateToken(bad);
+      } catch (e) {
+        expect(e).toBeInstanceOf(ConfigError);
+        message = (e as Error).message;
+      }
+      expect(message, bad).toContain('openssl rand');
+      expect(message).not.toContain(bad);
+    }
+    expect(validateToken('f3a9c1d27b6e45a08c1f9d2e7b3a6c50de481f27')).toBeTruthy(); // hex, as `openssl rand -hex 20` makes it
+    expect(validateToken('a-long-enough-token-1234')).toBeTruthy();
   });
 
   it('bearerMatches: right token passes; missing, wrong, other scheme, lowercase scheme, extra text fail', () => {
@@ -204,6 +221,79 @@ describe('CORS', () => {
     try {
       await expect(startApiServer({ runtime: rig.runtime, port: 0, allowOrigins: ['*'] })).rejects.toThrow(ConfigError);
     } finally {
+      rig.cleanup();
+    }
+  });
+});
+
+describe('AuthThrottle (failed bearer attempts)', () => {
+  const clock = (): { now: () => number; advance: (ms: number) => void } => {
+    let t = 1_000_000;
+    return { now: () => t, advance: (ms) => (t += ms) };
+  };
+  const opts = { freeFailures: 2, baseDelayMs: 100, maxDelayMs: 500, lockoutFailures: 6, windowMs: 10_000, lockoutMs: 30_000, maxTracked: 3 };
+
+  it('free failures cost nothing, then the delay doubles up to the cap', () => {
+    const c = clock();
+    const t = new AuthThrottle({ ...opts, now: c.now });
+    expect([1, 2, 3, 4, 5].map(() => t.failed('a'))).toEqual([0, 0, 100, 200, 400]);
+    expect(t.lockedFor('a')).toBeUndefined();
+  });
+
+  it('enough failures lock the address out for lockoutMs (reported in seconds), then it may try again; other addresses are unaffected', () => {
+    const c = clock();
+    const t = new AuthThrottle({ ...opts, now: c.now });
+    for (let i = 0; i < 6; i++) t.failed('a');
+    expect(t.lockedFor('a')).toBe(30);
+    c.advance(10_000);
+    expect(t.lockedFor('a')).toBe(20);
+    expect(t.lockedFor('b')).toBeUndefined();
+    c.advance(20_001);
+    expect(t.lockedFor('a')).toBeUndefined();
+    expect(t.failed('a')).toBe(0); // a fresh count after the lockout
+  });
+
+  it('failures older than the window are forgotten; a success clears the count', () => {
+    const c = clock();
+    const t = new AuthThrottle({ ...opts, now: c.now });
+    t.failed('a');
+    t.failed('a');
+    c.advance(10_001);
+    expect(t.failed('a')).toBe(0); // count restarted
+    t.failed('a');
+    t.succeeded('a');
+    expect(t.failed('a')).toBe(0);
+  });
+
+  it('remembers a bounded number of addresses (the least recently failed is dropped)', () => {
+    const c = clock();
+    const t = new AuthThrottle({ ...opts, now: c.now });
+    for (let i = 0; i < 6; i++) t.failed('victim');
+    expect(t.lockedFor('victim')).toBeDefined();
+    for (const k of ['x1', 'x2', 'x3']) t.failed(k);
+    expect(t.lockedFor('victim')).toBeUndefined(); // evicted: memory use is bounded by maxTracked
+  });
+});
+
+describe('the server throttles failed tokens per address', () => {
+  const T = 'a-long-enough-token-1234';
+  it('wrong tokens are delayed and then locked out with 429 + Retry-After (even the right token), and a missing header does not count', async () => {
+    const rig = await makeRuntime();
+    const server = await startTestServer(rig, { token: T, authThrottle: { freeFailures: 1, baseDelayMs: 1, maxDelayMs: 2, lockoutFailures: 4, lockoutMs: 1200, windowMs: 5000 } });
+    try {
+      for (let i = 0; i < 6; i++) expect((await raw(server, '/api/personas')).status).toBe(401); // no header: not a guess
+      for (let i = 0; i < 3; i++) expect((await raw(server, '/api/personas', { headers: { Authorization: 'Bearer wrong-wrong-wrong-1' } })).status).toBe(401);
+      expect((await raw(server, '/api/personas', { headers: { Authorization: `Bearer ${T}` } })).status).toBe(200); // not locked yet, and success resets
+      for (let i = 0; i < 4; i++) expect((await raw(server, '/api/personas', { headers: { Authorization: 'Bearer wrong-wrong-wrong-1' } })).status).toBe(401);
+      const locked = await raw(server, '/api/personas', { headers: { Authorization: `Bearer ${T}` } });
+      expect(locked.status).toBe(429);
+      expect(locked.json().error.code).toBe('RATE_LIMITED');
+      expect(Number(locked.headers['retry-after'])).toBeGreaterThanOrEqual(1);
+      expect(locked.text).not.toContain(T);
+      await new Promise((r) => setTimeout(r, 1300));
+      expect((await raw(server, '/api/personas', { headers: { Authorization: `Bearer ${T}` } })).status).toBe(200);
+    } finally {
+      await server.close();
       rig.cleanup();
     }
   });
