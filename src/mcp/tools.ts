@@ -36,6 +36,7 @@ export async function callTool(runtime: ServiceRuntime, name: string, args: unkn
   } catch (err) {
     const d = describeError(err);
     const doc = errorDocument(d);
-    return { isError: true, content: [{ type: 'text', text: JSON.stringify(doc) }], structuredContent: doc, _meta: { 'ghostwriter/category': d.mcp } };
+    // No structuredContent here: a client validates it against `outputSchema`, which describes the success document only.
+    return { isError: true, content: [{ type: 'text', text: JSON.stringify(doc) }], _meta: { 'ghostwriter/category': d.mcp } };
   }
 }
