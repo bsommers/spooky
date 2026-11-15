@@ -93,6 +93,22 @@ describe('runEnsemble', () => {
     expect((await runEnsemble(TEXT, fixedLocal(0.6), [detector('b', () => 0.2)], { weights: new Map([['local', 0]]) })).score).toBe(0.2);
   });
 
+  it('aborts the adapter\'s signal when the timeout fires, and an abandoned late rejection is not unhandled', async () => {
+    let seen: AbortSignal | undefined;
+    const slow: DetectorAdapter = {
+      name: 'slow',
+      score: (_t, signal) => new Promise<number>((_res, rej) => {
+        seen = signal;
+        signal?.addEventListener('abort', () => rej(new Error('aborted')));
+      }),
+    };
+    const r = await runEnsemble(TEXT, fixedLocal(0.5), [slow], { timeoutMs: 20 });
+    expect(r.excluded).toEqual([{ name: 'slow', reason: 'timeout' }]);
+    expect(seen?.aborted).toBe(true);
+    const ok = await runEnsemble(TEXT, fixedLocal(0.5), [{ name: 'fast', score: async () => 0.5 }], { timeoutMs: 1000 });
+    expect(ok.members).toHaveLength(2);
+  });
+
   it('records distinct fixed-vocabulary reasons: kind and status, never the message', async () => {
     const fail = (e: Error & { kind?: string; status?: number }) => ({ name: 'x', score: async (): Promise<number> => { throw e; } });
     const mk = (name: string, kind: string, status?: number): DetectorAdapter => ({ ...fail(Object.assign(new Error('secret-in-message'), { kind, ...(status === undefined ? {} : { status }) })), name });

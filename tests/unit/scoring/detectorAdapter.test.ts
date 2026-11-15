@@ -55,6 +55,16 @@ describe('HttpDetectorAdapter', () => {
     }
   });
 
+  it('aborts the request when the caller\'s signal fires', async () => {
+    let init: RequestInit | undefined;
+    const a = new HttpDetectorAdapter(cfg, { fetch: async (_u, i) => ((init = i), json({ score: 0.2 })) });
+    const ctl = new AbortController();
+    await a.score('x', ctl.signal);
+    expect(init?.signal?.aborted).toBe(false);
+    ctl.abort();
+    expect(init?.signal?.aborted).toBe(true);
+  });
+
   it('refuses an oversized response', async () => {
     const a = new HttpDetectorAdapter(cfg, { fetch: async () => json(`{"score":0.5,"pad":"${'x'.repeat(70_000)}"}`) });
     await expect(a.score('x')).rejects.toMatchObject({ kind: 'too-large' });

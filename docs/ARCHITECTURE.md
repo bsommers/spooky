@@ -98,7 +98,7 @@ Nothing downstream of the pre pipeline (profile, embedder, store, disk) ever see
 
 - **Filter:** implement `Filter`, add its name to `config/filters.ts`, pass a factory to `Engine` (README, "Add a filter in under 20 lines").
 - **LLM provider:** implement `LlmClient.complete(req) => Promise<string>` and pass `llm` to `Engine`.
-- **Score detector:** implement `DetectorAdapter` (`name`, `score(text) => Promise<number>` in [0,1]) and pass `detectors` to `Engine`, or declare an HTTP one under `scorer.detectors`. It runs only when `score()` names it.
+- **Score detector:** implement `DetectorAdapter` (`name`, `score(text, signal?) => Promise<number>` in [0,1], 1 = machine-generated; the signal aborts on timeout) and pass `detectors` to `Engine`, or declare an HTTP one under `scorer.detectors`. It runs only when `score()` names it.
 - **Embedder / vector store:** pass `embedder` / `store` to `Engine`; a store needs `save`/`load` only when a state directory is used.
 - **Personas, phrases, blocklist, custom redaction rules:** data in the config file.
 

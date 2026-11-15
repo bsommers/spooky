@@ -131,9 +131,15 @@ export interface ScoreBreakdown {
   /** Phase 7, additive. What was measured (protected spans excluded). */
   stats?: { words: number; sentences: number; paragraphs: number };
 }
+/**
+ * An external AI-text detector. `score` resolves to a number in [0,1] where 1 means "reads machine-generated" and 0
+ * means "reads human-written" (the direction of the local heuristic). A detector that reports P(human) must be
+ * inverted by the adapter: the ensemble averages whatever it gets and cannot tell the directions apart. `signal` aborts
+ * when the ensemble gives up on this call (timeout): stop work, close sockets and drop the text.
+ */
 export interface DetectorAdapter {
   readonly name: string;
-  score(text: string): Promise<number>; // [0,1]
+  score(text: string, signal?: AbortSignal): Promise<number>; // [0,1], 1 = machine-generated
 }
 export interface AiLikenessScorer {
   score(text: string): ScoreBreakdown;
@@ -173,7 +179,11 @@ export interface ConfidentialityConfig {
 export interface DetectorConfig {
   /** Lower-case id used by `--detector <name>`; `local` is reserved. */
   name: string;
-  /** http(s) endpoint that accepts `POST {"text": "..."}` and answers `{"score": <0..1>}`. */
+  /**
+   * https endpoint (http only for localhost / 127.0.0.0/8 / ::1) that accepts `POST {"text": "..."}` and answers
+   * `{"score": <0..1>}` where 1 = machine-generated and 0 = human-written, the same direction as the local score. A
+   * service that returns P(human) must be fronted by a shim that inverts it; there is no `invert` option.
+   */
   url: string;
   /** Environment variable that holds a bearer token. Never the token itself. */
   apiKeyEnv?: string;

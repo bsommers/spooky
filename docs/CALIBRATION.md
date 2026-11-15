@@ -154,7 +154,9 @@ license, note) and the harness refuses a file without an entry or an entry witho
 - Not a calibrated probability.
 - Third-party detectors use different signals and change without notice; their scores do not line up with this one.
   The `DetectorAdapter` ensemble averages whatever the adapters return and records any that fail or return an invalid
-  value; it does not validate their accuracy.
+  value; it does not validate their accuracy. **Direction:** a detector must report 1 = machine-generated and
+  0 = human-written, like the local score. The ensemble cannot tell a detector that reports P(human) from one that
+  reports P(AI), and averaging it in would silently invert that member; front such a service with a shim that inverts it.
 - External adapters send the (already redacted) text to a third-party endpoint. They run only when you name them
   (`--detector <name>` / `engine.score(text, { detectors: [...] })`), and only for detectors declared in
   `scorer.detectors`. A detector URL must be https (plain http only for localhost, 127.0.0.0/8 and ::1, with or

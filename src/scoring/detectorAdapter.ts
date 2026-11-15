@@ -87,7 +87,7 @@ export class HttpDetectorAdapter implements DetectorAdapter {
     assertDetectorAdapter(this);
   }
 
-  async score(text: string): Promise<number> {
+  async score(text: string, signal?: AbortSignal): Promise<number> {
     const headers: Record<string, string> = { 'content-type': 'application/json', accept: 'application/json' };
     if (this.#apiKeyEnv !== undefined) {
       const key = this.#env[this.#apiKeyEnv];
@@ -101,7 +101,7 @@ export class HttpDetectorAdapter implements DetectorAdapter {
         headers,
         body: JSON.stringify({ text }),
         redirect: 'error',
-        signal: AbortSignal.timeout(this.#timeoutMs),
+        signal: signal === undefined ? AbortSignal.timeout(this.#timeoutMs) : AbortSignal.any([AbortSignal.timeout(this.#timeoutMs), signal]),
       });
       if (!res.ok) {
         await res.body?.cancel().catch(() => undefined);

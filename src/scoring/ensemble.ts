@@ -46,15 +46,21 @@ function reasonOf(err: unknown): string {
   return `error:${err.name}`;
 }
 
-/** Run `adapter.score(text)` with a timeout; resolves to a valid score or an exclusion reason. */
+/** Run `adapter.score(text, signal)` with a timeout; the signal is aborted on timeout. Resolves to a valid score or an exclusion reason. */
 async function callAdapter(adapter: DetectorAdapter, text: string, timeoutMs: number): Promise<{ score: number } | { reason: string }> {
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const controller = new AbortController();
   try {
     const timeout = new Promise<'timeout'>((resolve) => {
       timer = setTimeout(() => resolve('timeout'), timeoutMs);
     });
-    const raced = await Promise.race([(async () => adapter.score(text))(), timeout]); // the async wrapper turns a synchronous throw into a rejection
-    if (raced === 'timeout') return { reason: 'timeout' };
+    const call = (async () => adapter.score(text, controller.signal))(); // the async wrapper turns a synchronous throw into a rejection
+    call.catch(() => undefined); // an abandoned call that rejects later must not become an unhandled rejection
+    const raced = await Promise.race([call, timeout]);
+    if (raced === 'timeout') {
+      controller.abort();
+      return { reason: 'timeout' };
+    }
     const score = checkDetectorScore(raced);
     return score === undefined ? { reason: 'invalid_score' } : { score };
   } catch (err) {
