@@ -6,7 +6,8 @@
 //
 // Protected spans (fenced/inline code, URLs, blockquotes: src/filters/protectedSpans.ts) are removed before anything
 // is measured: code and quotations say nothing about how the surrounding prose was written.
-import { CLICHE_PHRASES, FEATURE_NAMES, FEATURE_PARAMS } from '../../config/scorer.js';
+import { CLICHE_PHRASES, FEATURE_NAMES, FEATURE_PARAMS, MAX_SCORE_INPUT_CHARS } from '../../config/scorer.js';
+import { ConfigError } from '../models/errors.js';
 import type { FeatureName } from '../../config/scorer.js';
 import { splitProtected } from '../filters/protectedSpans.js';
 
@@ -37,7 +38,13 @@ type PunctuationClass = (typeof PUNCTUATION_CLASSES)[number];
 const WORD_RE = /[\p{L}\p{N}]+(?:['’][\p{L}]+)*/gu;
 const BLOCK_START_RE = /^\s*(?:#{1,6}\s|[-*+]\s|\d{1,3}[.)]\s)/;
 const MARKER_RE = /^\s*(?:#{1,6}\s+|[-*+]\s+|\d{1,3}[.)]\s+)/;
-const ABBREVIATIONS = new Set(['mr', 'mrs', 'ms', 'dr', 'prof', 'sr', 'jr', 'st', 'vs', 'etc', 'eg', 'ie', 'no', 'fig', 'inc', 'ltd', 'co']);
+// Abbreviations that cannot end a sentence: "Dr." is followed by a name, "e.g." / "i.e." / "vs." by the rest of the clause.
+const TITLE_ABBREVIATIONS = new Set(['mr', 'mrs', 'ms', 'dr', 'prof', 'vs', 'eg', 'ie']);
+// Abbreviations that are also real words or can end a sentence ("etc.", "Jr.", "the co. in", "Fig. 3"): the period is
+// not a boundary only when the next word starts in lower case or with a digit. "St." with a capital is a title/place.
+const SOFT_ABBREVIATIONS = new Set(['sr', 'jr', 'st', 'etc', 'fig', 'inc', 'ltd']);
+// "No. 5" is an abbreviation only before a digit; "I said no. Then he left." is a sentence end.
+const NUMBER_ABBREVIATIONS = new Set(['no']);
 const TERMINATORS = new Set(['.', '!', '?', '…']);
 const CLOSERS = new Set(['"', "'", ')', ']', '”', '’']);
 
@@ -55,6 +62,24 @@ function proseOf(raw: string): string {
 
 const wordCount = (s: string): number => s.match(WORD_RE)?.length ?? 0;
 
+/** Does the period at `block[i]` belong to an abbreviation or initial (so it does not end the sentence)? `start` bounds the look-behind. */
+function isAbbreviationPeriod(block: string, start: number, i: number): boolean {
+  let k = i;
+  while (k > start && /[\p{L}.]/u.test(block[k - 1] as string)) k--;
+  const raw = block.slice(k, i).replace(/\./g, '');
+  const token = raw.toLowerCase();
+  let m = i + 1;
+  while (m < block.length && /\s/.test(block[m] as string)) m++;
+  const next = m < block.length ? (block[m] as string) : '';
+  const lowerOrDigit = /[\p{Ll}\p{N}]/u.test(next);
+  if (TITLE_ABBREVIATIONS.has(token)) return true;
+  if (token === 'st' && /\p{Lu}/u.test(raw[0] as string)) return true;
+  if (SOFT_ABBREVIATIONS.has(token)) return lowerOrDigit;
+  if (NUMBER_ABBREVIATIONS.has(token)) return /\p{N}/u.test(next);
+  // A single capital letter is an initial ("J. R. R. Tolkien", "J. Smith") when a name follows; the pronoun "I." ends a sentence.
+  return raw.length === 1 && /\p{Lu}/u.test(raw) && raw !== 'I' && /\p{Lu}/u.test(next);
+}
+
 /** Split one block of prose into sentences. A boundary is a terminator run (plus closing quotes/brackets) followed by whitespace or the end. */
 function splitSentences(block: string): string[] {
   const out: string[] = [];
@@ -68,15 +93,9 @@ function splitSentences(block: string): string[] {
       i = j - 1; // "3.5", "e.g.x": not a boundary
       continue;
     }
-    if (block[i] === '.' && j === i + 1) {
-      // a lone period after an abbreviation or a single initial is not a boundary ("Dr. Smith", "J. Smith")
-      let k = i;
-      while (k > start && /[\p{L}.]/u.test(block[k - 1] as string)) k--;
-      const token = block.slice(k, i).toLowerCase().replace(/\./g, '');
-      if (ABBREVIATIONS.has(token) || (token.length === 1 && /\p{Lu}/u.test(block[k] as string))) {
-        i = j - 1;
-        continue;
-      }
+    if (block[i] === '.' && j === i + 1 && isAbbreviationPeriod(block, start, i)) {
+      i = j - 1;
+      continue;
     }
     out.push(block.slice(start, j));
     start = j;
@@ -88,8 +107,10 @@ function splitSentences(block: string): string[] {
 
 /** Cut `raw` into words, sentences and paragraphs after removing protected spans. */
 export function prepareText(raw: string): PreparedText {
+  // splitProtected is quadratic on newline-heavy input; bound the work here, where the library entry points converge.
+  if (raw.length > MAX_SCORE_INPUT_CHARS) throw new ConfigError(`score: text is ${raw.length} characters; the scorer limit is ${MAX_SCORE_INPUT_CHARS}`);
   const prose = proseOf(raw);
-  const words = (prose.toLowerCase().replace(/’/g, "'").match(WORD_RE) ?? []).slice();
+  const words = prose.toLowerCase().replace(/’/g, "'").match(WORD_RE) ?? [];
   const sentenceLengths: number[] = [];
   const paragraphLengths: number[] = [];
   for (const paragraph of prose.split(/\n[ \t]*\n/)) {

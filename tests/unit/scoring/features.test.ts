@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MAX_SCORE_INPUT_CHARS } from '../../../config/scorer.js';
 import { FEATURE_NAMES, burstiness, cliche, computeFeatures, countCliches, lexicalDiversity, paragraphUniformity, prepareText, punctuation, repetition } from '../../../src/scoring/features.js';
 
 const uniform = Array.from({ length: 8 }, (_, i) => `The ${['red', 'blue', 'green', 'grey', 'tall', 'old', 'new', 'dry'][i]} house stands near the quiet river.`).join(' ');
@@ -16,7 +17,25 @@ describe('prepareText', () => {
 
   it('does not split on abbreviations, initials or decimals', () => {
     const p = prepareText('Dr. Smith paid 3.5 dollars to J. Doe. Then he left, e.g. quickly.');
-    expect(p.sentenceLengths).toEqual([9, 6]) // "3.5" and "e.g." count as two words each;
+    expect(p.sentenceLengths).toEqual([9, 6]); // "3.5" and "e.g." count as two words each;
+  });
+
+  it('splits after sentence-final words that look like abbreviations, and after "I."', () => {
+    const lens = (t: string): number[] => prepareText(t).sentenceLengths;
+    expect(lens('I said no. Then he left.')).toEqual([3, 3]);
+    expect(lens('She met Prof. Lee, and so did I. Then we left the co. in peace.')).toEqual([8, 5, 2]);
+    expect(lens('He ran the firm for years, etc. Then he retired.')).toEqual([7, 3]);
+    expect(lens('They sell shoes, hats, etc. and more. Then it closed.')).toEqual([7, 3]);
+    expect(lens('Read No. 5 and Fig. 3 carefully. Then stop.')).toEqual([7, 2]);
+    expect(lens('We went to St. Louis. It was fine.')).toEqual([5, 3]);
+    expect(lens('The Smiths Jr. said no. Nobody cared.')).toEqual([5, 2]);
+    expect(lens('J. R. R. Tolkien wrote it. Fine.')).toEqual([6, 1]);
+    expect(lens('Is it Mr. Jones? Yes. He is.')).toEqual([4, 1, 2]);
+  });
+
+  it('refuses text over the scorer limit instead of running a quadratic pass', () => {
+    expect(() => prepareText('\n'.repeat(MAX_SCORE_INPUT_CHARS + 1))).toThrow(/scorer limit/);
+    expect(() => prepareText('word '.repeat(1000))).not.toThrow();
   });
 
   it('treats list items and headings as their own sentences and wrapped lines as one', () => {

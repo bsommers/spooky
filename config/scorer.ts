@@ -23,6 +23,8 @@ export const LOW_CONFIDENCE_WORDS = 50;
 /** Default weight of the local heuristic in the ensemble, and the default per-detector timeout. */
 export const DEFAULT_LOCAL_WEIGHT = 1;
 export const DEFAULT_DETECTOR_TIMEOUT_MS = 10_000;
+/** Longest text the scorer accepts (characters). The protected-span pass is quadratic on newline-heavy input; 500k keeps the worst case under about a second. */
+export const MAX_SCORE_INPUT_CHARS = 500_000;
 /** Largest detector response body read (a score is a few bytes). */
 export const MAX_DETECTOR_RESPONSE_BYTES = 64 * 1024;
 
