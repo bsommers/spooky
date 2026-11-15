@@ -1,6 +1,6 @@
 # Checkpoint (2026-11-13, autonomous run mid-flight)
 
-**Status:** Phases 1-6 (all of v1) COMPLETE. `main` fast-forwarded to e198796 and PUSHED to origin/main (user-authorized 2026-11-14). Phase branch `gsd/phase-01-foundation` not pushed. Phases 7-8 (v2) pending: confirm with user before running. No PR.
+**Status:** v1 (P1-6) done and main pushed (e198796). Since then on branch gsd/phase-01-foundation (unpushed): glued-secret confidentiality fix (f0733bc, c25d2e5, reviewed+fixed, gate 1249), Phase 7 scorer built (3be6602..d7d1535; AUC 0.7293 CI 0.60-0.84, confounded corpus; review found 7 WR, fixer running), Milestone v3 spec written (b835e23: phases 9 API/MCP, 10 UI foundation + Black Cat/Tron themes, 11 UI features; React Aria Components). Next: finish P7 gate (verify, phase.complete 07), then P8 humanizer, then P9-11. User approved P7, P8, conf fix; v3 phases not yet approved to build; 5 open decisions in docs/SURFACES.md (recs: node:http, config read-only, optional loopback token, fontsource fonts, committed Playwright baselines). Open decision: build bigger genre-matched corpus before P8 targets the score. No push of branch/PR without say-so.
 
 ## Goal (user's words)
 "/gsd-execute-phase 1 - ... parallel subagents using the best and cheapest model", then "/gsd-autonomous" (all remaining phases). User confirmed D2 (LLM adapters) and deps @anthropic-ai/sdk ^0.40, commander ^12; D3/D4/D5 kept as written.
