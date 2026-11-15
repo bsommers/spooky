@@ -323,6 +323,48 @@ describe('size, shape and time limits', () => {
     });
   });
 
+  describe('/mcp: one message per request, and the REST body caps apply per tool', () => {
+    const mcpHeaders = { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' };
+    const call = (id: number, name: string, args: unknown): unknown => ({ jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: args } });
+    const split = { maxBodyBytes: 2048, maxIngestBodyBytes: 16_384, readTimeoutMs: 2000, maxConcurrent: 8 };
+
+    it('a JSON-RPC batch (any size, even empty) is 400 and no tool runs', async () => {
+      await withServer({ mcp: true }, async (s, rig) => {
+        const gen = { authorId: 'terse', persona: 'exec', text: 'Please rewrite this short draft.' };
+        const batch = Array.from({ length: 100 }, (_, i) => call(i + 1, 'generate', gen));
+        for (const b of [batch, batch.slice(0, 2), [], [call(1, 'personas', {})]]) {
+          const r = await raw(s, '/mcp', { method: 'POST', headers: mcpHeaders, body: JSON.stringify(b) });
+          expect(r.status, `batch of ${b.length}`).toBe(400);
+          expect(r.json().error.code).toBe('USAGE');
+        }
+        expect(rig.llm.callCount).toBe(0);
+        // a single message still works
+        const one = await raw(s, '/mcp', { method: 'POST', headers: mcpHeaders, body: JSON.stringify(call(1, 'personas', {})) });
+        expect(one.status).toBe(200);
+      });
+    });
+
+    it('a tools/call of any tool but ingest is held to the default body cap; ingest alone gets the large cap', async () => {
+      await withServer({ mcp: true, limits: split }, async (s) => {
+        const text = 'Words go here. '.repeat(300); // ~4.5 KB: over maxBodyBytes (2 KB), under maxIngestBodyBytes (16 KB)
+        for (const tool of ['score', 'generate']) {
+          const args = tool === 'score' ? { text } : { authorId: 'terse', persona: 'exec', text };
+          const r = await raw(s, '/mcp', { method: 'POST', headers: mcpHeaders, body: JSON.stringify(call(1, tool, args)) });
+          expect(r.status, tool).toBe(413);
+          expect(r.json().error.code).toBe('INPUT_TOO_LARGE');
+        }
+        // not a tools/call at all: also held to the small cap
+        const pad = await raw(s, '/mcp', { method: 'POST', headers: mcpHeaders, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping', params: { pad: text } }) });
+        expect(pad.status).toBe(413);
+        const ing = await raw(s, '/mcp', { method: 'POST', headers: mcpHeaders, body: JSON.stringify(call(1, 'ingest', { authorId: 'big1', name: 'Big', text })) });
+        expect(ing.status).toBe(200); // past the door; the tool result carries the outcome
+        // the declared cap for ingest is still enforced
+        const huge = await raw(s, '/mcp', { method: 'POST', headers: mcpHeaders, body: JSON.stringify(call(1, 'ingest', { authorId: 'big2', name: 'Big', text: text.repeat(5) })) });
+        expect(huge.status).toBe(413);
+      });
+    });
+  });
+
   it('unknown routes are 404, wrong methods 405 with Allow, HEAD/PUT/DELETE never run an operation', async () => {
     await withServer({}, async (s, rig) => {
       expect((await raw(s, '/nope')).status).toBe(404);

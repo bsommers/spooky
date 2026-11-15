@@ -12,7 +12,7 @@ import { createServer } from 'node:http';
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { handleMcpHttp } from '../mcp/server.js';
-import { ConfigError } from '../models/errors.js';
+import { ConfigError, InputTooLargeError } from '../models/errors.js';
 import { describeError, errorDocument, SurfaceError } from '../service/errors.js';
 import { buildOpenApi, serializeOpenApi } from '../service/openapi.js';
 import { OPERATIONS } from '../service/operations.js';
@@ -127,6 +127,15 @@ function parseJsonBody(buf: Buffer): unknown {
   }
 }
 
+/** Is `body` a single MCP `tools/call` of an operation that writes state? Those (and only those) may exceed the default body cap. */
+function isWriteToolCall(body: unknown, ops: readonly AnyOperation[]): boolean {
+  if (typeof body !== 'object' || body === null) return false;
+  const { method, params } = body as { method?: unknown; params?: unknown };
+  if (method !== 'tools/call' || typeof params !== 'object' || params === null) return false;
+  const name = (params as { name?: unknown }).name;
+  return typeof name === 'string' && ops.some((o) => o.name === name && o.mutates);
+}
+
 export async function startApiServer(options: ApiServerOptions): Promise<ApiServer> {
   const host = options.host ?? DEFAULT_HOST;
   const port = options.port ?? DEFAULT_PORT;
@@ -201,7 +210,13 @@ export async function startApiServer(options: ApiServerOptions): Promise<ApiServ
       try {
         if (!isJsonContentType(req.headers['content-type'])) throw new SurfaceError('UNSUPPORTED_MEDIA_TYPE', 'Content-Type must be application/json');
         checkDeclaredLength(req, limits.maxIngestBodyBytes);
-        const body = parseJsonBody(await readBody(req, { ...limits, maxBodyBytes: limits.maxIngestBodyBytes }));
+        const bytes = await readBody(req, { ...limits, maxBodyBytes: limits.maxIngestBodyBytes });
+        const body = parseJsonBody(bytes);
+        // One message per request: the SDK transport runs every element of a JSON-RPC batch concurrently, which would
+        // multiply the work done under this one slot and this one body-cap check.
+        if (Array.isArray(body)) throw new SurfaceError('USAGE', 'JSON-RPC batch requests are not supported; send one message per request');
+        // Only a call to a writing tool (ingest) may use the large cap, exactly as on the REST routes.
+        if (bytes.length > limits.maxBodyBytes && !isWriteToolCall(body, ops)) throw new InputTooLargeError(bytes.length, limits.maxBodyBytes, 'bytes');
         await handleMcpHttp(runtime, req, res, body, ops);
       } finally {
         release();
