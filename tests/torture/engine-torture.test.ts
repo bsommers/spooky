@@ -105,7 +105,7 @@ describe(`torture: ${RUNS} random generate() calls never throw an untyped error`
           const s = planted();
           planting.push(s);
           const at = Math.floor(rnd() * (input.length + 1));
-          input = `${input.slice(0, at)} ${s} ${input.slice(at)}`; // padded: npm/hf/sk-/Stripe/SendGrid/JWT tokens glued to letters or digits are not redacted (AS-BUILT, Known limits)
+          input = `${input.slice(0, at)}${s}${input.slice(at)}`; // glued: secrets are planted with no padding
         }
       }
       const authorId = rnd() < 0.05 ? pick(rnd, ['nobody', '', '__proto__', 'x'.repeat(300), planted()]) : 'terse';

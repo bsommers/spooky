@@ -413,8 +413,8 @@ describe('ConfidentialityFilter: provider formats and auth headers (CR-06)', () 
     }
   });
 
-  it('short provider prefixes need a left boundary: ordinary words are not secrets', async () => {
-    for (const t of ['task_live_tester_account_name', 'xhf_' + 'a'.repeat(40), 'mask_live_' + 'a'.repeat(30)]) {
+  it('short provider prefixes glued to a word need a real-token-length body: ordinary words are not secrets', async () => {
+    for (const t of ['task_live_tester_account_name', 'xhf_' + 'a'.repeat(20), 'mask_live_' + 'a'.repeat(18)]) {
       expect((await run(t)).content, t).toBe(t);
     }
   });
@@ -599,4 +599,62 @@ describe('ConfidentialityFilter: size and performance', () => {
     },
     10_000,
   );
+});
+
+describe('ConfidentialityFilter: tokens glued to a preceding character', () => {
+  const kinds = ['sk', 'skProj', 'skAnt', 'stripeLive', 'stripeRestricted', 'bearer', 'npm', 'huggingface', 'sendgrid', 'jwt', 'aws', 'ghp'] as const;
+  const prefixes = [
+    ['letter', 'W'],
+    ['word', 'tokenword'],
+    ['digit', '7'],
+    ['underscore', '_'],
+    ['hyphen', 'a-'],
+  ] as const;
+
+  for (const kind of kinds) {
+    for (const [name, pre] of prefixes) {
+      it(`${kind} glued after ${name} is redacted, prefix kept, idempotent`, async () => {
+        const k = secret(kind);
+        const r = await run(`x ${pre}${k.text} y`);
+        for (const v of k.values) expect(r.content).not.toContain(v);
+        expect(r.content).toContain(`${pre}[REDACTED:${k.type}]`);
+        expect((await run(r.content)).content).toBe(r.content);
+      });
+    }
+  }
+
+  it('glued secret followed directly by text is redacted without ReDoS-scale cost', async () => {
+    const k = secret('sk');
+    const r = await run(`pre${k.text}`);
+    expect(r.content).toBe('pre[REDACTED:api_key]');
+  });
+
+  it('false-positive guard: prefix lookalikes inside ordinary words are left alone', async () => {
+    const text = [
+      'risk-assessment-framework-for-enterprise-planning',
+      'task-runner-configuration-for-the-build-system',
+      'desk_live_streaming_session_manager',
+      'pnpm_modules and ASG.config.values and PNG.image',
+      'pallbearer arrangements extraordinaire_of_the_realm and Bearer of bad news',
+      'whf_short and tohf_abc and MSG.hello.world',
+      'see eyJ.x.y or xeyJ and xeyJshort.tiny.t',
+    ].join('\n');
+    expect((await run(text)).content).toBe(text);
+  });
+
+  it('adversarial glued repetition completes quickly', async () => {
+    for (const unit of ['a' + 'sk-', 'npm_', 'hf_', 'SG.', 'eyJ', 'sk_live_']) {
+      const text = unit.repeat(Math.ceil(1_000_000 / unit.length));
+      const start = performance.now();
+      await run(text);
+      expect(performance.now() - start).toBeLessThan(2000);
+    }
+  }, 20_000);
+
+  it('glued secret hidden by zero-width characters keeps the NFKC index map intact', async () => {
+    const k = secret('npm');
+    const split = `ab${k.text.slice(0, 10)}\u200b${k.text.slice(10)}cd`;
+    const r = await run(split);
+    expect(r.content).toBe('ab[REDACTED:npm_token]cd');
+  });
 });
