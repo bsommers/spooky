@@ -217,3 +217,31 @@ export interface ConfigIssue {
   path: string;
   message: string;
 }
+
+// ---------- 9. scoring (Phase 7 additive) ----------
+/** A member of the score ensemble that produced a valid score. `weight` is normalized over the contributing members. */
+export interface EnsembleMember {
+  /** `local` for the built-in heuristic, else the detector's name. */
+  name: string;
+  score: number;
+  weight: number;
+}
+/** A requested detector that did not contribute. `reason` is a fixed word or `error:<ClassName>`; never a message. */
+export interface EnsembleExclusion {
+  name: string;
+  reason: string;
+}
+export interface ScoreOptions {
+  /** Names of configured / registered detectors to include. Absent or empty = the local heuristic only, nothing leaves the process. */
+  detectors?: readonly string[];
+}
+export interface ScoreResult {
+  /** Ensemble score in [0,1] (equals `local.score` when no detector contributed). */
+  score: number;
+  /** The local heuristic's breakdown, computed on the redacted text. */
+  local: ScoreBreakdown;
+  members: EnsembleMember[];
+  excluded: EnsembleExclusion[];
+  /** Confidentiality trace of the redaction that ran first. */
+  trace: TraceEntry[];
+}
