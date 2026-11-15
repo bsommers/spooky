@@ -34,6 +34,7 @@ export const EXIT_CODES: Readonly<Record<string, number>> = {
   INPUT_TOO_LARGE: 6,
   STORE_CORRUPT: 7,
   STATE_LOCKED: 8,
+  DETECTORS_FAILED: 9,
 };
 
 export interface CliIo {

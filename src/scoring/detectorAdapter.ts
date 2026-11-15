@@ -12,14 +12,16 @@ import type { DetectorAdapter, DetectorConfig } from '../models/types.js';
 export type { DetectorAdapter };
 
 export const DETECTOR_NAME_RE = /^[a-z0-9_-]{1,40}$/;
+/** Names that are legal under `DETECTOR_NAME_RE` but would collide with object internals in a plain-object lookup. */
+export const RESERVED_DETECTOR_NAMES: ReadonlySet<string> = new Set(['local', '__proto__']);
 /** Reserved: the built-in heuristic's name in an ensemble. */
 export const LOCAL_NAME = 'local';
 
 /** `ConfigError` unless `a` looks like an adapter: a usable name (not `local`) and a `score` function. */
 export function assertDetectorAdapter(a: unknown): asserts a is DetectorAdapter {
   const name = (a as Partial<DetectorAdapter> | null | undefined)?.name;
-  if (typeof name !== 'string' || !DETECTOR_NAME_RE.test(name) || name === LOCAL_NAME) {
-    throw new ConfigError('detector adapter: name must be 1-40 characters of a-z, 0-9, "_" or "-" and must not be "local"');
+  if (typeof name !== 'string' || !DETECTOR_NAME_RE.test(name) || RESERVED_DETECTOR_NAMES.has(name)) {
+    throw new ConfigError('detector adapter: name must be 1-40 characters of a-z, 0-9, "_" or "-" and must not be "local" or "__proto__"');
   }
   if (typeof (a as DetectorAdapter).score !== 'function') throw new ConfigError(`detector adapter "${name}": score must be a function`);
 }

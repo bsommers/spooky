@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Engine } from '../../src/engine.js';
-import { ConfigError, InputTooLargeError } from '../../src/models/errors.js';
+import { ConfigError, DetectorsFailedError, InputTooLargeError } from '../../src/models/errors.js';
 import type { DetectorAdapter } from '../../src/models/types.js';
 import { loadConfig } from '../../src/config/load.js';
 import { runCli } from '../helpers/cli.js';
@@ -80,6 +80,22 @@ describe('engine.score', () => {
       { name: 'big', reason: 'invalid_score' },
       { name: 'nan', reason: 'invalid_score' },
     ]);
+  });
+
+  it('localWeight 0 with every named detector failing is a DetectorsFailedError; a weighted detector still carries the score', async () => {
+    const config = loadConfig({ ...baseConfig, scorer: { localWeight: 0 } });
+    const failing = new Engine({ config, detectors: [detector('boom', () => { throw new Error('nope'); })] });
+    await expect(failing.score(TEXT, { detectors: ['boom'] })).rejects.toBeInstanceOf(DetectorsFailedError);
+    await expect(failing.score(TEXT)).rejects.toBeInstanceOf(DetectorsFailedError); // local alone with weight 0: nothing to report
+    const ok = new Engine({ config, detectors: [detector('good', () => 0.25)] });
+    expect((await ok.score(TEXT, { detectors: ['good'] })).score).toBe(0.25);
+  });
+
+  it('a detector cannot be named __proto__ (config or library), and a configured detector weight is applied', async () => {
+    expect(() => loadConfig({ ...baseConfig, scorer: { detectors: [{ name: '__proto__', url: 'https://d.example/s' }] } })).toThrow(ConfigError);
+    expect(() => new Engine({ config: loadConfig(baseConfig), detectors: [detector('__proto__', () => 0.5)] })).toThrow(ConfigError);
+    const engine = new Engine({ config: loadConfig({ ...baseConfig, scorer: { detectors: [{ name: 'w', url: 'https://d.example/s', weight: 3 }] } }), detectors: [detector('w', () => 1)] });
+    expect((await engine.score(TEXT, { detectors: ['w'] })).members.find((m) => m.name === 'w')?.weight).toBeCloseTo(0.75, 9);
   });
 
   it('an unknown detector name is a ConfigError that lists the configured ones, raised before any filter or call', async () => {

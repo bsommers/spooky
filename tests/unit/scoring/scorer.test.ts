@@ -177,3 +177,9 @@ describe('scorer config (scorer.weights)', () => {
     expect(fails([det({}), det({})])).toBe(true);
   });
 });
+
+describe('normalizeWeights (overflow)', () => {
+  it('rejects a weight set whose sum is not finite instead of normalizing everything to 0', () => {
+    expect(() => normalizeWeights({ burstiness: 1e308, cliche: 1e308 })).toThrow(/not finite/);
+  });
+});

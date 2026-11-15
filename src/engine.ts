@@ -94,7 +94,7 @@ export class Engine {
   readonly #maxInputChars: number;
   readonly #scorer: HeuristicScorer;
   readonly #detectors = new Map<string, DetectorAdapter>();
-  readonly #detectorWeights: Record<string, number>;
+  readonly #detectorWeights = new Map<string, number>(); // a Map: a detector may legally be named like an Object.prototype key
   readonly #detectorTimeouts = new Map<string, number>();
 
   /** Builds the engine without touching the disk. Prefer `Engine.create`, which also restores persisted state. */
@@ -122,16 +122,16 @@ export class Engine {
     this.#pre = pre;
     this.#maxInputChars = config.limits.maxInputChars;
     this.#scorer = new HeuristicScorer(config.scorer?.weights);
-    this.#detectorWeights = { local: config.scorer?.localWeight ?? 1 };
+    this.#detectorWeights.set('local', config.scorer?.localWeight ?? 1);
     for (const d of config.scorer?.detectors ?? []) {
       this.#detectors.set(d.name, new HttpDetectorAdapter(d, { env, ...(options.detectorFetch === undefined ? {} : { fetch: options.detectorFetch }) }));
-      this.#detectorWeights[d.name] = d.weight;
+      this.#detectorWeights.set(d.name, d.weight);
       this.#detectorTimeouts.set(d.name, d.timeoutMs);
     }
     for (const d of options.detectors ?? []) {
       assertDetectorAdapter(d);
       this.#detectors.set(d.name, d);
-      this.#detectorWeights[d.name] ??= 1;
+      if (!this.#detectorWeights.has(d.name)) this.#detectorWeights.set(d.name, 1);
     }
 
     let client = options.llm;
@@ -205,7 +205,8 @@ export class Engine {
    * the redacted text to them. A detector that fails or answers outside [0,1] is excluded and recorded.
    *
    * `ConfigError` for a non-string text or an unknown detector name (checked before any filter or call),
-   * `InputTooLargeError` above `limits.maxInputChars`, `FilterFailedError` if the redaction cannot be shown to have run.
+   * `InputTooLargeError` above `limits.maxInputChars`, `FilterFailedError` if the redaction cannot be shown to have run,
+   * `DetectorsFailedError` if `scorer.localWeight` is 0 and no requested detector produced a score.
    */
   async score(text: string, options: ScoreOptions = {}): Promise<ScoreResult> {
     if (typeof text !== 'string') throw new ConfigError('score: text must be a string');
@@ -226,7 +227,10 @@ export class Engine {
     }
     // The adapter's own abort fires first; the ensemble's limit is only the backstop for an adapter without one.
     const timeoutMs = Math.max(DEFAULT_DETECTOR_TIMEOUT_MS, ...names.map((n) => (this.#detectorTimeouts.get(n) ?? 0) + 1000));
-    const r = await runEnsemble(pre.text, this.#scorer, adapters, { weights: this.#detectorWeights, timeoutMs });
+    // Weights only for the members of this call: the ensemble rejects a weight that names no member.
+    const weights = new Map<string, number>([['local', this.#detectorWeights.get('local') ?? 1]]);
+    for (const n of names) weights.set(n, this.#detectorWeights.get(n) ?? 1);
+    const r = await runEnsemble(pre.text, this.#scorer, adapters, { weights, timeoutMs });
     return { score: r.score, local: r.local, members: r.members, excluded: r.excluded, trace: pre.trace };
   }
 

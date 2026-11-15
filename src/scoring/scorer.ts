@@ -4,7 +4,7 @@
 //
 // Weights come from config (`scorer.weights`), need not sum to 1 (they are normalized) and may not be negative. A
 // feature that cannot be computed (too little text for that statistic) is left out and the remaining weights are
-// renormalized, so the breakdown is always an exact decomposition of the score. With NO computable feature the result
+// renormalized, so the breakdown decomposes the score (contributions sum to it to within floating-point error). With NO computable feature the result
 // is the neutral 0.5 flagged `insufficient_text`. A score is a heuristic proxy, not a detector verdict (docs/CALIBRATION.md).
 import { DEFAULT_SCORER_WEIGHTS, FEATURE_NAMES, LOW_CONFIDENCE_WORDS } from '../../config/scorer.js';
 import type { FeatureName } from '../../config/scorer.js';
@@ -16,7 +16,7 @@ export type ScorerWeights = Readonly<Record<FeatureName, number>>;
 
 /**
  * Merge `weights` over the defaults, validate and normalize to sum 1. `ConfigError` for an unknown feature name, a
- * negative / non-finite / non-number weight, or a set with no positive weight.
+ * negative / non-finite / non-number weight, a set whose sum overflows, or a set with no positive weight.
  */
 export function normalizeWeights(weights: Readonly<Partial<Record<string, number>>> = {}): ScorerWeights {
   const merged: Record<string, number> = { ...DEFAULT_SCORER_WEIGHTS };
@@ -29,6 +29,7 @@ export function normalizeWeights(weights: Readonly<Partial<Record<string, number
     merged[key] = value;
   }
   const total = FEATURE_NAMES.reduce((sum, name) => sum + (merged[name] as number), 0);
+  if (!Number.isFinite(total)) throw new ConfigError('scorer weights: the weights are too large (their sum is not finite)', [{ path: 'scorer.weights', message: 'sum of weights overflows' }]);
   if (!(total > 0)) throw new ConfigError('scorer weights: at least one weight must be positive', [{ path: 'scorer.weights', message: 'at least one weight must be positive' }]);
   return Object.fromEntries(FEATURE_NAMES.map((name) => [name, (merged[name] as number) / total])) as Record<FeatureName, number>;
 }

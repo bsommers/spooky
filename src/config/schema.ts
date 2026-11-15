@@ -129,7 +129,8 @@ const detectorSchema = z
     name: z
       .string()
       .regex(/^[a-z0-9_-]{1,40}$/, 'must be 1-40 characters: lowercase letters, digits, "_" or "-"')
-      .refine((v) => v !== 'local', { error: '"local" is reserved for the built-in heuristic' }),
+      .refine((v) => v !== 'local', { error: '"local" is reserved for the built-in heuristic' })
+      .refine((v) => v !== '__proto__', { error: '"__proto__" is reserved' }),
     url: httpUrl,
     apiKeyEnv: z.string().regex(ENV_NAME, 'must be an environment variable name, not a key').optional(),
     weight: weight.default(1),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ConfigError } from '../../../src/models/errors.js';
+import { ConfigError, DetectorsFailedError } from '../../../src/models/errors.js';
 import type { AiLikenessScorer, DetectorAdapter } from '../../../src/models/types.js';
 import { runEnsemble } from '../../../src/scoring/ensemble.js';
 import { HeuristicScorer } from '../../../src/scoring/scorer.js';
@@ -81,9 +81,25 @@ describe('runEnsemble', () => {
     expect(r.score).toBe(0.5);
   });
 
-  it('local weight 0 with every detector failed falls back to the local score instead of dividing by zero', async () => {
-    const r = await runEnsemble(TEXT, fixedLocal(0.6), [detector('a', () => { throw new Error('x'); })], { weights: { local: 0 } });
-    expect(r.score).toBe(0.6);
+  it('local weight 0 with every detector failed is an error, not a silent local score', async () => {
+    const bad = detector('a', () => { throw new Error('x'); });
+    const err = await runEnsemble(TEXT, fixedLocal(0.6), [bad], { weights: { local: 0 } }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(DetectorsFailedError);
+    expect((err as DetectorsFailedError).excluded).toEqual([{ name: 'a', reason: 'error:Error' }]);
+    expect((err as Error).message).not.toContain('x"');
+    // all weights zero while a detector did answer is the same: nothing carries weight
+    await expect(runEnsemble(TEXT, fixedLocal(0.6), [detector('b', () => 0.2)], { weights: { local: 0, b: 0 } })).rejects.toThrow(DetectorsFailedError);
+    // local weight 0 is fine while a weighted detector answers
+    expect((await runEnsemble(TEXT, fixedLocal(0.6), [detector('b', () => 0.2)], { weights: new Map([['local', 0]]) })).score).toBe(0.2);
+  });
+
+  it('rejects weights that name no member (typos), including __proto__, and weight sets whose sum overflows', async () => {
+    const a = detector('a', () => 0.5);
+    await expect(runEnsemble(TEXT, fixedLocal(0.5), [a], { weights: { aa: 2 } })).rejects.toThrow(/not a member/);
+    await expect(runEnsemble(TEXT, fixedLocal(0.5), [a], { weights: JSON.parse('{"__proto__": 3}') as Record<string, number> })).rejects.toThrow(/not a member/);
+    await expect(runEnsemble(TEXT, fixedLocal(0.5), [a], { weights: new Map([['nope', 1]]) })).rejects.toThrow(/not a member/);
+    await expect(runEnsemble(TEXT, fixedLocal(0.5), [a], { weights: { local: 1e308, a: 1e308 } })).rejects.toThrow(/not finite/);
+    await expect(runEnsemble(TEXT, fixedLocal(0.5), [{ name: '__proto__', score: async () => 0.5 }])).rejects.toThrow(ConfigError);
   });
 
   it('rejects bad adapters, duplicate names, the reserved name and bad weights before calling anything', async () => {
