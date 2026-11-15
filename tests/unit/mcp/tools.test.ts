@@ -144,6 +144,35 @@ describe('MCP inputs are untrusted (security)', () => {
     }
   });
 
+  it('only tools in the served list can be called: a subset registry does not fall back to the global one', async () => {
+    const rig = await makeRuntime();
+    try {
+      const readOnly = OPERATIONS.filter((o) => !o.mutates);
+      expect(toolDefinitions(readOnly).map((t) => t.name)).not.toContain('ingest');
+      expect(await callTool(rig.runtime, 'ingest', { authorId: 'sneaky', name: 'S', text: 'One. Two. Three.' }, readOnly)).toBeUndefined();
+      expect(rig.engine.listAuthors().map((a) => a.authorId)).toEqual(['terse']);
+      expect(await callTool(rig.runtime, 'personas', {}, readOnly)).toBeDefined();
+      // and over the protocol it is the same protocol error as any unknown tool
+      const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
+      const { InMemoryTransport } = await import('@modelcontextprotocol/sdk/inMemory.js');
+      const { createMcpServer } = await import('../../../src/mcp/server.js');
+      const [a, b] = InMemoryTransport.createLinkedPair();
+      const server = createMcpServer(rig.runtime, readOnly);
+      const client = new Client({ name: 'test', version: '1' });
+      await Promise.all([server.connect(a), client.connect(b)]);
+      try {
+        expect((await client.listTools()).tools.map((t) => t.name)).not.toContain('ingest');
+        await expect(client.callTool({ name: 'ingest', arguments: { authorId: 'sneaky', name: 'S', text: 'One. Two. Three.' } })).rejects.toBeInstanceOf(McpError);
+        expect(rig.engine.listAuthors().map((a) => a.authorId)).toEqual(['terse']);
+      } finally {
+        await client.close();
+        await server.close();
+      }
+    } finally {
+      rig.cleanup();
+    }
+  });
+
   it('the tool surface has no parameter that names a path, a command or a URL', () => {
     for (const t of toolDefinitions()) {
       for (const key of Object.keys((t.inputSchema as { properties?: object }).properties ?? {})) {

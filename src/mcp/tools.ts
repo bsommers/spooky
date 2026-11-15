@@ -5,7 +5,7 @@
 import type { CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
 import { jsonSchemaOf, successSchemaOf } from '../service/openapi.js';
 import { describeError, errorDocument } from '../service/errors.js';
-import { OPERATIONS, findOperation, successDocument } from '../service/operations.js';
+import { OPERATIONS, successDocument } from '../service/operations.js';
 import type { AnyOperation } from '../service/operations.js';
 import type { ServiceRuntime } from '../service/runtime.js';
 
@@ -28,7 +28,8 @@ export function toolDefinitions(ops: readonly AnyOperation[] = OPERATIONS): Tool
 
 /** Run a tool call. Domain failures are tool results with `isError: true` and the shared `{ok:false, error:{code,message}}`. */
 export async function callTool(runtime: ServiceRuntime, name: string, args: unknown, ops: readonly AnyOperation[] = OPERATIONS): Promise<CallToolResult | undefined> {
-  const op = ops.find((o) => o.name === name) ?? findOperation(name);
+  // Only what `ops` lists can be called: "served = listed". No fallback to the global registry.
+  const op = ops.find((o) => o.name === name);
   if (op === undefined) return undefined; // the caller turns an unknown tool into a protocol error
   try {
     const doc = successDocument(await runtime.runOperation(op, args));
