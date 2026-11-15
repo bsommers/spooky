@@ -106,6 +106,7 @@ Rules: `loadConfig` throws `ConfigError` with one `ConfigIssue` per problem (pat
 | list personas | `engine.listPersonas()` | `ghostwriter personas` |
 | list filters | `engine.listFilters()` | `ghostwriter filters` |
 | generate | `engine.generate(authorId, personaKey, input, options?)` | `ghostwriter generate --author --persona [--json]` |
+| score | `engine.score(text, options?)` | `ghostwriter score [--json] [--detector name] <file>` |
 
 `tests/integration/parity.test.ts` parses this table: every row needs an `Engine` method and a CLI command with the listed flags, and neither surface may have a capability the table lacks. (`Engine.create(options)` / `engine.load()` restore persisted state; the CLI does that implicitly.) Input for `ingest`/`generate` comes from `<file>`, `--file <path>` or stdin; every command accepts `--config`, `--state-dir`, `--json`.
 
@@ -134,7 +135,14 @@ export type ProviderConfig =
 
 ## v2 contracts
 ```ts
-export interface ScoreBreakdown { score: number; features: Record<string, { value: number; weight: number; contribution: number }> }
+export interface ScoreBreakdown {
+  score: number;                                    // [0,1]; 0 reads human, 1 reads machine-generated
+  features: Record<string, { value: number; weight: number; contribution: number }>; // contributions sum to score
+  flags?: string[];                                 // Phase 7 additive: insufficient_text | low_confidence | unavailable:<feature>
+  stats?: { words: number; sentences: number; paragraphs: number };
+}
 export interface DetectorAdapter { readonly name: string; score(text: string): Promise<number> } // [0,1]
 export interface AiLikenessScorer { score(text: string): ScoreBreakdown }
 ```
+
+`engine.score(text, { detectors? })` -> `ScoreResult { score, local: ScoreBreakdown, members: {name, score, weight}[], excluded: {name, reason}[], trace }` (types.ts section 9). Flow: size cap -> unknown detector name = `ConfigError` -> PRE pipeline (confidentiality, fail-closed) -> local heuristic and the named detectors, both on the REDACTED text only -> weighted mean of the members that returned a finite score in [0,1]. A detector that throws, times out or returns anything else is excluded (`reason` = `error:<ClassName>` | `timeout` | `invalid_score` | `empty_text`, never a message); with none left the score is the local one. Detectors run only when named; the default sends nothing off the machine. Config: `scorer: { weights (6 features, non-negative, normalized), localWeight, detectors: [{name, url, apiKeyEnv?, weight, timeoutMs}] }` with the LLM endpoint/key-egress rules. CLI exit codes unchanged (unknown detector = 2). Measured quality: docs/CALIBRATION.md.

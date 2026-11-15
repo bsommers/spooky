@@ -22,8 +22,8 @@ const program = buildProgram({ stdout: () => undefined, stderr: () => undefined,
 const commands = new Map(program.commands.map((c) => [c.name(), c]));
 
 describe('surface parity (CONTRACTS.md)', () => {
-  it('the table is parsed (5 capabilities)', () => {
-    expect(rows.map((r) => r.capability)).toEqual(['ingest corpus', 'show profile', 'list personas', 'list filters', 'generate']);
+  it('the table is parsed (6 capabilities)', () => {
+    expect(rows.map((r) => r.capability)).toEqual(['ingest corpus', 'show profile', 'list personas', 'list filters', 'generate', 'score']);
     for (const r of rows) {
       expect(r.method, r.capability).toBeTruthy();
       expect(r.command, r.capability).toBeTruthy();

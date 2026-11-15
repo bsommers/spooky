@@ -90,6 +90,7 @@ Nothing downstream of the pre pipeline (profile, embedder, store, disk) ever see
 | `src/pipeline/` | `buildPrompt`: pure `(profile, exemplars, persona, input) -> {system, user}`, delimiter-neutralizing. |
 | `src/llm/` | `LlmClient` adapters (Anthropic, OpenAI-compatible, Mock), retry, endpoint/key-egress policy. |
 | `src/orchestration/` | `Orchestrator`: the one place both axes, the filters and the LLM meet. |
+| `src/scoring/` + `config/scorer.ts` | AI-likeness scorer: pure `features.ts` (six [0,1] features over prose with protected spans removed), `HeuristicScorer` (weighted mean with an exact per-feature breakdown), `DetectorAdapter` + `HttpDetectorAdapter`, `runEnsemble` (weighted mean; failing/invalid detectors excluded and recorded), `calibration.ts` (AUC, bootstrap). `Engine.score` runs the PRE pipeline first, so the heuristic and every detector see redacted text only. Measured quality: [CALIBRATION.md](CALIBRATION.md). |
 | `src/engine.ts` | `Engine` facade: library surface, lazy LLM client, optional persistence. |
 | `src/cli/` | commander program; `main()` returns an exit code, `bin.ts` is the shebang entry. |
 
@@ -97,6 +98,7 @@ Nothing downstream of the pre pipeline (profile, embedder, store, disk) ever see
 
 - **Filter:** implement `Filter`, add its name to `config/filters.ts`, pass a factory to `Engine` (README, "Add a filter in under 20 lines").
 - **LLM provider:** implement `LlmClient.complete(req) => Promise<string>` and pass `llm` to `Engine`.
+- **Score detector:** implement `DetectorAdapter` (`name`, `score(text) => Promise<number>` in [0,1]) and pass `detectors` to `Engine`, or declare an HTTP one under `scorer.detectors`. It runs only when `score()` names it.
 - **Embedder / vector store:** pass `embedder` / `store` to `Engine`; a store needs `save`/`load` only when a state directory is used.
 - **Personas, phrases, blocklist, custom redaction rules:** data in the config file.
 

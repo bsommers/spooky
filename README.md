@@ -45,6 +45,7 @@ With Anthropic instead: `export ANTHROPIC_API_KEY=...` and `generate --author an
 |---|---|
 | `ghostwriter ingest --author <id> --name <name> [file]` | Profile and store an author's corpus (file, `--file <path>` or stdin). |
 | `ghostwriter generate --author <id> --persona <key> [file]` | Rewrite a draft (file, `--file <path>` or stdin). Options: `--exemplars <0-20>`, `--max-tokens`, `--temperature <0-1>`, `--model`, `--provider anthropic\|openai-compat`, `--base-url`, `--api-key-env <NAME>`. |
+| `ghostwriter score [file] [--detector <name>]...` | Rate how machine-written a text reads, 0 to 1, with a per-feature breakdown (file, `--file <path>` or stdin). Local, offline, deterministic; needs no model or key. `--detector` also asks a detector you declared under `scorer.detectors` and **sends the redacted text to it**; nothing is sent unless you name one. A heuristic proxy, not a detector verdict: [docs/CALIBRATION.md](docs/CALIBRATION.md) has the measured numbers (AUC 0.73 on a small corpus, wide interval, chance level against modern technical prose). |
 | `ghostwriter profile <id>` | Show the stored stylometric profile. |
 | `ghostwriter personas` | List target personas (`engineer`, `executive`, `newcomer` by default). |
 | `ghostwriter filters` | List the filter pipeline in execution order. |
@@ -62,7 +63,9 @@ Config (JSON, unknown keys are rejected; every key is optional except `llm.model
   "confidentiality": { "blocklist": ["Acme Corp", "Project Falcon"], "caseInsensitive": true,
                        "customRules": [{ "name": "ticket", "pattern": "TKT-[0-9]{4,8}" }] },
   "personas": [{ "key": "board", "name": "Board member", "cognitiveLoad": "low", "informationDensity": "medium",
-                 "structuralMandates": ["first sentence is the recommendation"], "bannedPhrases": ["deep dive"] }]
+                 "structuralMandates": ["first sentence is the recommendation"], "bannedPhrases": ["deep dive"] }],
+  "scorer": { "weights": { "cliche": 0.4, "repetition": 0 },
+              "detectors": [{ "name": "acme", "url": "https://detector.example/v1/score", "apiKeyEnv": "ACME_DETECTOR_KEY" }] }
 }
 ```
 
@@ -75,6 +78,13 @@ const engine = await Engine.create({ config: loadConfig({ llm: { model: 'claude-
 await engine.ingest('ann', 'Ann Author', corpusText);
 const { text, trace } = await engine.generate('ann', 'executive', draft);
 ```
+
+```ts
+const { score, local, members, excluded } = await engine.score(text);                     // local heuristic only, nothing leaves the process
+const withDetector = await engine.score(text, { detectors: ['acme'] });                   // averages in a declared / registered detector
+```
+
+`score` is in [0,1] (0 reads human, 1 reads machine-generated) and `local.features` explains it: each feature's `value`, applied `weight` and `contribution`, summing to the score. A detector speaks `POST {"text"}` -> `{"score": 0..1}` (or implement `DetectorAdapter` and pass `detectors` to `Engine`); one that fails or answers outside [0,1] is listed in `excluded`, never fatal.
 
 `trace` lists one entry per stage (`confidentiality`, `llm`, `style`, `confidentiality`, and `persona-banned` when a banned phrase survived) with `modified`, `ms` and counts. It never contains matched text.
 
@@ -126,9 +136,9 @@ Tests are offline: the LLM is `MockLlmClient` or a local `127.0.0.1` stub server
 | Milestone | Phases |
 |---|---|
 | v1 (built) | 1 Foundation, 2 Filters, 3 Target axis, 4 Source axis, 5 Orchestration/LLM/CLI, 6 Hardening |
-| v2 (planned) | 7 AI-likeness scorer (0..1, explainable, pluggable detector adapters), 8 Score-driven humanizer |
+| v2 | 7 AI-likeness scorer (0..1, explainable, pluggable detector adapters; built, measured in [docs/CALIBRATION.md](docs/CALIBRATION.md)), 8 Score-driven humanizer (planned) |
 
-The v2 scorer and humanizer will report measured results only; a score from the local scorer is a proxy, and results against any third-party detector will be published as measured, including where it does not work. Plans: [`.planning/`](.planning/).
+The scorer and the humanizer report measured results only; a score from the local scorer is a proxy, and results against any third-party detector will be published as measured, including where it does not work. Plans: [`.planning/`](.planning/).
 
 ## Origin
 

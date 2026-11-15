@@ -2,6 +2,7 @@
 //
 //   ghostwriter ingest   --author <id> --name <name> [file | --file <path>]   (stdin when no file)
 //   ghostwriter generate --author <id> --persona <key> [file | --file <path>] (stdin when no file)
+//   ghostwriter score    [file | --file <path>] [--detector <name>]...        (stdin when no file)
 //   ghostwriter personas | filters | profile <id>
 //
 // Contract: the result (and only the result) goes to stdout; logs, warnings and errors go to stderr. `--json` makes
@@ -259,6 +260,39 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
       else out(io, result.text);
     },
   );
+
+  common(
+    program
+      .command('score')
+      .description('rate how machine-written a text reads, 0 to 1 (a heuristic proxy, not a detector verdict; docs/CALIBRATION.md)')
+      .argument('[file]', 'text file (default: stdin)')
+      .option('--file <path>', 'text file; "-" is stdin')
+      .option('--detector <name>', 'also ask a detector declared in config scorer.detectors; SENDS the redacted text to it (repeatable)', (v: string, prev: string[]) => [...prev, v], [] as string[]),
+  ).action(async (file: string | undefined, opts: CommonOpts & { file?: string; detector: string[] }) => {
+    const config = await resolveConfig(io, opts, false);
+    const text = await readInput(io, file, opts.file, config.limits.maxInputChars * 4);
+    const engine = await engineFor(config, opts, false);
+    if (opts.detector.length > 0) io.stderr(`note: sending the redacted text to external detector(s): ${opts.detector.join(', ')}\n`);
+    const r = await engine.score(text, { detectors: opts.detector });
+    for (const e of r.excluded) io.stderr(`warning: detector "${e.name}" was not used (${e.reason})\n`);
+    if (settings.json === true) {
+      printJson(io, { score: r.score, local: r.local, members: r.members, excluded: r.excluded, trace: r.trace });
+      return;
+    }
+    const lines = [`score: ${r.score.toFixed(3)}`];
+    if (r.local.flags !== undefined && r.local.flags.length > 0) lines.push(`flags: ${r.local.flags.join(', ')}`);
+    lines.push('features (value x weight = contribution):');
+    for (const [name, f] of Object.entries(r.local.features)) {
+      lines.push(`  ${name.padEnd(20)} ${f.value.toFixed(3)} x ${f.weight.toFixed(3)} = ${f.contribution.toFixed(3)}`);
+    }
+    if (r.members.length > 1 || r.excluded.length > 0) {
+      lines.push('ensemble:');
+      for (const m of r.members) lines.push(`  ${m.name.padEnd(20)} ${m.score.toFixed(3)} (weight ${m.weight.toFixed(3)})`);
+      for (const e of r.excluded) lines.push(`  ${e.name.padEnd(20)} excluded: ${e.reason}`);
+    }
+    lines.push('note: a heuristic proxy, not a detector verdict (docs/CALIBRATION.md)');
+    out(io, lines.join('\n'));
+  });
 
   common(program.command('personas').description('list the configured target personas')).action(async (opts: CommonOpts) => {
     const { engine } = await start(opts, false, false);
