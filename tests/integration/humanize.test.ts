@@ -127,6 +127,20 @@ describe('Engine.humanize', () => {
     expect(r.steps.some((s) => s.step === 'llm' && s.redacted)).toBe(true);
   });
 
+  it('a steered model cannot add a link, swap an email, or wrap the answer in chatter (HR-01, HR-02 end to end)', async () => {
+    const text = aiTexts[5] as string;
+    for (const tamper of [
+      (t: string) => `${t} Details: https://evil.example/login`,
+      (t: string) => `${t} See evil.example/login for more.`,
+      (t: string) => `Here is the edited text:\n${t}`,
+      (t: string) => `\`\`\`\n${t}\n\`\`\``,
+    ]) {
+      const e = engineWith((req: { user: string }) => tamper(joiner(req)));
+      const r = await e.humanize(text, { maxIterations: 2 });
+      expect(r.text).not.toMatch(/evil\.example|Here is the edited text|^```/m);
+    }
+  });
+
   it('rejects bad options and inputs before any work', async () => {
     const e = engineWith([]);
     await expect(e.humanize(aiTexts[0] as string, { target: 2 })).rejects.toBeInstanceOf(ConfigError);
