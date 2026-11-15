@@ -5,6 +5,7 @@
 import { MAX_DETECTOR_RESPONSE_BYTES } from '../../config/scorer.js';
 import { ENDPOINT_MESSAGES, endpointProblem } from '../llm/endpoint.js';
 import { DEFAULT_TIMEOUT_MS, classifyFetchError, httpError, positive, readCapped } from '../llm/http.js';
+import { LlmTransportError } from '../llm/retry.js';
 import type { FetchLike } from '../llm/http.js';
 import { ConfigError } from '../models/errors.js';
 import type { DetectorAdapter, DetectorConfig } from '../models/types.js';
@@ -31,8 +32,24 @@ export function checkDetectorScore(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1 ? value : undefined;
 }
 
+/** The detector could not be reached or answered with an error status / oversize body. Carries `kind` and `status` only: never the URL, token or response. */
+export class DetectorTransportError extends LlmTransportError {
+  constructor(cause: LlmTransportError) {
+    super(cause.kind, cause.status === undefined ? {} : { status: cause.status });
+    this.name = 'DetectorTransportError';
+    this.message = `detector failure: ${this.kind}${this.status === undefined ? '' : ` (HTTP ${this.status})`}`;
+  }
+}
+
+/** The environment variable that should hold the bearer token is unset or empty. `kind` is the fixed word the ensemble records. */
+export class DetectorKeyMissingError extends ConfigError {
+  readonly kind = 'missing-key';
+}
+
 /** The detector answered, but not with `{"score": number}`. Carries no response content. */
 export class DetectorResponseError extends Error {
+  readonly kind = 'invalid-response';
+
   constructor() {
     super('detector response is not a JSON object with a numeric "score"');
     this.name = 'DetectorResponseError';
@@ -73,7 +90,7 @@ export class HttpDetectorAdapter implements DetectorAdapter {
     const headers: Record<string, string> = { 'content-type': 'application/json', accept: 'application/json' };
     if (this.#apiKeyEnv !== undefined) {
       const key = this.#env[this.#apiKeyEnv];
-      if (key === undefined || key === '') throw new ConfigError(`detector "${this.name}": environment variable ${this.#apiKeyEnv} is not set`);
+      if (key === undefined || key === '') throw new DetectorKeyMissingError(`detector "${this.name}": environment variable ${this.#apiKeyEnv} is not set`);
       headers.authorization = `Bearer ${key}`;
     }
     let body: Uint8Array;
@@ -91,7 +108,7 @@ export class HttpDetectorAdapter implements DetectorAdapter {
       }
       body = await readCapped(res, MAX_DETECTOR_RESPONSE_BYTES);
     } catch (err) {
-      throw classifyFetchError(err);
+      throw new DetectorTransportError(classifyFetchError(err));
     }
     let parsed: unknown;
     try {

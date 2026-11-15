@@ -163,19 +163,27 @@ describe('ghostwriter score', () => {
     expect(JSON.parse(viaFile.out)).toEqual({ ...a, trace: expect.anything() });
   });
 
-  it('--detector for an unknown name exits 2 with a JSON error; for a failing declared detector warns on stderr and still scores', async () => {
+  it('--detector for an unknown name exits 2 with a JSON error; when every named detector fails it still prints the local score, warns on stderr and exits 9', async () => {
     const unknown = await runCli(['score', textPath, '--config', configPath, '--detector', 'nope', '--json']);
     expect(unknown.code).toBe(2);
     expect(JSON.parse(unknown.out)).toMatchObject({ ok: false, error: { code: 'CONFIG_INVALID' } });
 
     await writeFile(configPath, JSON.stringify({ ...baseConfig, scorer: { detectors: [{ name: 'acme', url: 'https://detect.example/score', timeoutMs: 500 }] } }));
     const failing = await runCli(['score', textPath, '--config', configPath, '--detector', 'acme', '--json'], {}, {});
-    // no network in tests: the real fetch fails (or is refused); either way the detector is excluded, never fatal
-    expect(failing.code).toBe(0);
+    // no network in tests: the real fetch fails (or is refused); the detector is excluded, the local result is still
+    // printed, and the exit code says the requested external opinion was not obtained
+    expect(failing.code).toBe(9);
+    expect(failing.err).toContain('no named detector produced a score');
     expect(failing.err).toContain('sending the redacted text to external detector(s): acme');
     expect(failing.err).toMatch(/detector "acme" was not used \(error:/);
-    expect(JSON.parse(failing.out)).toMatchObject({ ok: true, excluded: [{ name: 'acme' }] });
+    expect(JSON.parse(failing.out)).toMatchObject({ ok: true, localOnly: true, excluded: [{ name: 'acme' }] });
   }, 15_000);
+
+  it('without --detector there is no exit-9 path', async () => {
+    const plain = await runCli(['score', textPath, '--config', configPath]);
+    expect(plain.code).toBe(0);
+    expect(plain.err).not.toContain('no named detector');
+  });
 
   it('empty input is a defined result, exit 0', async () => {
     const r = await runCli(['score', '--config', configPath], { stdin: '' });

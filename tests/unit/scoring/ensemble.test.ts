@@ -93,6 +93,14 @@ describe('runEnsemble', () => {
     expect((await runEnsemble(TEXT, fixedLocal(0.6), [detector('b', () => 0.2)], { weights: new Map([['local', 0]]) })).score).toBe(0.2);
   });
 
+  it('records distinct fixed-vocabulary reasons: kind and status, never the message', async () => {
+    const fail = (e: Error & { kind?: string; status?: number }) => ({ name: 'x', score: async (): Promise<number> => { throw e; } });
+    const mk = (name: string, kind: string, status?: number): DetectorAdapter => ({ ...fail(Object.assign(new Error('secret-in-message'), { kind, ...(status === undefined ? {} : { status }) })), name });
+    const r = await runEnsemble(TEXT, fixedLocal(0.5), [mk('t', 'timeout'), mk('h', 'http', 503), mk('k', 'missing-key'), mk('big', 'too-large'), mk('weird', 'Not Safe!'), mk('st', 'http', 99999)]);
+    expect(r.excluded.map((e) => e.reason)).toEqual(['error:timeout', 'error:http:503', 'error:missing-key', 'error:too-large', 'error:Error', 'error:http']);
+    expect(JSON.stringify(r.excluded)).not.toContain('secret');
+  });
+
   it('rejects weights that name no member (typos), including __proto__, and weight sets whose sum overflows', async () => {
     const a = detector('a', () => 0.5);
     await expect(runEnsemble(TEXT, fixedLocal(0.5), [a], { weights: { aa: 2 } })).rejects.toThrow(/not a member/);

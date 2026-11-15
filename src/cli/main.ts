@@ -169,6 +169,8 @@ export interface CliSettings {
   json?: boolean;
   text?: string[];
   dispatched?: boolean;
+  /** Exit code of a command that produced its result but still failed its purpose (`score` when no named detector answered). */
+  exitCode?: number;
 }
 
 /** Build the commander program. Exported so the parity test can enumerate the commands without running anything. */
@@ -276,8 +278,14 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
     if (opts.detector.length > 0) io.stderr(`note: sending the redacted text to external detector(s): ${opts.detector.join(', ')}\n`);
     const r = await engine.score(text, { detectors: opts.detector });
     for (const e of r.excluded) io.stderr(`warning: detector "${e.name}" was not used (${e.reason})\n`);
+    // The caller asked for an external opinion and got none: still print the local result, but do not exit 0 as if it were one.
+    const noneAnswered = opts.detector.length > 0 && r.members.every((m) => m.name === 'local') && r.excluded.some((e) => e.reason !== 'empty_text');
+    if (noneAnswered) {
+      io.stderr('error: no named detector produced a score; the result below is the local heuristic alone\n');
+      settings.exitCode = EXIT_CODES.DETECTORS_FAILED as number;
+    }
     if (settings.json === true) {
-      printJson(io, { score: r.score, local: r.local, members: r.members, excluded: r.excluded, trace: r.trace });
+      printJson(io, { score: r.score, local: r.local, members: r.members, excluded: r.excluded, trace: r.trace, ...(noneAnswered ? { localOnly: true } : {}) });
       return;
     }
     const lines = [`score: ${r.score.toFixed(3)}`];
@@ -357,7 +365,7 @@ export async function main(argv: readonly string[], ioOverrides: Partial<CliIo> 
       return EXIT_CODES.USAGE as number;
     }
     await program.parseAsync([...argv], { from: 'user' });
-    return 0;
+    return settings.exitCode ?? 0;
   } catch (err) {
     if (err instanceof CommanderError) {
       // Rejected before any subcommand was reached (unknown command, bad top-level option): commander has no

@@ -30,9 +30,20 @@ export interface EnsembleResult {
   excluded: EnsembleExclusion[];
 }
 
-/** Reason recorded for a failure: the error's class name only. */
+const SAFE_KIND = /^[a-z][a-z-]{0,23}$/;
+
+/**
+ * Reason recorded for a failure, from fixed vocabulary only: `error:<kind>` (or `error:<kind>:<status>`) when the error
+ * carries a safe `kind` (timeout, network, http, too-large, invalid-response, missing-key), else the class name.
+ * Never a message: messages can echo text.
+ */
 function reasonOf(err: unknown): string {
-  return err instanceof Error ? `error:${err.name}` : 'error:non-Error';
+  if (!(err instanceof Error)) return 'error:non-Error';
+  const { kind, status } = err as { kind?: unknown; status?: unknown };
+  if (typeof kind === 'string' && SAFE_KIND.test(kind)) {
+    return Number.isInteger(status) && (status as number) >= 100 && (status as number) <= 599 ? `error:${kind}:${status as number}` : `error:${kind}`;
+  }
+  return `error:${err.name}`;
 }
 
 /** Run `adapter.score(text)` with a timeout; resolves to a valid score or an exclusion reason. */

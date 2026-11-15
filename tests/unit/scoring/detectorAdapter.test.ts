@@ -33,6 +33,7 @@ describe('HttpDetectorAdapter', () => {
     expect(auth).toBe('Bearer tok-123');
     const without = new HttpDetectorAdapter({ ...cfg, apiKeyEnv: 'ACME_KEY' }, { env: {}, fetch: fetchStub });
     await expect(without.score('x')).rejects.toThrow(/ACME_KEY is not set/);
+    await expect(without.score('x')).rejects.toMatchObject({ name: 'DetectorKeyMissingError', kind: 'missing-key' });
   });
 
   it('returns an out-of-range number as-is (the ensemble rejects it)', async () => {
@@ -47,6 +48,7 @@ describe('HttpDetectorAdapter', () => {
     expect((e500 as LlmTransportError).status).toBe(500);
     const net = await run(async () => { throw new TypeError('connect ECONNREFUSED detect.example tok-secret'); }).catch((e: unknown) => e);
     expect((net as LlmTransportError).kind).toBe('network');
+    expect([e500, net].map((e) => (e as Error).name)).toEqual(['DetectorTransportError', 'DetectorTransportError']);
     for (const e of [e500, net]) expect(String((e as Error).message)).not.toMatch(/tok-secret|detect\.example/);
     for (const body of ['not json', '[]', '{"score":"0.4"}', '{}', 'null']) {
       await expect(run(async () => json(body))).rejects.toBeInstanceOf(DetectorResponseError);
