@@ -182,6 +182,73 @@ describe('size, shape and time limits', () => {
     });
   });
 
+  it('a network-path or backslash request target (//host/path) is 400, never routed as /path', async () => {
+    await withServer({}, async (s) => {
+      for (const target of ['//x/api/authors', '//api/authors', '///api/authors', '/\\x/api/authors', '/api\\authors', '/\\\\x/api/authors']) {
+        const reply = await socketExchange(s.port, `GET ${target} HTTP/1.1\r\nHost: 127.0.0.1:${s.port}\r\nConnection: close\r\n\r\n`);
+        expect(statusOf(reply), target).toBe(400);
+        expect(reply, target).toContain('USAGE');
+      }
+      expect((await raw(s, '/api/authors')).status).toBe(200);
+    });
+  });
+
+  describe('route existence is not revealed before the token', () => {
+    const TOKEN = 'a-long-enough-token-1234';
+    const auth = { Authorization: `Bearer ${TOKEN}` };
+    const protectedPaths = ['/api/authors', '/api/nope', '/api/', '/openapi.json', '/mcp'];
+
+    it('with a token, every protected path answers 401 without it, whether the route or /mcp exists or not', async () => {
+      for (const mcp of [false, true]) {
+        await withServer({ token: TOKEN, mcp }, async (s) => {
+          const replies = new Set<string>();
+          for (const path of protectedPaths) {
+            for (const method of ['GET', 'POST']) {
+              const r = await raw(s, path, { method, headers: method === 'POST' ? { 'Content-Type': 'application/json' } : {}, body: method === 'POST' ? '{}' : undefined });
+              expect(r.status, `${method} ${path} mcp=${mcp}`).toBe(401);
+              replies.add(r.text);
+            }
+          }
+          expect(replies.size).toBe(1); // the same body for all of them
+        });
+      }
+    });
+
+    it('with the token, a disabled /mcp is 404 and an enabled one answers; paths outside the protected namespace stay 404', async () => {
+      await withServer({ token: TOKEN, mcp: false }, async (s) => {
+        expect((await raw(s, '/mcp', { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: '{}' })).status).toBe(404);
+        expect((await raw(s, '/api/nope', { headers: auth })).status).toBe(404);
+        expect((await raw(s, '/nope')).status).toBe(404);
+      });
+      await withServer({ token: TOKEN, mcp: true }, async (s) => {
+        expect((await raw(s, '/mcp', { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: '{}' })).status).not.toBe(404);
+      });
+    });
+
+    it('a --no-api server (mcp only) does not reveal /openapi.json to an unauthenticated caller either', async () => {
+      await withServer({ token: TOKEN, mcp: true, api: false }, async (s) => {
+        expect((await raw(s, '/openapi.json')).status).toBe(401);
+        expect((await raw(s, '/openapi.json', { headers: auth })).status).toBe(404);
+      });
+    });
+
+    it('the static hook is only offered public GET/HEAD paths, before the token, and never the protected namespace', async () => {
+      const offered: string[] = [];
+      const staticHandler = (_req: unknown, res: import('node:http').ServerResponse, url: URL): boolean => {
+        offered.push(url.pathname);
+        res.statusCode = 200;
+        res.end('asset');
+        return true;
+      };
+      await withServer({ token: TOKEN, mcp: true, staticHandler }, async (s) => {
+        expect((await raw(s, '/index.html')).text).toBe('asset'); // public, no token needed
+        for (const p of ['/api/authors', '/api/anything', '/openapi.json', '/mcp']) expect((await raw(s, p)).status, p).toBe(401);
+        expect((await raw(s, '/ui', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status).toBe(404);
+        expect(offered).toEqual(['/index.html']);
+      });
+    });
+  });
+
   it('a request line that is not an absolute path is rejected, and an oversize header block never reaches a handler', async () => {
     await withServer({}, async (s) => {
       const abs = await socketExchange(s.port, `GET http://evil.example/api/authors HTTP/1.1\r\nHost: 127.0.0.1:${s.port}\r\n\r\n`);

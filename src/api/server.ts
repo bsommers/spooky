@@ -4,7 +4,8 @@
 //   GET  /api/<read operation>?field=value     POST /api/<operation>  {json}      GET /openapi.json      POST /mcp (opt-in)
 //
 // Routes are DERIVED from the registry (`op.http`); this file names no operation. Order of checks for every request:
-//   Host (DNS rebinding) -> Origin (CSRF / CORS) -> preflight -> static hook -> bearer token -> route -> method ->
+//   target shape -> Host (DNS rebinding) -> Origin (CSRF / CORS) -> preflight -> public paths (static hook) -> bearer token ->
+//   route -> method ->
 //   concurrency -> content type -> declared size -> streamed size + time -> JSON -> schema -> handler.
 // Responses are `{ok:true,...}` / `{ok:false,error:{code,message}}` with the status from the shared error table.
 // The token, request bodies and query strings never reach a log line or a response.
@@ -32,7 +33,11 @@ import {
 import { ConcurrencyGate, DEFAULT_API_LIMITS, MAX_BODY_CEILING, checkDeclaredLength, isJsonContentType, readBody } from './limits.js';
 import type { ApiLimits } from './limits.js';
 
-/** Optional hook for a UI mount (Phase 10): return true when it answered. Runs before the token check and sets its own CSP. */
+/**
+ * Optional hook for a UI mount (Phase 10): return true when it answered. It runs BEFORE the token check, so it may serve
+ * public assets only. It is offered GET and HEAD requests for paths outside `/api/*`, `/openapi.json` and `/mcp` (those
+ * are token-protected), the target never starts with `//` or contains a backslash, and it sets its own CSP.
+ */
 export type StaticHandler = (req: IncomingMessage, res: ServerResponse, url: URL) => boolean | Promise<boolean>;
 
 export interface ApiServerOptions {
@@ -184,10 +189,11 @@ export async function startApiServer(options: ApiServerOptions): Promise<ApiServ
       return;
     }
 
-    const isApi = serveApi && (path.startsWith('/api/') || path === OPENAPI_PATH);
-    const isMcp = serveMcp && path === MCP_PATH;
-    if (!isApi && !isMcp) {
-      if (options.staticHandler !== undefined && (method === 'GET' || method === 'HEAD') && !path.startsWith('/api/') && path !== MCP_PATH && path !== OPENAPI_PATH) {
+    // `/api/*`, `/openapi.json` and `/mcp` are the protected namespace: the token comes first there, so an unauthenticated
+    // caller cannot tell a route that exists (or an enabled `/mcp`) from one that does not. Everything else may be public.
+    const protectedPath = path.startsWith('/api/') || path === OPENAPI_PATH || path === MCP_PATH;
+    if (!protectedPath) {
+      if (options.staticHandler !== undefined && (method === 'GET' || method === 'HEAD')) {
         if (await options.staticHandler(req, res, url)) return;
       }
       throw new SurfaceError('NOT_FOUND', 'no such route');
@@ -197,6 +203,10 @@ export async function startApiServer(options: ApiServerOptions): Promise<ApiServ
       res.setHeader('WWW-Authenticate', 'Bearer');
       throw new SurfaceError('UNAUTHORIZED', 'a valid bearer token is required');
     }
+
+    const isApi = serveApi && (path.startsWith('/api/') || path === OPENAPI_PATH);
+    const isMcp = serveMcp && path === MCP_PATH;
+    if (!isApi && !isMcp) throw new SurfaceError('NOT_FOUND', 'no such route');
 
     if (isMcp) {
       seen.route = MCP_PATH;
@@ -265,7 +275,9 @@ export async function startApiServer(options: ApiServerOptions): Promise<ApiServ
     res.once('close', () => log(`${printable(req.method ?? '?', 8)} ${seen.route} ${res.statusCode} ${Date.now() - started}ms`));
     void (async () => {
       try {
-        if (typeof req.url !== 'string' || !req.url.startsWith('/')) throw new SurfaceError('USAGE', 'the request target must be an absolute path');
+        // One leading slash only: `//host/path` would parse as the path `/path`, so route identity and any path-based
+        // policy (the static mount) would see something other than what the client sent. Backslashes are refused too.
+        if (typeof req.url !== 'string' || !/^\/(?![/\\])/.test(req.url) || req.url.includes('\\')) throw new SurfaceError('USAGE', 'the request target must be an absolute path');
         await route(req, res, new URL(req.url, 'http://localhost'), seen);
       } catch (err) {
         if (res.headersSent) {

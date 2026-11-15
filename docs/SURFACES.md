@@ -29,7 +29,7 @@ flowchart LR
 
 **Pending capability, not faked.** Phase 8 (humanize) is not built. It is listed in `PENDING_CAPABILITIES` (`src/service/operations.ts`) and in the output of every `capabilities` call (`pending: [{name:'humanize', phase:8}]`), so clients can tell "not built yet" from "does not exist". It has no CLI command, route, tool or OpenAPI path. When Phase 8 adds `Engine.humanize()`, the parity test (`tests/integration/surfaces-parity.test.ts`) fails until the registry has an `humanize` operation; adding that one registry entry creates its CLI command (if declared `derived` or hand-wired like `score`), HTTP route, MCP tool and OpenAPI path, and the entry moves out of `PENDING_CAPABILITIES`.
 
-Serve the UI from the API server: one process, one origin, no CORS needed. `startApiServer({ staticHandler })` is the mount hook for Phase 10; it runs before the token check and sets its own CSP (`applySecurityHeaders(res, csp)`).
+Serve the UI from the API server: one process, one origin, no CORS needed. `startApiServer({ staticHandler })` is the mount hook for Phase 10; it runs before the token check and sets its own CSP (`applySecurityHeaders(res, csp)`). Because it is unauthenticated it may serve public assets only: it is offered GET/HEAD for paths outside `/api/*`, `/openapi.json` and `/mcp` (all token-protected), and the request target can never begin with `//`.
 
 ## How it is built
 - `src/service/operations.ts`: the registry. `{ name, description, input (strict zod), output (zod), mutates, openWorld, readsState, engineMethod, http, cli, render, handler }`. `invokeOperation` validates and runs; every surface calls it.
