@@ -113,8 +113,7 @@ const digest = (s: string): Buffer => createHash('sha256').update(s, 'utf8').dig
 
 /** Constant-time check of an `Authorization` header value against the token. Equal-length digests go to `timingSafeEqual`. */
 export function bearerMatches(header: string | undefined, token: string): boolean {
-  if (header === undefined) return false;
-  const m = /^Bearer ([\x21-\x7E]+)$/.exec(header);
+  const m = header === undefined ? null : /^Bearer ([\x21-\x7E]+)$/.exec(header);
   const presented = m?.[1];
   // Always do the comparison so a missing or malformed header costs the same as a wrong token.
   const ok = timingSafeEqual(digest(presented ?? ''), digest(token));
