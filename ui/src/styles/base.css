@@ -1,0 +1,101 @@
+/* Components read only --gw-* tokens (stylelint forbids raw colors here); themes live in ../theme/themes/. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--gw-bg);
+  color: var(--gw-text);
+  font-family: var(--gw-font-body);
+  font-size: 100%;
+  line-height: 1.55;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--gw-font-display);
+  line-height: 1.2;
+  margin: 0 0 0.5em;
+  letter-spacing: 0.01em;
+}
+
+h1 {
+  font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.25rem);
+}
+
+h2 {
+  font-size: 1.15rem;
+}
+
+p {
+  margin: 0 0 0.75em;
+}
+
+a {
+  color: var(--gw-accent);
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  color: var(--gw-accent-2);
+}
+
+code {
+  font-family: var(--gw-font-mono);
+  font-size: 0.9em;
+}
+
+:focus-visible,
+[data-focus-visible] {
+  outline: 2px solid var(--gw-focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--gw-glow);
+}
+
+.gw-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.gw-muted {
+  color: var(--gw-text-muted);
+}
+
+/* Reduced motion: --gw-motion-scale is 0 (set by the theme engine) and the marker below stops every animation. The
+   media query covers the moment before scripts run. */
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
