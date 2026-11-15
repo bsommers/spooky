@@ -13,6 +13,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { FEATURE_NAMES } from '../config/scorer.js';
 import { auc, bestThreshold, bootstrapAuc, histogram, mean } from '../src/scoring/calibration.js';
 import type { Labeled } from '../src/scoring/calibration.js';
+import { ConfigError } from '../src/models/errors.js';
 import { HeuristicScorer } from '../src/scoring/scorer.js';
 
 export interface ManifestEntry {
@@ -129,16 +130,38 @@ function markdown(r: CalibrationReport): string {
   lines.push('', 'confound checks');
   lines.push(`word count alone as the score: AUC ${r.confounds.wordCountOnlyAuc.toFixed(4)}`);
   lines.push(`AI vs literary human only: AUC ${r.confounds.aiVsLiteraryHumanAuc.toFixed(4)}; AI vs RFC human only: AUC ${r.confounds.aiVsRfcHumanAuc.toFixed(4)}`);
-  lines.push(`even-index half: AUC ${r.confounds.evenIndexAuc.toFixed(4)}; odd-index half: AUC ${r.confounds.oddIndexAuc.toFixed(4)}`);
+  lines.push(`two interleaved subsamples (even / odd index; the weights are not fit, so this is NOT a holdout): AUC ${r.confounds.evenIndexAuc.toFixed(4)} / ${r.confounds.oddIndexAuc.toFixed(4)}`);
   return lines.join('\n');
 }
 
-function main(): void {
-  // Exploratory what-if only: `--weights '{"cliche":2,"repetition":0}'` merges over the default weights. Never changes the shipped defaults.
-  const i = process.argv.indexOf('--weights');
-  const weights = i === -1 ? undefined : (JSON.parse(process.argv[i + 1] ?? '{}') as Record<string, number>);
-  const report = runCalibration(undefined, weights);
-  process.stdout.write(process.argv.includes('--json') ? `${JSON.stringify(report, null, 2)}\n` : `${markdown(report)}\n`);
+const USAGE = `usage: calibrate [--json] [--weights '{"cliche":2,"repetition":0}']`;
+
+/** Parse the value of `--weights` (a JSON object of feature weights). `ConfigError` with a one-line message for anything else. */
+export function parseWeightsArg(raw: string | undefined): Record<string, number> {
+  if (raw === undefined || raw.startsWith('--')) throw new ConfigError(`--weights needs a JSON object value; ${USAGE}`);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new ConfigError(`--weights is not valid JSON; ${USAGE}`);
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) throw new ConfigError(`--weights must be a JSON object; ${USAGE}`);
+  return parsed as Record<string, number>;
 }
 
-if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main();
+function main(): number {
+  try {
+    // Exploratory what-if only: `--weights '{"cliche":2,"repetition":0}'` merges over the default weights. Never changes the shipped defaults.
+    const i = process.argv.indexOf('--weights');
+    const weights = i === -1 ? undefined : parseWeightsArg(process.argv[i + 1]);
+    const report = runCalibration(undefined, weights);
+    process.stdout.write(process.argv.includes('--json') ? `${JSON.stringify(report, null, 2)}\n` : `${markdown(report)}\n`);
+    return 0;
+  } catch (err) {
+    if (!(err instanceof ConfigError)) throw err;
+    process.stderr.write(`calibrate: ${err.message}\n`);
+    return 2;
+  }
+}
+
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) process.exitCode = main();

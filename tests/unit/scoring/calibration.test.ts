@@ -55,3 +55,16 @@ describe('histogram, bestThreshold, mean', () => {
     expect(mean([1, 2, 3])).toBe(2);
   });
 });
+
+describe('calibrate --weights parsing', () => {
+  it('accepts a JSON object and gives a typed one-line ConfigError for anything else', async () => {
+    const { parseWeightsArg } = await import('../../../scripts/calibrate.js');
+    const { ConfigError } = await import('../../../src/models/errors.js');
+    expect(parseWeightsArg('{"cliche":2}')).toEqual({ cliche: 2 });
+    for (const bad of ['{bad', '[1]', 'null', '3', undefined, '--json']) {
+      const run = (): unknown => parseWeightsArg(bad);
+      expect(run, String(bad)).toThrow(ConfigError);
+      expect(run, String(bad)).toThrow(/^[^\n]*$/);
+    }
+  });
+});
