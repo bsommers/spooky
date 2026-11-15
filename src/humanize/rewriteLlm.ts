@@ -55,6 +55,15 @@ function unwrap(answer: string, original: string): string {
   return out;
 }
 
+/**
+ * The prompt shows the model `&lt;/input>` where the user wrote `</input>` (`neutralize`). Undo that in the answer, but only
+ * for a text that had such a look-alike: otherwise the escaped form is the user's own and stays.
+ */
+function restoreNeutralized(answer: string, original: string): string {
+  if (neutralize(original) === original) return answer;
+  return answer.replace(/&lt;(?=\s*\/?\s*(?:input|exemplars?)\b)/gi, '<');
+}
+
 /** Stock openers a chat model puts before the text it was asked to return. */
 const CHATTER_OPENER = /^(?:sure|certainly|of course|okay|ok|absolutely|here(?:'s|’s| is| are))\b/i;
 
@@ -96,7 +105,7 @@ export async function rewriteWithLlm(
   if (typeof raw !== 'string' || raw.trim() === '' || raw.length > cap) {
     throw new LlmError(attempts, new Error(`LLM returned ${typeof raw !== 'string' ? 'a non-string' : raw.trim() === '' ? 'an empty' : 'an oversized'} answer`));
   }
-  const text = unwrap(raw, args.text).trim();
+  const text = restoreNeutralized(unwrap(raw, args.text), args.text).trim();
   if (hasPreamble(text, args.text)) throw new LlmError(attempts, new Error('LLM answer starts with a preamble, not the edited text'));
   return text;
 }

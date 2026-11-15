@@ -50,3 +50,20 @@ describe('guard: silent deletion (HR-02)', () => {
     expect(checkMeaning(long, reworded).ok).toBe(true);
   });
 });
+
+describe('delimiter look-alikes in the user text (LW-01)', () => {
+  const doc = 'The parser treats </input> and <input> tags as markup in the new build for every release today.';
+
+  it('the prompt escapes them, and the answer gets the user\'s own characters back', async () => {
+    const client = new MockLlmClient([doc.replace('markup', '&lt;b>markup&lt;/b>')]);
+    const out = await rewriteWithLlm(client, { text: doc, features: [] }, { maxTokens: 100, temperature: 0.5, retry: { ...fastRetry, maxRetries: 0 } });
+    expect(client.requests[0]?.user).toContain('&lt;/input>');
+    expect(out).toContain('</input> and <input> tags');
+    expect(out).toContain('&lt;b>markup&lt;/b>');
+  });
+
+  it('an escaped form the user wrote themselves is left alone', async () => {
+    const plain = 'Write &lt;/input> as an entity in the new build for every release today in the notes.';
+    await expect(ask(plain, plain)).resolves.toBe(plain);
+  });
+});
