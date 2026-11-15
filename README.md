@@ -13,7 +13,7 @@ input -> size cap -> PRE filters (confidentiality redaction)
 
 - **Providers:** Anthropic, or any OpenAI-compatible `/v1/chat/completions` endpoint (OpenAI, Ollama, vLLM, LM Studio, OpenRouter) through `baseUrl`.
 - **Filters:** async, ordered, configurable. Confidentiality fails closed: if it cannot demonstrably run, no text is returned.
-- **Surfaces:** every capability is a library call and a CLI command.
+- **Surfaces:** every capability is a library call, a CLI command, an HTTP route (OpenAPI 3.1) and an MCP tool, all generated from one operations registry ([docs/SURFACES.md](docs/SURFACES.md)).
 - **Deterministic:** the same input, corpus and model answer give byte-identical output.
 
 Status: v1 is built (phases 1-6). See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design and [docs/AS-BUILT.md](docs/AS-BUILT.md) for what differs from the plan, measured numbers, and known limits.
@@ -49,6 +49,11 @@ With Anthropic instead: `export ANTHROPIC_API_KEY=...` and `generate --author an
 | `ghostwriter profile <id>` | Show the stored stylometric profile. |
 | `ghostwriter personas` | List target personas (`engineer`, `executive`, `newcomer` by default). |
 | `ghostwriter filters` | List the filter pipeline in execution order. |
+| `ghostwriter authors` | List every ingested author with their profile. |
+| `ghostwriter config get` | Show the effective config, redacted (endpoint hosts, key variable NAMES, never values). Read-only. |
+| `ghostwriter capabilities` | List the operations and the ones planned but not built (`humanize`). |
+| `ghostwriter serve [--token-env NAME] [--mcp]` | HTTP API on `127.0.0.1:8787` with `GET /openapi.json`: [docs/API.md](docs/API.md). Without a token any local process can use it; set one. |
+| `ghostwriter mcp [--stdio\|--http]` | MCP server exposing the same operations as tools: [docs/MCP.md](docs/MCP.md). |
 
 Every command takes `--config <file.json>` (default `$GHOSTWRITER_CONFIG`), `--state-dir <dir>` (default `$GHOSTWRITER_STATE_DIR`, else `$XDG_STATE_HOME/ghostwriter`, else `~/.local/state/ghostwriter`) and `--json`. The result goes to stdout and nothing else does; warnings and errors go to stderr. With `--json` stdout is exactly one document, `{ok:true,...}` or `{ok:false,error:{code,message}}`.
 

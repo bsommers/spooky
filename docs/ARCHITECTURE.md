@@ -1,6 +1,6 @@
 # Architecture
 
-Spooky rewrites a draft along two axes: whose **voice** (source author) and for whom (target **persona**). A filter pipeline wraps the single LLM call. The CLI is a thin adapter over the `Engine` class; every capability exists on both surfaces (`tests/integration/parity.test.ts` enforces this).
+Spooky rewrites a draft along two axes: whose **voice** (source author) and for whom (target **persona**). A filter pipeline wraps the single LLM call. The CLI, the HTTP API and the MCP server are thin adapters over the `Engine` class, generated from one operations registry (`src/service/operations.ts`); every capability exists on every surface (`tests/integration/parity.test.ts` and `tests/integration/surfaces-parity.test.ts` enforce this; see [SURFACES.md](SURFACES.md)).
 
 ## Generation flow
 
