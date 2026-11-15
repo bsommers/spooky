@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { accessSync, constants, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -71,6 +71,19 @@ describe('static handler: serving', () => {
       const r = await raw(target, p);
       expect([p, r.status, r.headers['cache-control']], p).toEqual([p, 200, 'no-store']);
     }
+  });
+
+  it('a file that cannot be opened is answered (404) before any header, not by resetting the connection', async () => {
+    const file = join(fx.root, 'assets', 'locked-AbCdEf12.js');
+    let readable = true;
+    try {
+      accessSync(file, constants.R_OK);
+    } catch {
+      readable = false;
+    }
+    const r = await raw(target, '/assets/locked-AbCdEf12.js'); // would reject with a socket error if the connection were destroyed
+    if (readable) expect(r.status).toBe(200); // running as a user that bypasses file modes (root): nothing to refuse
+    else expect([r.status, r.text, r.headers['content-security-policy']]).toEqual([404, 'not-handled', undefined]);
   });
 
   it('HEAD answers headers and length with no body; other methods are not handled', async () => {

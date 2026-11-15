@@ -1,6 +1,6 @@
 // A throwaway "ui/dist" for the static-handler tests: a tiny SPA, a hashed asset, a dotfile, a secret OUTSIDE the root and
 // a symlink inside the root that points at it.
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -25,6 +25,8 @@ export function makeUiFixture(): UiFixture {
   writeFileSync(join(root, 'assets', 'font-regular.woff2'), Buffer.from([0x77, 0x4f, 0x46, 0x32])); // hyphenated, but not a Vite hash
   writeFileSync(join(root, 'assets', 'my-notes.txt'), 'notes');
   symlinkSync(join(root, 'assets', 'app-AbCdEf12.js'), join(root, 'assets', 'plain.js')); // an unhashed name pointing at a hashed file
+  writeFileSync(join(root, 'assets', 'locked-AbCdEf12.js'), 'locked');
+  chmodSync(join(root, 'assets', 'locked-AbCdEf12.js'), 0o000); // exists, stats fine, cannot be opened
   writeFileSync(join(root, 'favicon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
   writeFileSync(join(root, 'theme-init.js'), '/* init */');
   writeFileSync(join(root, '.hidden'), 'dotfile');

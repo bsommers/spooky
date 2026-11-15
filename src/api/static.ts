@@ -10,8 +10,8 @@
 //     a reloaded deep link works. `/api`, `/api/...`, `/openapi.json` and `/mcp` never fall back: they stay 404 here.
 //   - Content-Security-Policy: scripts, styles, fonts and images from this origin only; no inline script or style, no
 //     frames, no `<base>`, no forms posting elsewhere. The build output is checked for CSP-compatibility by a test.
-import { createReadStream } from 'node:fs';
-import { realpath, stat } from 'node:fs/promises';
+import { open, realpath, stat } from 'node:fs/promises';
+import type { FileHandle } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { dirname, extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -139,20 +139,42 @@ export async function createStaticHandler(options: StaticHandlerOptions): Promis
     if (found === undefined && extname(url.pathname) === '') found = await locate([]); // SPA fallback
     if (found === undefined) return false;
 
+    // Open first and fstat the handle: a file that cannot be opened (EACCES, removed since the lookup) is a plain 404 before any
+    // header is set, and the length comes from the same handle the body is read from (no stat-then-open race).
+    let fh: FileHandle;
+    try {
+      fh = await open(found.file, 'r');
+    } catch {
+      return false;
+    }
+    let size: number;
+    try {
+      const st = await fh.stat();
+      if (!st.isFile()) {
+        await fh.close();
+        return false;
+      }
+      size = st.size;
+    } catch {
+      await fh.close().catch(() => undefined);
+      return false;
+    }
+
     const ext = extname(found.file).toLowerCase();
     applySecurityHeaders(res, UI_CSP);
     // Hashed bundle files never change under the same name; everything else is re-checked. Judge the REQUESTED name (a symlink
     // must not borrow a hashed target name) and use Vite's hash shape: exactly eight base64url characters before the extension.
     if (segments[0] === 'assets' && /-[A-Za-z0-9_-]{8}\.[a-z0-9]+$/.test(segments[segments.length - 1] ?? '')) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     res.setHeader('Content-Type', TYPES[ext] ?? 'application/octet-stream');
-    res.setHeader('Content-Length', String(found.size));
+    res.setHeader('Content-Length', String(size));
     res.statusCode = 200;
     if (method === 'HEAD') {
+      await fh.close();
       res.end();
       return true;
     }
     await new Promise<void>((done) => {
-      const stream = createReadStream(found.file);
+      const stream = fh.createReadStream({ start: 0, end: size > 0 ? size - 1 : undefined, autoClose: true });
       stream.on('error', () => {
         res.destroy();
         done();
