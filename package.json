@@ -19,6 +19,7 @@
     "verify": "scripts/verify.sh",
     "calibrate": "tsc -p tsconfig.build.json && node dist/scripts/calibrate.js",
     "coverage": "vitest run --coverage",
+    "prepack": "npm run build && npm run ui:build && node scripts/check-ui-dist.mjs",
     "ui:install": "npm --prefix ui ci",
     "ui:build": "npm --prefix ui run build",
     "ui:test": "npm --prefix ui test",
