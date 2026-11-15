@@ -18,6 +18,8 @@
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { loadConfig } from './config/load.js';
+import { buildConfigView } from './config/view.js';
+import type { ConfigView } from './config/view.js';
 import { HashEmbedder } from './embedding/hashEmbedder.js';
 import type { FilterPipeline } from './filters/pipeline.js';
 import { buildPipeline } from './filters/registry.js';
@@ -84,6 +86,7 @@ export function defaultStateDir(env: Readonly<Record<string, string | undefined>
 
 export class Engine {
   readonly #config: Config;
+  readonly #env: Readonly<Record<string, string | undefined>>;
   readonly #sources: SourceManager;
   readonly #targets: TargetManager;
   readonly #orchestrator: Orchestrator;
@@ -102,6 +105,7 @@ export class Engine {
     const config = loadConfig(structuredClone(options.config)); // validate + detach from the caller's object
     this.#config = config;
     const env = options.env ?? process.env;
+    this.#env = env;
     const pre = buildPipeline(config, 'pre', options.factories);
     const post = buildPipeline(config, 'post', options.factories);
     const dir = options.stateDir;
@@ -185,6 +189,19 @@ export class Engine {
   /** The stored profile of `authorId`. `UnknownAuthorError` if it was never ingested. */
   getProfile(authorId: string): StylometricProfile {
     return this.#sources.getProfile(authorId);
+  }
+
+  /** Every ingested author's profile, sorted by author id (copies). */
+  listAuthors(): StylometricProfile[] {
+    return this.#sources.listAuthors();
+  }
+
+  /**
+   * Read-only, redacted view of the effective configuration: provider, model, endpoint HOSTS, the NAMES of key
+   * environment variables (never their values), limits, filters, persona keys, scorer settings (src/config/view.ts).
+   */
+  getConfigView(): ConfigView {
+    return buildConfigView(this.#config, this.#env);
   }
 
   /** Every configured persona, sorted by key. */

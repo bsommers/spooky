@@ -107,6 +107,11 @@ Rules: `loadConfig` throws `ConfigError` with one `ConfigIssue` per problem (pat
 | list filters | `engine.listFilters()` | `ghostwriter filters` |
 | generate | `engine.generate(authorId, personaKey, input, options?)` | `ghostwriter generate --author --persona [--json]` |
 | score | `engine.score(text, options?)` | `ghostwriter score [--json] [--detector name] <file>` |
+| list authors | `engine.listAuthors()` | `ghostwriter authors` |
+| config get | `engine.getConfigView()` | `ghostwriter config get` |
+| capabilities | service registry `describeCapabilities()` | `ghostwriter capabilities` |
+
+Since Phase 9 every row is also an entry of the operations registry (`src/service/operations.ts`) and exists as an HTTP route and an MCP tool; see "Service surfaces (Phase 9)" below and `tests/integration/surfaces-parity.test.ts`. `humanize` (Phase 8) is a PENDING capability: it has no row until the Engine has it.
 
 `tests/integration/parity.test.ts` parses this table: every row needs an `Engine` method and a CLI command with the listed flags, and neither surface may have a capability the table lacks. (`Engine.create(options)` / `engine.load()` restore persisted state; the CLI does that implicitly.) Input for `ingest`/`generate` comes from `<file>`, `--file <path>` or stdin; every command accepts `--config`, `--state-dir`, `--json`.
 
@@ -146,3 +151,24 @@ export interface AiLikenessScorer { score(text: string): ScoreBreakdown }
 ```
 
 `engine.score(text, { detectors? })` -> `ScoreResult { score, local: ScoreBreakdown, members: {name, score, weight}[], excluded: {name, reason}[], trace }` (types.ts section 9). Flow: size cap -> unknown detector name = `ConfigError` -> PRE pipeline (confidentiality, fail-closed) -> local heuristic and the named detectors, both on the REDACTED text only -> weighted mean of the members that returned a finite score in [0,1]. A detector that throws, times out or returns anything else is excluded (`reason` = `error:<ClassName>` | `timeout` | `invalid_score` | `empty_text`, never a message); with none left the score is the local one. Detectors run only when named; the default sends nothing off the machine. Config: `scorer: { weights (6 features, non-negative, normalized), localWeight, detectors: [{name, url, apiKeyEnv?, weight, timeoutMs}] }` with the LLM endpoint/key-egress rules. CLI exit codes unchanged (unknown detector = 2). Measured quality: docs/CALIBRATION.md.
+
+## Service surfaces (Phase 9)
+One registry, `OPERATIONS` in `src/service/operations.ts`, is the only declaration of an operation: `{ name, description, input (strict zod object), output (zod object), mutates, openWorld, readsState, engineMethod, http: {method, path}, cli, render, handler }`. The CLI, the HTTP API (`ghostwriter serve`), the MCP server (`ghostwriter mcp`) and the OpenAPI 3.1 document are adapters over it.
+
+| Operation (MCP tool) | HTTP | CLI | Input fields | Output fields |
+|---|---|---|---|---|
+| `ingest` (writes) | `POST /api/ingest` | `ingest` | `authorId`, `name`, `text` | `profile` |
+| `generate` | `POST /api/generate` | `generate` | `authorId`, `persona`, `text`, `exemplars?`, `maxTokens?`, `temperature?` | `text`, `trace`, `promptTokensEstimate` |
+| `score` | `POST /api/score` | `score` | `text`, `detectors?` | `score`, `local`, `members`, `excluded`, `trace`, `localOnly?` |
+| `profile` | `GET /api/profile?authorId=` | `profile <id>` | `authorId` | `profile` |
+| `authors` | `GET /api/authors` | `authors` | none | `authors` |
+| `personas` | `GET /api/personas` | `personas` | none | `personas` |
+| `filters` | `GET /api/filters` | `filters` | none | `filters` |
+| `config_get` | `GET /api/config` | `config get` | none | `config` (redacted view) |
+| `capabilities` | `GET /api/capabilities` | `capabilities` | none | `operations`, `pending` |
+
+Every surface reports `{ ok: true, ...output }` or `{ ok: false, error: { code, message } }` (CLI `--json`, HTTP body, MCP `structuredContent`). Errors: one table `ERROR_TABLE` in `src/service/errors.ts` maps each `code` to `{ exit, http, mcp }`: CONFIG_INVALID 2/400, PROFILE_INVALID 2/422, UNKNOWN_PERSONA 3/404, UNKNOWN_AUTHOR 3/404, FILTER_FAILED 4/500, LLM_FAILED 5/502, INPUT_TOO_LARGE 6/413, STORE_CORRUPT 7/500, STATE_LOCKED 8/503, DETECTORS_FAILED 9/502; surface-only USAGE 2/400, UNAUTHORIZED 401, FORBIDDEN 403, NOT_FOUND 404, METHOD_NOT_ALLOWED 405, REQUEST_TIMEOUT 408, UNSUPPORTED_MEDIA_TYPE 415, MISDIRECTED_REQUEST 421, OVERLOADED 503, IO_ERROR/INTERNAL 500. A unit test fails if a `GhostwriterError` code is missing from the table. Unexpected errors are reported by class name only.
+
+`humanize` (Phase 8) is listed in `PENDING_CAPABILITIES` (also in the `capabilities` output); it has no adapter. `tests/integration/surfaces-parity.test.ts` fails when `Engine` gains a `humanize` method without a registry entry, and fails if a pending capability already has an adapter.
+
+`Engine` additions (Phase 9): `listAuthors(): StylometricProfile[]` (sorted by id) and `getConfigView(): ConfigView` (redacted: endpoint hosts only, env var NAMES and whether they are set, never values, blocklist/rule counts only).

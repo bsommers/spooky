@@ -3,7 +3,12 @@
 //   ghostwriter ingest   --author <id> --name <name> [file | --file <path>]   (stdin when no file)
 //   ghostwriter generate --author <id> --persona <key> [file | --file <path>] (stdin when no file)
 //   ghostwriter score    [file | --file <path>] [--detector <name>]...        (stdin when no file)
-//   ghostwriter personas | filters | profile <id>
+//   ghostwriter personas | filters | authors | profile <id> | config get | capabilities
+//   ghostwriter serve [--host --port --token-env --allow-origin --max-body --mcp]   (HTTP API, src/api)
+//   ghostwriter mcp [--stdio | --http]                                              (MCP server, src/mcp)
+//
+// Every command that runs an operation reads it from the registry (src/service/operations.ts): the input is validated by
+// the operation's schema and the handler runs through `invokeOperation`, the same path the HTTP API and MCP use.
 //
 // Contract: the result (and only the result) goes to stdout; logs, warnings and errors go to stderr. `--json` makes
 // stdout a single JSON document `{ok, ...data}` / `{ok:false, error:{code,message}}` so scripts never parse prose.
@@ -17,25 +22,17 @@ import { Engine, defaultStateDir } from '../engine.js';
 import type { EngineOptions } from '../engine.js';
 import { ConfigError, GhostwriterError, InputTooLargeError } from '../models/errors.js';
 import type { Config } from '../models/types.js';
+import { EXIT_CODES, describeError } from '../service/errors.js';
+import { OPERATIONS, invokeOperation, operation, successDocument } from '../service/operations.js';
+import type { AnyOperation } from '../service/operations.js';
+import { registerMcp } from './mcp.js';
+import { registerServe } from './serve.js';
+
+export { EXIT_CODES };
 
 /** Largest corpus (characters) the engine accepts by default; the byte cap for reading is 4 bytes per character. */
 const MAX_CORPUS_CHARS = 10_000_000;
 const MAX_CONFIG_BYTES = 1024 * 1024;
-
-/** Process exit code per error `code` (.planning/CONTRACTS.md "CLI exit codes"). */
-export const EXIT_CODES: Readonly<Record<string, number>> = {
-  CONFIG_INVALID: 2,
-  PROFILE_INVALID: 2,
-  USAGE: 2,
-  UNKNOWN_PERSONA: 3,
-  UNKNOWN_AUTHOR: 3,
-  FILTER_FAILED: 4,
-  LLM_FAILED: 5,
-  INPUT_TOO_LARGE: 6,
-  STORE_CORRUPT: 7,
-  STATE_LOCKED: 8,
-  DETECTORS_FAILED: 9,
-};
 
 export interface CliIo {
   /** Text sink for the result (stdout). */
@@ -47,6 +44,19 @@ export interface CliIo {
   /** True when stdin is an interactive terminal (then "read stdin" would hang, so it is a usage error). */
   stdinIsTTY: boolean;
   env: Readonly<Record<string, string | undefined>>;
+  /** Aborts a long-running command (`serve`, `mcp`). Default: SIGINT / SIGTERM of this process. */
+  signal?: AbortSignal;
+}
+
+/** What `serve` and `mcp` need from this file; they live in their own modules. */
+export interface CliContext {
+  io: CliIo;
+  deps: CliDeps;
+  settings: CliSettings;
+  /** Adds --config / --state-dir / --json. */
+  common(cmd: Command): Command;
+  /** Resolve the config, then build the engine; `persisted` also restores the state directory. */
+  start(opts: CommonOpts & LlmOpts, needsModel: boolean, persisted: boolean): Promise<{ config: Config; engine: Engine }>;
 }
 
 /** Test/embedding hooks; the real binary passes none. */
@@ -62,12 +72,12 @@ function defaultIo(): CliIo {
   };
 }
 
-interface CommonOpts {
+export interface CommonOpts {
   config?: string;
   stateDir?: string;
   json?: boolean;
 }
-interface LlmOpts {
+export interface LlmOpts {
   model?: string;
   provider?: string;
   baseUrl?: string;
@@ -212,6 +222,14 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
     return persisted ? Engine.create(options) : new Engine(options);
   };
 
+  const context: CliContext = { io, deps, settings, common, start };
+
+  /** Print the result of an operation: the one JSON document with --json, else the operation's text rendering. */
+  const emit = (op: AnyOperation, data: Record<string, unknown>): void => {
+    if (settings.json === true) io.stdout(`${JSON.stringify(successDocument(data))}\n`);
+    else out(io, op.render(data as never));
+  };
+
   common(
     program
       .command('ingest')
@@ -221,12 +239,11 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
       .requiredOption('--name <name>', 'display name')
       .option('--file <path>', 'corpus file; "-" is stdin'),
   ).action(async (file: string | undefined, opts: CommonOpts & { author: string; name: string; file?: string }) => {
+    const op = operation('ingest');
     const config = await resolveConfig(io, opts, false);
     const text = await readInput(io, file, opts.file, MAX_CORPUS_CHARS * 4);
     const engine = await engineFor(config, opts, true);
-    const profile = await engine.ingest(opts.author, opts.name, text);
-    if (settings.json === true) printJson(io, { profile });
-    else out(io, `ingested ${profile.authorId}: ${profile.corpusWordCount} words`);
+    emit(op, await invokeOperation(op, engine, { authorId: opts.author, name: opts.name, text }));
   });
 
   common(
@@ -249,18 +266,21 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
       file: string | undefined,
       opts: CommonOpts & LlmOpts & { author: string; persona: string; file?: string; exemplars?: number; maxTokens?: number; temperature?: number },
     ) => {
+      const op = operation('generate');
       const config = await resolveConfig(io, opts, true);
       const input = await readInput(io, file, opts.file, config.limits.maxInputChars * 4);
       const engine = await engineFor(config, opts, true);
-      const result = await engine.generate(opts.author, opts.persona, input, {
-        ...(opts.exemplars === undefined ? {} : { exemplarCount: opts.exemplars }),
+      const data = await invokeOperation(op, engine, {
+        authorId: opts.author,
+        persona: opts.persona,
+        text: input,
+        ...(opts.exemplars === undefined ? {} : { exemplars: opts.exemplars }),
         ...(opts.maxTokens === undefined ? {} : { maxTokens: opts.maxTokens }),
         ...(opts.temperature === undefined ? {} : { temperature: opts.temperature }),
       });
-      const banned = result.trace.find((t) => t.filter === 'persona-banned');
+      const banned = (data.trace as { filter: string; metadata: Record<string, unknown> }[]).find((t) => t.filter === 'persona-banned');
       if (banned) io.stderr(`warning: the output still contains ${String(banned.metadata.count)} phrase(s) banned for persona "${opts.persona}"\n`);
-      if (settings.json === true) printJson(io, { text: result.text, trace: result.trace, promptTokensEstimate: result.promptTokensEstimate });
-      else out(io, result.text);
+      emit(op, data);
     },
   );
 
@@ -272,83 +292,42 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
       .option('--file <path>', 'text file; "-" is stdin')
       .option('--detector <name>', 'also ask a detector declared in config scorer.detectors; SENDS the redacted text to it (repeatable)', (v: string, prev: string[]) => [...prev, v], [] as string[]),
   ).action(async (file: string | undefined, opts: CommonOpts & { file?: string; detector: string[] }) => {
+    const op = operation('score');
     const config = await resolveConfig(io, opts, false);
     const text = await readInput(io, file, opts.file, config.limits.maxInputChars * 4);
     const engine = await engineFor(config, opts, false);
     if (opts.detector.length > 0) io.stderr(`note: sending the redacted text to external detector(s): ${opts.detector.join(', ')}\n`);
-    const r = await engine.score(text, { detectors: opts.detector });
-    for (const e of r.excluded) io.stderr(`warning: detector "${e.name}" was not used (${e.reason})\n`);
+    const data = await invokeOperation(op, engine, { text, detectors: opts.detector });
+    for (const e of data.excluded as { name: string; reason: string }[]) io.stderr(`warning: detector "${e.name}" was not used (${e.reason})\n`);
     // The caller asked for an external opinion and got none: still print the local result, but do not exit 0 as if it were one.
-    const noneAnswered = opts.detector.length > 0 && r.members.every((m) => m.name === 'local') && r.excluded.some((e) => e.reason !== 'empty_text');
-    if (noneAnswered) {
+    if (data.localOnly === true) {
       io.stderr('error: no named detector produced a score; the result below is the local heuristic alone\n');
       settings.exitCode = EXIT_CODES.DETECTORS_FAILED as number;
     }
-    if (settings.json === true) {
-      printJson(io, { score: r.score, local: r.local, members: r.members, excluded: r.excluded, trace: r.trace, ...(noneAnswered ? { localOnly: true } : {}) });
-      return;
-    }
-    const lines = [`score: ${r.score.toFixed(3)}`];
-    if (r.local.flags !== undefined && r.local.flags.length > 0) lines.push(`flags: ${r.local.flags.join(', ')}`);
-    lines.push('features (value x weight = contribution):');
-    for (const [name, f] of Object.entries(r.local.features)) {
-      lines.push(`  ${name.padEnd(20)} ${f.value.toFixed(3)} x ${f.weight.toFixed(3)} = ${f.contribution.toFixed(3)}`);
-    }
-    if (r.members.length > 1 || r.excluded.length > 0) {
-      lines.push('ensemble:');
-      for (const m of r.members) lines.push(`  ${m.name.padEnd(20)} ${m.score.toFixed(3)} (weight ${m.weight.toFixed(3)})`);
-      for (const e of r.excluded) lines.push(`  ${e.name.padEnd(20)} excluded: ${e.reason}`);
-    }
-    lines.push('note: a heuristic proxy, not a detector verdict (docs/CALIBRATION.md)');
-    out(io, lines.join('\n'));
+    emit(op, data);
   });
 
-  common(program.command('personas').description('list the configured target personas')).action(async (opts: CommonOpts) => {
-    const { engine } = await start(opts, false, false);
-    const personas = engine.listPersonas();
-    if (settings.json === true) printJson(io, { personas });
-    else out(io, personas.map((p) => `${p.key}\t${p.name}`).join('\n'));
-  });
+  // The remaining operations are fully described by their registry entry: the command, its arguments and its text
+  // rendering all come from `OPERATIONS` (src/service/operations.ts), so a new registry entry gets a CLI command.
+  for (const op of OPERATIONS.filter((o) => o.cli.derived)) {
+    let parent: Command = program;
+    for (const seg of op.cli.command.slice(0, -1)) {
+      parent = parent.commands.find((c) => c.name() === seg) ?? parent.command(seg).description(`${seg} commands`);
+    }
+    const cmd = parent.command(op.cli.command[op.cli.command.length - 1] as string).description(op.description);
+    for (const a of op.cli.arguments) cmd.argument(`<${a.name}>`, a.description);
+    common(cmd).action(async (...args: unknown[]) => {
+      const opts = args[op.cli.arguments.length] as CommonOpts;
+      const input = Object.fromEntries(op.cli.arguments.map((a, i) => [a.field, args[i]]));
+      const { engine } = await start(opts, false, op.readsState);
+      emit(op, await invokeOperation(op, engine, input));
+    });
+  }
 
-  common(program.command('filters').description('list the configured filter pipeline, in execution order')).action(async (opts: CommonOpts) => {
-    const { engine } = await start(opts, false, false);
-    const filters = engine.listFilters();
-    if (settings.json === true) printJson(io, { filters });
-    else out(io, filters.map((f) => `${f.name}\t${f.stage}\t${f.onError}\t${f.enabled ? 'enabled' : 'disabled'}`).join('\n'));
-  });
-
-  common(program.command('profile').description('show an ingested author\'s stylometric profile').argument('<id>', 'author id')).action(
-    async (id: string, opts: CommonOpts) => {
-      const { engine } = await start(opts, false, true);
-      const profile = engine.getProfile(id);
-      if (settings.json === true) printJson(io, { profile });
-      else {
-        out(
-          io,
-          [
-            `author: ${profile.authorId} (${profile.displayName})`,
-            `words: ${profile.corpusWordCount}`,
-            `avg sentence length: ${profile.avgSentenceLength.toFixed(1)} (sd ${profile.sentenceLengthStdDev.toFixed(1)})`,
-            `lexical density: ${profile.lexicalDensityRatio.toFixed(3)}`,
-            `hedging per 100 words: ${profile.hedgingFrequency.toFixed(2)}`,
-            `active/passive ratio: ${profile.activePassiveRatio.toFixed(2)}`,
-            `punctuation: ${profile.preferredPunctuation.join(' ') || '-'}`,
-            `transitions: ${profile.commonTransitionWords.join(', ') || '-'}`,
-          ].join('\n'),
-        );
-      }
-    },
-  );
+  registerServe(program, context);
+  registerMcp(program, context);
 
   return program;
-}
-
-/** Map any thrown value to `{code, message, exit}`. Only typed errors and commander usage errors keep their message. */
-function describeError(err: unknown): { code: string; message: string; exit: number } {
-  if (err instanceof GhostwriterError) return { code: err.code, message: err.message, exit: EXIT_CODES[err.code] ?? 1 };
-  const errno = (err as NodeJS.ErrnoException | undefined)?.code;
-  if (typeof errno === 'string' && /^E[A-Z0-9]+$/.test(errno)) return { code: 'IO_ERROR', message: `file system error (${errno})`, exit: 1 };
-  return { code: 'INTERNAL', message: `internal error (${err instanceof Error ? err.name : typeof err})`, exit: 1 };
 }
 
 /**

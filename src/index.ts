@@ -48,3 +48,5 @@ export type { EnsembleOptions, EnsembleResult } from './scoring/ensemble.js';
 export { HttpDetectorAdapter, DetectorResponseError, assertDetectorAdapter, checkDetectorScore, LOCAL_NAME } from './scoring/detectorAdapter.js';
 export type { HttpDetectorOptions } from './scoring/detectorAdapter.js';
 export { auc, bootstrapAuc, histogram } from './scoring/calibration.js';
+export { buildConfigView } from './config/view.js';
+export type { ConfigView, DetectorView } from './config/view.js';
