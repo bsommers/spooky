@@ -11,6 +11,7 @@
 // is listed in `PENDING_CAPABILITIES` (never faked as an operation); the parity test enumerates it and fails the moment
 // the Engine gains the method without a registry entry, so a pending capability cannot be forgotten.
 import { z } from 'zod';
+import { HEURISTIC_HELD_OUT_AUC } from '../../config/humanize.js';
 import type { Engine } from '../engine.js';
 import type { ConfigView } from '../config/view.js';
 import type { StylometricProfile } from '../models/types.js';
@@ -66,8 +67,7 @@ export interface PendingCapability {
 export const PENDING_CAPABILITIES: readonly PendingCapability[] = [];
 
 /** Said on every surface next to a humanizer result: what the scores mean. */
-export const HUMANIZE_CAVEAT =
-  'Scores are from the local heuristic, a weak and confounded proxy (held-out AUC 0.694, docs/CALIBRATION.md), not a detector verdict. A lower score is not evidence that any real detector would pass the text. Results against detectors are in docs/HUMANIZING.md.';
+export const HUMANIZE_CAVEAT = `Scores are from the local heuristic, a weak and confounded proxy (held-out AUC ${HEURISTIC_HELD_OUT_AUC}, docs/CALIBRATION.md), not a detector verdict. A lower score is not evidence that any real detector would pass the text. No external detector has been tested (docs/HUMANIZING.md).`;
 
 function define<I extends z.ZodObject, O extends z.ZodObject>(op: Operation<I, O>): Operation<I, O> {
   return op;
@@ -181,8 +181,7 @@ const score = define({
 
 const humanize = define({
   name: 'humanize',
-  description:
-    'Rewrite a text to score lower on the local AI-likeness heuristic while keeping numbers, names, quotes, code and URLs unchanged. Bounded loop (target score or max iterations), at most one model call per iteration unless llm is false; every edit is checked by a meaning guard and the confidentiality filter and kept only if it scores lower. The score is a weak, confounded proxy (held-out AUC 0.694), not a detector verdict; no guarantee against any real detector.',
+  description: `Rewrite a text to score lower on the local AI-likeness heuristic while keeping numbers, names, quotes, code and URLs unchanged. Bounded loop (target score or max iterations), at most one logical model call per iteration (plus transport retries) unless llm is false; every edit is checked by a meaning guard and the confidentiality filter and kept only if it scores lower. The score is a weak, confounded proxy (held-out AUC ${HEURISTIC_HELD_OUT_AUC}), not a detector verdict; no guarantee against any real detector.`,
   input: S.humanizeInput,
   output: S.humanizeOutput,
   mutates: false,

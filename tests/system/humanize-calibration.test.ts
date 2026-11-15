@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { HEURISTIC_HELD_OUT_AUC } from '../../config/humanize.js';
 import { loadConfig } from '../../src/config/load.js';
 import { Engine } from '../../src/engine.js';
 import { loadCorpus, packageRoot, splitOf } from '../../scripts/calibrate.js';
@@ -91,6 +92,8 @@ describe('humanizer calibration over the labeled corpus (deterministic edits onl
     const recorded = MARKER.exec(doc)?.[1];
     // To refresh the doc, replace the marker comment with this line (and the prose table with the same numbers):
     expect(recorded, `<!-- humanize-calibration: ${marker(m)} -->`).toBe(marker(m));
+    // The AUC quoted in every caveat (config/humanize.ts) is the one measured here, not a hard-coded copy that can drift.
+    expect(r3(HEURISTIC_HELD_OUT_AUC)).toBe(r3(m.testAucBefore));
     // The loop must never make a text WORSE on the scorer it optimizes, and must keep the length.
     for (const [a, b] of m.ai.after.map((x, i) => [x, m.ai.before[i] as number] as const)) expect(a).toBeLessThanOrEqual(b + 1e-9);
     expect(m.wordsRatio).toBeGreaterThan(0.9);

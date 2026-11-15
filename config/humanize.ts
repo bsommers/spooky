@@ -2,6 +2,13 @@
 // The target is a threshold on the LOCAL heuristic score (a weak, confounded proxy: docs/CALIBRATION.md), not a promise
 // about any third-party detector (docs/HUMANIZING.md).
 
+/**
+ * Held-out AUC of the local heuristic on the labeled corpus (docs/CALIBRATION.md), quoted in every humanizer caveat. The
+ * calibration test (tests/system/humanize-calibration.test.ts) fails when this differs from the number measured in
+ * docs/HUMANIZING.md, so the quoted figure cannot drift from the calibration.
+ */
+export const HEURISTIC_HELD_OUT_AUC = 0.694;
+
 export const DEFAULT_HUMANIZE = { targetScore: 0.3, maxIterations: 3 } as const;
 
 /** Hard upper bound on `maxIterations` (each iteration can cost one model call). */

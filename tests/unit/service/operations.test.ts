@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
+import { HEURISTIC_HELD_OUT_AUC } from '../../../config/humanize.js';
 import { buildConfigView, WITHHELD } from '../../../src/config/view.js';
 import { loadConfig } from '../../../src/config/load.js';
 import { InputError } from '../../../src/service/errors.js';
@@ -74,11 +75,13 @@ describe('operations registry', () => {
   });
 
   it('humanize says what its score is: the description and every result carry the weak-scorer caveat', async () => {
-    expect(operation('humanize').description).toContain('0.694');
+    expect(operation('humanize').description).toContain(String(HEURISTIC_HELD_OUT_AUC));
     const rig = await makeRuntime();
     try {
       const out = await invokeOperation(operation('humanize'), rig.engine, { text: 'A short text to rewrite. It has two sentences and then a third one. And a fourth one ends it.', llm: false });
       expect(out.caveat).toContain('0.694');
+      expect(out.caveat).toContain('No external detector has been tested');
+      expect(out.caveat).not.toMatch(/Results against detectors/i);
       expect(operation('humanize').render(out as never)).toContain('weak and confounded');
     } finally {
       rig.cleanup();
