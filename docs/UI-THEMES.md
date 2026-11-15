@@ -1,6 +1,32 @@
 # UI themes
 
-Contract: a theme is one CSS file defining `--gw-*` tokens under `:root[data-theme="<id>"]` plus a manifest entry. See `.planning/phases/10-ui-foundation/10-01-PLAN.md` for the token list. Contrast (WCAG AA) is asserted by test; values below are the starting palette and must be adjusted until the test passes.
+Contract (`ui/src/theme/contract.ts`): a theme is ONE CSS file `ui/src/theme/themes/<id>.css` holding exactly one rule, `:root[data-theme="<id>"] { --gw-*: value; }`, plus one line in `ui/src/theme/manifest.ts` (`{ id, label, colorScheme }`). Adding a third theme is that file and that line, nothing else (a test does exactly this). Every token below must be defined, none may be added, color tokens are opaque `#rrggbb`, no value may name another origin, and a file or manifest line without its partner fails the build. Components read only `--gw-*` (stylelint forbids raw colors outside theme files). Contrast (WCAG 2.x AA) is asserted by test and by the build over every declared pair; the values below are the shipped palettes after that check.
+
+| Group | Tokens |
+|---|---|
+| surfaces | `--gw-bg --gw-bg-raised --gw-surface --gw-border` |
+| text | `--gw-text --gw-text-muted` |
+| accents | `--gw-accent --gw-accent-text --gw-accent-2` |
+| status | `--gw-danger --gw-warning --gw-success` |
+| focus and shape | `--gw-focus-ring --gw-glow --gw-radius` |
+| fonts, motion | `--gw-font-display --gw-font-body --gw-font-mono --gw-motion-scale` |
+| background art | `--gw-bg-art --gw-bg-grid --gw-bg-grid-cell --gw-bg-grid-transform --gw-bg-mark --gw-anim-grid --gw-anim-glow` |
+
+The plan listed one `--gw-bg-art` token; Tron's perspective floor needs the grid plane, its cell size, its transform and the two animations to be separate (the plane is tilted, the glow is not), and Black Cat's watermark is an image, so six background tokens were added to the contract rather than putting theme names in component CSS. Required contrast pairs: text, muted, accent, accent-2, danger, warning, success at 4.5:1 on bg, surface and bg-raised; accent-text on accent at 4.5:1; focus ring and accent (as a UI boundary) at 3:1. `--gw-motion-scale` is overridden to 0 inline when the user prefers reduced motion.
+
+Shipped values (the files are the source of truth; the tests read them):
+
+| Token | Black Cat | Tron Neon |
+|---|---|---|
+| bg / bg-raised / surface / border | `#0a0a0c` / `#1b1b20` / `#131316` / `#2a2a31` | `#05070a` / `#121a24` / `#0b0f14` / `#1f2a37` |
+| text / muted | `#ece7dc` / `#a8a398` | `#e6edf3` / `#9aa4b2` |
+| accent / accent-text / accent-2 | `#ffb000` / `#1a1100` / `#8fa3c7` | `#00e5ff` / `#031014` / `#ff2bd6` |
+| danger / warning / success | `#ff6b6b` / `#ffb000` / `#7bd88f` | `#ff5c7a` / `#ffc233` / `#3ddc97` |
+| focus ring | `#ffd24a` | `#7df9ff` |
+| radius | 8px | 4px |
+| display / body / mono | Fraunces Variable / Inter Variable / JetBrains Mono Variable | Orbitron Variable / Inter Variable / JetBrains Mono Variable |
+
+The remainder of this page records where the design came from.
 
 ## Tron Neon (extracted from https://bsommers.github.io/lumagrid, 2026-11-14)
 The page is a JS SPA, so WebFetch returned only the title; the compiled stylesheet `assets/index-*.css` was fetched directly and read. These are the site's actual values.

@@ -1,0 +1,29 @@
+/* Black Cat: charcoal and near-black with amber eyes, a dim moon, a night haze and a cat silhouette watermark. Original design. */
+:root[data-theme="black-cat"] {
+  --gw-bg: #0a0a0c;
+  --gw-bg-raised: #1b1b20;
+  --gw-surface: #131316;
+  --gw-border: #2a2a31;
+  --gw-text: #ece7dc;
+  --gw-text-muted: #a8a398;
+  --gw-accent: #ffb000;
+  --gw-accent-text: #1a1100;
+  --gw-accent-2: #8fa3c7;
+  --gw-danger: #ff6b6b;
+  --gw-warning: #ffb000;
+  --gw-success: #7bd88f;
+  --gw-focus-ring: #ffd24a;
+  --gw-glow: 0 0 10px #ffb00033;
+  --gw-radius: 8px;
+  --gw-font-display: "Fraunces Variable", "Fraunces", Georgia, "Times New Roman", serif;
+  --gw-font-body: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --gw-font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --gw-motion-scale: 1;
+  --gw-bg-art: radial-gradient(circle at 84% 11%, #8fa3c740 0, #8fa3c740 1.6rem, #8fa3c714 1.8rem, transparent 6rem), radial-gradient(70% 50% at 80% 0%, #8fa3c71a, transparent 70%), linear-gradient(180deg, #12131a 0, #0a0a0c 60%);
+  --gw-bg-grid: none;
+  --gw-bg-grid-cell: 48px;
+  --gw-bg-grid-transform: none;
+  --gw-bg-mark: url("/art/cat-silhouette.svg");
+  --gw-anim-grid: none;
+  --gw-anim-glow: none;
+}
