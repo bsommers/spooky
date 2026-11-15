@@ -188,4 +188,13 @@ describe('ghostwriter mcp', () => {
     expect((await runCli(['mcp', '--stdio', '--http', ...common()])).code).toBe(2);
     expect((await runCli(['mcp', '--http', '--host', '0.0.0.0', '--port', '0', ...common()])).code).toBe(2);
   });
+
+  it('listener flags without --http are a ConfigError naming the flags, not silently ignored on stdio', async () => {
+    const r = await runCli(['mcp', '--host', '0.0.0.0', '--token-env', 'GW_TOKEN', '--port', '9', ...common(), '--json'], { env: { GW_TOKEN: 'tok-' + 'abcdef0123456789'.repeat(2) } });
+    expect(r.code).toBe(2);
+    const e = JSON.parse(r.out).error;
+    expect(e.code).toBe('CONFIG_INVALID');
+    expect(e.message).toContain('--host, --port, --token-env only apply with --http');
+    expect(r.out).not.toContain('abcdef0123456789');
+  });
 });

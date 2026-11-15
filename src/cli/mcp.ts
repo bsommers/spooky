@@ -9,7 +9,7 @@ import { serveStdio } from '../mcp/server.js';
 import { defaultStateDir } from '../engine.js';
 import { ConfigError } from '../models/errors.js';
 import { ServiceRuntime } from '../service/runtime.js';
-import { addListenOptions, startListening, stopSignal, untilAborted } from './serve.js';
+import { addListenOptions, listenerFlagsGiven, startListening, stopSignal, untilAborted } from './serve.js';
 import type { ListenOpts } from './serve.js';
 import type { CliContext, CommonOpts } from './main.js';
 
@@ -28,6 +28,9 @@ export function registerMcp(program: Command, ctx: CliContext): void {
       await server.close();
       return;
     }
+    // Listener options mean nothing on stdio: refuse them rather than silently starting a server without the listener the user asked for.
+    const ignored = listenerFlagsGiven(opts);
+    if (ignored.length > 0) throw new ConfigError(`${ignored.join(', ')} only apply with --http; stdio has no listener`);
     const { engine } = await ctx.start(opts, false, true);
     const runtime = new ServiceRuntime(engine, { stateDir: opts.stateDir ?? defaultStateDir(ctx.io.env) });
     await runtime.markLoaded();

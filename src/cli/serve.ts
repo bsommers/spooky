@@ -45,6 +45,19 @@ export function addListenOptions(cmd: Command): Command {
     .option('--max-ingest-body <bytes>', `largest body for ingest and /mcp (default ${DEFAULT_API_LIMITS.maxIngestBodyBytes})`, int);
 }
 
+/** The listener flags present in `opts` (static flag names only, never values). */
+export function listenerFlagsGiven(opts: ListenOpts): string[] {
+  const given: string[] = [];
+  if (opts.host !== undefined) given.push('--host');
+  if (opts.port !== undefined) given.push('--port');
+  if (opts.tokenEnv !== undefined) given.push('--token-env');
+  if (opts.allowOrigin.length > 0) given.push('--allow-origin');
+  if (opts.allowHost.length > 0) given.push('--allow-host');
+  if (opts.maxBody !== undefined) given.push('--max-body');
+  if (opts.maxIngestBody !== undefined) given.push('--max-ingest-body');
+  return given;
+}
+
 /** The process-lifetime abort signal: the injected one, else SIGINT / SIGTERM. */
 export function stopSignal(io: CliIo): AbortSignal {
   if (io.signal !== undefined) return io.signal;
