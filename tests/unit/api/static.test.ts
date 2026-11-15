@@ -1,4 +1,7 @@
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -82,6 +85,16 @@ describe('static handler: serving', () => {
   });
 });
 
+describe('static handler: a symlinked directory index', () => {
+  it('never serves a directory index.html that is a symlink leaving the root (falls back to the SPA shell instead)', async () => {
+    for (const p of ['/sub2/', '/sub2']) {
+      const r = await raw(target, p);
+      expect(r.text, p).not.toContain(SECRET);
+      expect([p, r.status, r.text.includes('id="root"')], p).toEqual([p, 200, true]);
+    }
+  });
+});
+
 describe('static handler: path traversal and hidden files are 404', () => {
   const attacks = [
     '/../secret.txt',
@@ -103,6 +116,7 @@ describe('static handler: path traversal and hidden files are 404', () => {
     '/assets/.hidden',
     '/%2ehidden',
     '/link.txt', // a symlink that points outside the root
+    '/sub2/index.html',
     '/%ZZ', // malformed percent-encoding
   ];
   for (const p of attacks) {
@@ -121,5 +135,19 @@ describe('static handler setup', () => {
     await expect(createStaticHandler({ root: `${fx.base}/does-not-exist` })).rejects.toThrow();
     expect(await hasBuiltUi(fx.root)).toBe(true);
     expect(await hasBuiltUi(fx.base)).toBe(false);
+  });
+
+  it('a root index.html that is a symlink leading outside the root is not a build and is refused', async () => {
+    const base = mkdtempSync(join(tmpdir(), 'gw-ui-rootlink-'));
+    try {
+      const root = join(base, 'dist');
+      mkdirSync(root);
+      writeFileSync(join(base, 'secret.html'), SECRET);
+      symlinkSync(join(base, 'secret.html'), join(root, 'index.html'));
+      expect(await hasBuiltUi(root)).toBe(false);
+      await expect(createStaticHandler({ root })).rejects.toThrow(/index\.html/);
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
   });
 });

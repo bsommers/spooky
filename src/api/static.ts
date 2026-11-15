@@ -76,10 +76,17 @@ export interface StaticHandlerOptions {
   root: string;
 }
 
-/** True when `dir` holds a built UI. */
+/**
+ * True when `dir` holds a built UI: an `index.html` that is a regular file AND whose real path stays inside the real `dir`
+ * (a symlinked index.html pointing elsewhere is not a build).
+ */
 export async function hasBuiltUi(dir: string): Promise<boolean> {
   try {
-    return (await stat(join(dir, 'index.html'))).isFile();
+    const realDir = await realpath(dir);
+    const prefix = realDir.endsWith(sep) ? realDir : realDir + sep;
+    const index = await realpath(join(realDir, 'index.html'));
+    if (!index.startsWith(prefix)) return false;
+    return (await stat(index)).isFile();
   } catch {
     return false;
   }
@@ -110,7 +117,9 @@ export async function createStaticHandler(options: StaticHandlerOptions): Promis
       let st = await stat(real);
       let file = real;
       if (st.isDirectory()) {
-        file = join(real, 'index.html');
+        // The implicit index may itself be a symlink: re-resolve and re-check containment before reading it.
+        file = await realpath(join(real, 'index.html'));
+        if (!file.startsWith(rootPrefix)) return undefined;
         st = await stat(file);
       }
       return st.isFile() ? { file, size: st.size } : undefined;

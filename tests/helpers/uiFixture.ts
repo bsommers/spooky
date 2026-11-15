@@ -28,5 +28,7 @@ export function makeUiFixture(): UiFixture {
   writeFileSync(join(base, 'secret.txt'), SECRET);
   writeFileSync(join(base, 'dist-sibling.txt'), SECRET); // shares the "dist" name prefix: a startsWith(root) check would let it through
   symlinkSync(join(base, 'secret.txt'), join(root, 'link.txt'));
+  mkdirSync(join(root, 'sub2'), { recursive: true });
+  symlinkSync(join(base, 'secret.txt'), join(root, 'sub2', 'index.html')); // a directory whose implicit index points outside
   return { base, root, cleanup: () => rmSync(base, { recursive: true, force: true }) };
 }
