@@ -55,3 +55,8 @@ export function renderApp(hash = '#/', client: ApiClient = fakeClient()): Render
   );
   return Object.assign(utils, { client });
 }
+
+/** Render `hash` against the shared mock server (every route answers; `overrides` replaces single ones). */
+export function renderScreen(hash: string, overrides: Overrides = {}) {
+  return renderApp(hash, mockClient(overrides));
+}

@@ -9,6 +9,8 @@ export interface RouteDef {
 /** Routes of the shell. Feature screens (Phase 11) add entries here; unknown hashes render the not-found page. */
 export const ROUTES: readonly RouteDef[] = [
   { path: '/', label: 'Overview', title: 'Overview' },
+  { path: '/personas', label: 'Personas', title: 'Personas' },
+  { path: '/settings', label: 'Settings', title: 'Settings' },
   { path: '/kitchen-sink', label: 'Kitchen sink', title: 'Kitchen sink' },
 ];
 

@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { CapabilitiesProvider } from '../api/capabilities';
 import { AnnouncerProvider } from '../components/Announcer';
@@ -10,7 +10,13 @@ import { ROUTES, useHashRoute } from './route';
 import { Shell } from './Shell';
 
 // Every feature screen is its own lazy chunk: the first paint carries the shell only.
-const SCREENS: Record<string, ReactNode> = {};
+const PersonasScreen = lazy(() => import('../screens/personas/PersonasScreen'));
+const SettingsScreen = lazy(() => import('../screens/settings/SettingsScreen'));
+
+const SCREENS: Record<string, ReactNode> = {
+  '/personas': <PersonasScreen />,
+  '/settings': <SettingsScreen />,
+};
 
 export function App() {
   const route = useHashRoute();

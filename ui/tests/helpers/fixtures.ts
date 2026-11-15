@@ -61,6 +61,14 @@ export const PERSONAS = {
   ],
 };
 
+export const FILTERS = {
+  ok: true,
+  filters: [
+    { name: 'confidentiality', stage: 'both', onError: 'fail-closed', enabled: true },
+    { name: 'style', stage: 'post', onError: 'skip', enabled: true },
+  ],
+};
+
 export const CONFIG = {
   ok: true,
   config: {
@@ -156,14 +164,14 @@ export interface Reply {
   body: unknown;
   headers?: Record<string, string>;
 }
-export type Overrides = Partial<Record<string, (init: { method: string; body: unknown }) => Reply>>;
+export type Overrides = Partial<Record<string, (init: { method: string; url: string; body: unknown }) => Reply>>;
 
 /** The mock server. `overrides` is keyed by "METHOD /path". */
 export function respond(method: string, url: string, body: unknown, overrides: Overrides = {}): Reply {
   const path = url.split('?')[0] ?? url;
   const key = `${method} ${path}`;
   const o = overrides[key];
-  if (o !== undefined) return o({ method, body });
+  if (o !== undefined) return o({ method, url, body });
   switch (key) {
     case 'GET /api/capabilities':
       return { status: 200, body: CAPS_FULL };
@@ -171,6 +179,8 @@ export function respond(method: string, url: string, body: unknown, overrides: O
       return { status: 200, body: AUTHORS };
     case 'GET /api/personas':
       return { status: 200, body: PERSONAS };
+    case 'GET /api/filters':
+      return { status: 200, body: FILTERS };
     case 'GET /api/config':
       return { status: 200, body: CONFIG };
     case 'GET /api/profile': {
