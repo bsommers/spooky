@@ -6,6 +6,8 @@ import type { ApiClient } from '../../src/api/client';
 import { App } from '../../src/app/App';
 import { ThemeProvider } from '../../src/theme/ThemeProvider';
 import { DARK, memoryStorage, mediaWith } from './media';
+import { respond } from './fixtures';
+import type { Overrides } from './fixtures';
 
 export const CAPABILITIES = {
   ok: true,
@@ -30,6 +32,16 @@ export function fakeClient(handler: (url: string, init: RequestInit) => Response
     }) as typeof fetch,
   });
   return Object.assign(client, { calls });
+}
+
+/** A client backed by the shared mock server (tests/helpers/fixtures.ts); `overrides` replaces single routes. */
+export function mockClient(overrides: Overrides = {}) {
+  return fakeClient(async (url, init) => {
+    const method = init.method ?? 'GET';
+    const body = typeof init.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined;
+    const r = respond(method, url, body, overrides);
+    return jsonResponse(r.status, r.body, r.headers);
+  });
 }
 
 export function renderApp(hash = '#/', client: ApiClient = fakeClient()): RenderResult & { client: ApiClient } {

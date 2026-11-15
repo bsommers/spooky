@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-aria-components';
 import { PawIcon, Wordmark, WhiskerIcon } from '../icons';
+import { LiveRegion } from '../components/Announcer';
 import { Backdrop } from './Backdrop';
 import { ROUTES } from './route';
 import { ThemeSwitcher } from './ThemeSwitcher';
@@ -56,6 +57,7 @@ export function Shell({ route, children }: { route: string; children: ReactNode 
       <footer className="gw-footer">
         <PawIcon size={16} />
         <span>Spooky runs on this machine. Nothing on this page is loaded from the internet.</span>
+        <LiveRegion />
       </footer>
     </>
   );

@@ -16,4 +16,15 @@ describe('generated API types', () => {
     expect(Object.keys(doc.paths)).toEqual(expect.arrayContaining(['/api/capabilities', '/api/authors', '/api/generate', '/openapi.json']));
     expect(JSON.stringify(doc.components)).not.toMatch(/"type":\s*"apiKey"/); // a bearer token at most; provider keys never reach the UI
   });
+
+  it('operations.ts is the manifest of the committed document: one entry per /api route, named by its operationId', async () => {
+    const doc = JSON.parse(readFileSync(join(UI_ROOT, 'src/api/openapi.json'), 'utf8')) as { paths: Record<string, Record<string, { operationId: string }>> };
+    const { OPERATIONS } = await import('../../src/api/operations');
+    const want = Object.entries(doc.paths)
+      .filter(([p]) => p.startsWith('/api/'))
+      .flatMap(([path, item]) => Object.entries(item).map(([m, o]) => ({ name: o.operationId, method: m.toUpperCase(), path })))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    expect(OPERATIONS).toEqual(want);
+    expect(OPERATIONS.map((o) => o.name)).toEqual(expect.arrayContaining(['ingest', 'generate', 'authors', 'personas', 'profile', 'config_get', 'capabilities', 'score', 'humanize', 'filters']));
+  });
 });

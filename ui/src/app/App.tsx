@@ -1,9 +1,16 @@
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import { CapabilitiesProvider } from '../api/capabilities';
+import { AnnouncerProvider } from '../components/Announcer';
+import { AuthGate } from '../components/AuthGate';
 import { KitchenSink } from './pages/KitchenSink';
 import { NotFound } from './pages/NotFound';
 import { Overview } from './pages/Overview';
 import { ROUTES, useHashRoute } from './route';
 import { Shell } from './Shell';
+
+// Every feature screen is its own lazy chunk: the first paint carries the shell only.
+const SCREENS: Record<string, ReactNode> = {};
 
 export function App() {
   const route = useHashRoute();
@@ -11,9 +18,16 @@ export function App() {
   useEffect(() => {
     document.title = def === undefined ? 'Not found - Spooky' : `${def.title} - Spooky`;
   }, [def]);
+  const screen = SCREENS[route];
   return (
-    <Shell route={route}>
-      {route === '/' ? <Overview /> : route === '/kitchen-sink' ? <KitchenSink /> : <NotFound />}
-    </Shell>
+    <AnnouncerProvider>
+      <CapabilitiesProvider>
+        <Shell route={route}>
+          <Suspense fallback={<p role="status">Loading...</p>}>
+            {route === '/' ? <Overview /> : route === '/kitchen-sink' ? <KitchenSink /> : screen !== undefined && def !== undefined ? <AuthGate title={def.title}>{screen}</AuthGate> : <NotFound />}
+          </Suspense>
+        </Shell>
+      </CapabilitiesProvider>
+    </AnnouncerProvider>
   );
 }
