@@ -82,12 +82,12 @@ Uniform-surface rule: every capability exists on every surface (library, CLI, HT
 
 ### UI
 
-- [ ] **UI-01**: `ui/` is a Vite + React + TypeScript (strict) SPA built to static files served by the API server at `/`; dev proxy to the API; `ui/` has its own tsconfig and tests and does not import from `src/` except generated API types.
-- [ ] **UI-02**: Component library: React Aria Components (Apache-2.0); all interactive widgets from it; no second UI kit.
-- [ ] **UI-03**: Theme system: CSS custom properties on `[data-theme]`, runtime switch, choice persisted (localStorage, try/catch), default follows `prefers-color-scheme`, `prefers-reduced-motion` disables animation; theme contract = one token file per theme validated by a schema test.
-- [ ] **UI-04**: Themes "Black Cat" and "Tron Neon" shipped; every text/background token pair used meets WCAG AA (4.5:1 text, 3:1 UI) asserted by a unit test over the token files.
-- [ ] **UI-05**: Original SVG logo and icon set (no third-party art); favicon set.
-- [ ] **UI-06**: Offline: no runtime request to any external origin (fonts self-hosted, OFL/compatible licenses recorded in `ui/THIRD_PARTY.md`); test asserts built HTML/CSS/JS reference only same-origin URLs.
+- [x] **UI-01**: `ui/` is a Vite + React + TypeScript (strict) SPA built to static files served by the API server at `/`; dev proxy to the API; `ui/` has its own tsconfig and tests and does not import from `src/` except generated API types.
+- [x] **UI-02**: Component library: React Aria Components (Apache-2.0); all interactive widgets from it; no second UI kit.
+- [x] **UI-03**: Theme system: CSS custom properties on `[data-theme]`, runtime switch, choice persisted (localStorage, try/catch), default follows `prefers-color-scheme`, `prefers-reduced-motion` disables animation; theme contract = one token file per theme validated by a schema test.
+- [x] **UI-04**: Themes "Black Cat" and "Tron Neon" shipped; every text/background token pair used meets WCAG AA (4.5:1 text, 3:1 UI) asserted by a unit test over the token files.
+- [x] **UI-05**: Original SVG logo and icon set (no third-party art); favicon set.
+- [x] **UI-06**: Offline: no runtime request to any external origin (fonts self-hosted, OFL/compatible licenses recorded in `ui/THIRD_PARTY.md`); test asserts built HTML/CSS/JS reference only same-origin URLs.
 - [ ] **UI-07**: Generate screen: persona + author pickers, input, output, trace view, banned-phrase and confidentiality indicators (counts only).
 - [ ] **UI-08**: Ingest/Authors screen: ingest text/file, list authors, stylometric profile view.
 - [ ] **UI-09**: Personas viewer.

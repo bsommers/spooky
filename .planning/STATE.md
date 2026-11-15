@@ -3,14 +3,14 @@ gsd_state_version: "1.0"
 milestone: v2
 milestone_name: scoring and humanizing (after v1 ships)
 status: unknown
-stopped_at: Phase 08 complete, ready to verify Phase 09
-last_updated: "2026-11-15T15:57:40.432Z"
-state_head: 330103c2912be50b0dcd9b2612a5e56ae79b9668
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-11-15T20:00:41.801Z"
+state_head: 1d3fbcce81de526929b034c661f3f4509b3bc160
 progress:
   total_phases: 11
   completed_phases: 2
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
   percent: 18
 current_phase: 09
 current_phase_name: service surfaces
@@ -31,6 +31,7 @@ current_phase_name: service surfaces
 | Phase 01 P01 | 7 min | 3 tasks | 17 files |
 | Phase 07 P01 | 35 min | 5 tasks | 40 files |
 | Phase 09 P01 | 45 min | 7 tasks | 41 files |
+| Phase 10 P01 | 80 min | 7 tasks | 108 files |
 
 ## Decisions
 
@@ -44,9 +45,10 @@ current_phase_name: service surfaces
 - [Phase 09]: optional bearer token on loopback, required off loopback; tokenless residual risk documented (user decision)
 - [Phase 09]: self-hosted OFL fonts via fontsource; committed Playwright baselines (user decisions, apply from Phase 10)
 - [Phase 09]: humanize is a PENDING capability enumerated by the parity test, not faked
+- [Phase 10]: React Aria Components, hash routing, six background tokens added to the theme contract; CSP without unsafe-inline (linked pressable stylesheet + exact hash)
 
 ## Session
 
-**Last session:** 2026-11-15T14:28:58.895Z
-**Stopped at:** Phase 08 complete, ready to verify Phase 09
+**Last session:** 2026-11-15T20:00:41.609Z
+**Stopped at:** Completed 10-01-PLAN.md
 **Resume file:** None
