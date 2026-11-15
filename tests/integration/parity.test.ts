@@ -15,24 +15,35 @@ const rows = section
   .filter((l) => l.startsWith('|') && !/^\|\s*(-|Capability)/.test(l))
   .map((l) => {
     const [capability, lib, cli] = l.split('|').slice(1, 4).map((c) => c.trim());
-    return { capability: capability ?? '', method: /engine\.(\w+)\(/.exec(lib ?? '')?.[1], command: /ghostwriter (\w+)/.exec(cli ?? '')?.[1], cli: cli ?? '' };
+    // `service ...` in the library column marks a registry-level capability (no Engine method); the surfaces test covers it.
+    return { capability: capability ?? '', method: /engine\.(\w+)\(/.exec(lib ?? '')?.[1], service: /^service /.test(lib ?? ''), command: /ghostwriter (\w+)/.exec(cli ?? '')?.[1], cli: cli ?? '' };
   });
 
 const program = buildProgram({ stdout: () => undefined, stderr: () => undefined, stdin: (async function* () {})(), stdinIsTTY: false, env: {} });
 const commands = new Map(program.commands.map((c) => [c.name(), c]));
 
 describe('surface parity (CONTRACTS.md)', () => {
-  it('the table is parsed (6 capabilities)', () => {
-    expect(rows.map((r) => r.capability)).toEqual(['ingest corpus', 'show profile', 'list personas', 'list filters', 'generate', 'score']);
+  it('the table is parsed (9 capabilities)', () => {
+    expect(rows.map((r) => r.capability)).toEqual([
+      'ingest corpus',
+      'show profile',
+      'list personas',
+      'list filters',
+      'generate',
+      'score',
+      'list authors',
+      'config get',
+      'capabilities',
+    ]);
     for (const r of rows) {
-      expect(r.method, r.capability).toBeTruthy();
+      if (!r.service) expect(r.method, r.capability).toBeTruthy();
       expect(r.command, r.capability).toBeTruthy();
     }
   });
 
   for (const row of rows) {
-    it(`${row.capability}: engine.${row.method}() and \`ghostwriter ${row.command}\` both exist`, () => {
-      expect(typeof (Engine.prototype as unknown as Record<string, unknown>)[row.method as string]).toBe('function');
+    it(`${row.capability}: ${row.service ? 'service registry' : `engine.${row.method}()`} and \`ghostwriter ${row.command}\` both exist`, () => {
+      if (!row.service) expect(typeof (Engine.prototype as unknown as Record<string, unknown>)[row.method as string]).toBe('function');
       const cmd = commands.get(row.command as string);
       expect(cmd, `CLI command ${row.command}`).toBeDefined();
       // every flag the table promises is a real option / argument of that command
@@ -45,12 +56,14 @@ describe('surface parity (CONTRACTS.md)', () => {
   }
 
   it('the CLI has no command outside the table (no capability on one surface only)', () => {
-    expect([...commands.keys()].sort()).toEqual(rows.map((r) => r.command as string).sort());
+    // `serve` and `mcp` are transports (they host the other capabilities), not capabilities.
+    const transports = new Set(['serve', 'mcp']);
+    expect([...commands.keys()].filter((c) => !transports.has(c)).sort()).toEqual([...new Set(rows.map((r) => r.command as string))].sort());
   });
 
   it('the Engine has no public capability outside the table', () => {
     const methods = Object.getOwnPropertyNames(Engine.prototype).filter((m) => m !== 'constructor' && !m.startsWith('#'));
-    const allowed = new Set([...rows.map((r) => r.method as string), 'load']); // `load` = restore persisted state (CLI does it implicitly)
+    const allowed = new Set([...rows.filter((r) => !r.service).map((r) => r.method as string), 'load']); // `load` = restore persisted state (CLI does it implicitly)
     expect(methods.filter((m) => !allowed.has(m))).toEqual([]);
   });
 
