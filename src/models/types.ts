@@ -1,6 +1,8 @@
 // Single declaration site for every shared type (FND-02).
 // Sections 1-7 are .planning/CONTRACTS.md verbatim (error classes live in ./errors.ts); section 8 is Phase 1 additive (config shapes).
 
+import type { FeatureName } from '../../config/scorer.js';
+
 // ---------- 1. filters ----------
 export type Stage = 'pre' | 'post';
 export type OnError = 'fail-closed' | 'skip';
@@ -118,7 +120,16 @@ export type ProviderConfig =
 // ---------- 7. v2 contracts ----------
 export interface ScoreBreakdown {
   score: number;
+  /**
+   * One entry per feature. `weight` is the weight actually applied (configured weights normalized over the features
+   * that could be computed; 0 for a feature left out), `contribution = value * weight`, and the contributions sum to
+   * `score` (except for the `insufficient_text` result, whose score is the neutral 0.5 and whose contributions are 0).
+   */
   features: Record<string, { value: number; weight: number; contribution: number }>;
+  /** Phase 7, additive. `insufficient_text`, `low_confidence` (< 50 words), `unavailable:<feature>`. */
+  flags?: string[];
+  /** Phase 7, additive. What was measured (protected spans excluded). */
+  stats?: { words: number; sentences: number; paragraphs: number };
 }
 export interface DetectorAdapter {
   readonly name: string;
@@ -158,6 +169,28 @@ export interface ConfidentialityConfig {
   customRules: CustomRuleConfig[];
 }
 
+/** One external detector reachable over HTTP (Phase 7). Declared here, called only when a score request names it. */
+export interface DetectorConfig {
+  /** Lower-case id used by `--detector <name>`; `local` is reserved. */
+  name: string;
+  /** http(s) endpoint that accepts `POST {"text": "..."}` and answers `{"score": <0..1>}`. */
+  url: string;
+  /** Environment variable that holds a bearer token. Never the token itself. */
+  apiKeyEnv?: string;
+  /** Weight in the ensemble mean. */
+  weight: number;
+  timeoutMs: number;
+}
+
+/** AI-likeness scorer settings (Phase 7). Absent section = built-in defaults, no external detectors. */
+export interface ScorerConfig {
+  /** Per-feature weights; any non-negative set with a positive sum, normalized when the scorer is built. */
+  weights: Record<FeatureName, number>;
+  /** Weight of the local heuristic in the ensemble mean. */
+  localWeight: number;
+  detectors: DetectorConfig[];
+}
+
 export interface Config {
   limits: { maxInputChars: number };
   chunk: { size: number; overlap: number };
@@ -176,6 +209,7 @@ export interface Config {
   filters: { pipeline: FilterSpec[] };
   personas: TargetPersonaConfig[];
   confidentiality?: ConfidentialityConfig;
+  scorer?: ScorerConfig;
 }
 
 /** One path-qualified config problem, e.g. `{ path: 'llm.model', message: 'required' }`. */
