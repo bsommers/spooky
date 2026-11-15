@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spooky</title>
+    <meta name="description" content="Spooky: write in an author's voice for a target audience." />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- React Aria would inject this rule as an inline style element (blocked by the CSP); with this id present it does not. -->
+    <link rel="stylesheet" id="react-aria-pressable-style" href="/react-aria-pressable.css" />
+    <!-- Same-origin classic script (CSP script-src 'self'): sets data-theme before first paint so there is no flash. -->
+    <script src="/theme-init.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

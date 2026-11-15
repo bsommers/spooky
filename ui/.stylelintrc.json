@@ -1,0 +1,30 @@
+{
+  "extends": ["stylelint-config-standard"],
+  "rules": {
+    "color-no-hex": true,
+    "color-named": "never",
+    "function-disallowed-list": ["rgb", "rgba", "hsl", "hsla", "hwb", "lab", "lch", "oklab", "oklch", "color", "color-mix"],
+    "declaration-property-value-disallowed-list": {
+      "/^(background|border|outline|box-shadow|text-shadow|fill|stroke|color|accent-color|caret-color)/": ["/\\b(white|black|transparent)\\b/i"]
+    },
+    "selector-class-pattern": null,
+    "custom-property-pattern": null,
+    "keyframes-name-pattern": null,
+    "value-keyword-case": null,
+    "alpha-value-notation": null,
+    "color-function-notation": null,
+    "import-notation": null,
+    "no-descending-specificity": null
+  },
+  "overrides": [
+    {
+      "files": ["src/theme/themes/*.css"],
+      "rules": {
+        "color-no-hex": null,
+        "function-disallowed-list": null,
+        "declaration-property-value-disallowed-list": null,
+        "declaration-block-no-redundant-longhand-properties": null
+      }
+    }
+  ]
+}
