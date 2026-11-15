@@ -12,6 +12,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
+import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
 import { DEFAULT_API_LIMITS } from '../api/limits.js';
 import { OPERATIONS } from '../service/operations.js';
 import type { AnyOperation } from '../service/operations.js';
@@ -58,11 +59,53 @@ export async function serveStdio(runtime: ServiceRuntime, options: StdioOptions 
   const closed = new Promise<void>((resolve) => {
     transport.onclose = () => resolve();
   });
-  await server.connect(transport);
-  // The SDK transport does not notice the client hanging up; end of input means the session is over.
+
+  // Requests received but not yet answered (answered = the reply has been written). End of input must wait for them: a
+  // one-shot client (`printf '<request>\n' | ghostwriter mcp`) closes stdin right after writing, and still wants its reply.
+  // The hooks go in BEFORE `connect`: input that is already buffered is delivered as soon as the transport starts.
+  const unanswered = new Set<string | number>();
+  let whenIdle: (() => void) | undefined;
+  let tracked: ((message: JSONRPCMessage) => void) | undefined;
+  Object.defineProperty(transport, 'onmessage', {
+    configurable: true,
+    get: () => tracked,
+    set: (h: ((message: JSONRPCMessage) => void) | undefined) => {
+      tracked =
+        h === undefined
+          ? undefined
+          : (message): void => {
+              if ('method' in message && 'id' in message) unanswered.add(message.id);
+              h(message);
+            };
+    },
+  });
+  const send = transport.send.bind(transport);
+  transport.send = async (message) => {
+    try {
+      await send(message);
+    } finally {
+      if ('id' in message && message.id !== undefined && ('result' in message || 'error' in message)) {
+        unanswered.delete(message.id);
+        if (unanswered.size === 0) whenIdle?.();
+      }
+    }
+  };
+  const drained = async (): Promise<void> => {
+    while (unanswered.size > 0) await new Promise<void>((resolve) => (whenIdle = resolve));
+  };
+
+  // The SDK transport does not notice the client hanging up; end of input means the session is over once the replies are out.
   const input = options.stdin ?? process.stdin;
-  input.once('end', () => void server.close());
-  input.once('close', () => void server.close());
+  let ending = false;
+  const onEnd = (): void => {
+    if (ending) return;
+    ending = true;
+    void drained().then(() => server.close());
+  };
+  input.once('end', onEnd);
+  input.once('close', onEnd);
+  await server.connect(transport);
+  // An abort (SIGINT / SIGTERM) is a shutdown request: do not wait for work in progress.
   const onAbort = (): void => void server.close();
   options.signal?.addEventListener('abort', onAbort, { once: true });
   if (options.signal?.aborted === true) onAbort();
