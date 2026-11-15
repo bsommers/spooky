@@ -10,6 +10,15 @@ export const MAX_HUMANIZE_ITERATIONS = 10;
 /** A rewrite may not shrink the text below, or grow it beyond, these fractions of the word count it started from. */
 export const HUMANIZE_LENGTH_BOUNDS = { min: 0.5, max: 2 } as const;
 
+/**
+ * "Added prose" check of the meaning guard: a candidate sentence of at least this many words whose distinct words (3+
+ * letters) overlap the original's vocabulary by less than `OVERLAP` is novel; more than `TOLERANCE` of the original's
+ * sentence count (rounded down: none for a text under 10 sentences) of them fails the candidate.
+ */
+export const HUMANIZE_NOVEL_SENTENCE_MIN_WORDS = 4;
+export const HUMANIZE_NOVEL_SENTENCE_OVERLAP = 0.5;
+export const HUMANIZE_NOVEL_SENTENCE_TOLERANCE = 0.1;
+
 /** Largest model answer the rewrite step accepts, as a multiple of the input length (plus a floor), in characters. */
 export const HUMANIZE_OUTPUT_FACTOR = 3;
 export const HUMANIZE_OUTPUT_FLOOR = 2000;
