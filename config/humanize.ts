@@ -19,6 +19,13 @@ export const HUMANIZE_NOVEL_SENTENCE_MIN_WORDS = 4;
 export const HUMANIZE_NOVEL_SENTENCE_OVERLAP = 0.5;
 export const HUMANIZE_NOVEL_SENTENCE_TOLERANCE = 0.1;
 
+/**
+ * "Silent deletion" check: at least this fraction of the original's distinct words (3+ letters) must still occur in the
+ * candidate. Judged only when the original has at least `MIN_VOCAB` such words.
+ */
+export const HUMANIZE_MIN_CONTENT_KEPT = 0.6;
+export const HUMANIZE_CONTENT_CHECK_MIN_VOCAB = 12;
+
 /** Largest model answer the rewrite step accepts, as a multiple of the input length (plus a floor), in characters. */
 export const HUMANIZE_OUTPUT_FACTOR = 3;
 export const HUMANIZE_OUTPUT_FLOOR = 2000;

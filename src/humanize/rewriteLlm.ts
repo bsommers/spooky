@@ -43,10 +43,29 @@ export function buildRewritePrompt(args: { text: string; features: readonly stri
   return { system: lines.join('\n'), user: ['<input>', neutralize(args.text), '</input>'].join('\n') };
 }
 
-/** Drop an echoed <input> wrapper from a model answer. */
-function unwrap(answer: string): string {
-  const m = /^\s*<input>\s*([\s\S]*?)\s*<\/input>\s*$/.exec(answer);
-  return m === null ? answer : (m[1] as string);
+/** Drop an echoed <input> wrapper, and one code fence around the whole answer when the original text has no fence. */
+function unwrap(answer: string, original: string): string {
+  let out = answer;
+  const m = /^\s*<input>\s*([\s\S]*?)\s*<\/input>\s*$/.exec(out);
+  if (m !== null) out = m[1] as string;
+  if (!/^[ \t]*(?:`{3,}|~{3,})/m.test(original)) {
+    const f = /^\s*(`{3,}|~{3,})[^\n`~]*\n([\s\S]*?)\n[ \t]*\1[ \t]*\s*$/.exec(out);
+    if (f !== null) out = f[2] as string;
+  }
+  return out;
+}
+
+/** Stock openers a chat model puts before the text it was asked to return. */
+const CHATTER_OPENER = /^(?:sure|certainly|of course|okay|ok|absolutely|here(?:'s|’s| is| are))\b/i;
+
+/**
+ * True when the first line of the answer is a preamble the original did not start with: it ends in a colon, or it is a stock
+ * chat opener. Such text would become part of the document, and the next iteration would build on it.
+ */
+export function hasPreamble(answer: string, original: string): boolean {
+  const first = (answer.split('\n', 1)[0] as string).trim();
+  if (first === '' || original.includes(first)) return false;
+  return first.endsWith(':') || (CHATTER_OPENER.test(first) && !CHATTER_OPENER.test(original.trimStart()));
 }
 
 export interface RewriteLlmOptions {
@@ -77,5 +96,7 @@ export async function rewriteWithLlm(
   if (typeof raw !== 'string' || raw.trim() === '' || raw.length > cap) {
     throw new LlmError(attempts, new Error(`LLM returned ${typeof raw !== 'string' ? 'a non-string' : raw.trim() === '' ? 'an empty' : 'an oversized'} answer`));
   }
-  return unwrap(raw).trim();
+  const text = unwrap(raw, args.text).trim();
+  if (hasPreamble(text, args.text)) throw new LlmError(attempts, new Error('LLM answer starts with a preamble, not the edited text'));
+  return text;
 }

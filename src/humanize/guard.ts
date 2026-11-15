@@ -11,10 +11,11 @@
 //   - links: URLs, emails, bare hosts and markdown link targets form the same multiset (none added, swapped or dropped);
 //     no new code fence
 //   - added prose: sentences made mostly of words the original never used are counted; more than a small tolerance fails
+//   - deletion: at least HUMANIZE_MIN_CONTENT_KEPT of the original's distinct words (3+ letters) are still there
 //   - length: the word count stays within HUMANIZE_LENGTH_BOUNDS of the original
 // Known limits, stated in docs/HUMANIZING.md: a sentence-initial proper noun is not tracked as an entity unless it also
 // occurs elsewhere capitalized; negation flips, reordered facts and changed verbs pass. Violations are fixed codes, never text.
-import { HUMANIZE_LENGTH_BOUNDS, HUMANIZE_NOVEL_SENTENCE_MIN_WORDS, HUMANIZE_NOVEL_SENTENCE_OVERLAP, HUMANIZE_NOVEL_SENTENCE_TOLERANCE } from '../../config/humanize.js';
+import { HUMANIZE_LENGTH_BOUNDS, HUMANIZE_CONTENT_CHECK_MIN_VOCAB, HUMANIZE_MIN_CONTENT_KEPT, HUMANIZE_NOVEL_SENTENCE_MIN_WORDS, HUMANIZE_NOVEL_SENTENCE_OVERLAP, HUMANIZE_NOVEL_SENTENCE_TOLERANCE } from '../../config/humanize.js';
 import { PLACEHOLDER_RE } from '../filters/confidentiality.js';
 import { splitProtected } from '../filters/protectedSpans.js';
 
@@ -31,6 +32,7 @@ export type GuardViolation =
   | 'link_dropped'
   | 'fence_added'
   | 'sentences_added'
+  | 'content_dropped'
   | 'length_out_of_bounds';
 
 export interface GuardResult {
@@ -139,6 +141,14 @@ export function checkMeaning(before: string, after: string): GuardResult {
     if (known / words.size < HUMANIZE_NOVEL_SENTENCE_OVERLAP) novel++;
   }
   if (novel > Math.floor(sb * HUMANIZE_NOVEL_SENTENCE_TOLERANCE)) violations.add('sentences_added');
+
+  // silent deletion: most of the original's vocabulary must still be there (short texts are too noisy to judge)
+  if (vb.size >= HUMANIZE_CONTENT_CHECK_MIN_VOCAB) {
+    const va = vocabulary(a);
+    let kept = 0;
+    for (const w of vb) if (va.has(w)) kept++;
+    if (kept / vb.size < HUMANIZE_MIN_CONTENT_KEPT) violations.add('content_dropped');
+  }
 
   const wb = wordCount(b);
   if (wb > 0) {
