@@ -127,6 +127,26 @@ describe('Overview', () => {
     for (const c of client.calls.slice(before)) expect((c.init.headers as Record<string, string>).Authorization).toBeUndefined();
   });
 
+  it('submitting a token keeps the form mounted (focus never falls to <body>), then moves focus to the result; no nested live regions', async () => {
+    let release: (r: Response) => void = () => undefined;
+    const client = fakeClient((_url, init) => {
+      if ((init.headers as Record<string, string>).Authorization === 'Bearer right-token-0123456789') return new Promise<Response>((r) => (release = r));
+      return jsonResponse(401, { ok: false, error: { code: 'UNAUTHORIZED', message: 'a valid bearer token is required' } });
+    });
+    const user = userEvent.setup();
+    const { container } = renderApp('#/', client);
+    const field = await screen.findByLabelText('API token');
+    expect(container.querySelector('.gw-card')?.hasAttribute('aria-live')).toBe(false);
+    await user.type(field, 'right-token-0123456789');
+    await user.click(screen.getByRole('button', { name: 'Connect' }));
+    const button = await screen.findByRole('button', { name: 'Checking...' }); // pending: still the same form on screen
+    expect(screen.getByLabelText('API token')).toBe(field);
+    expect(document.body).toContainElement(button);
+    release(jsonResponse(200, CAPABILITIES));
+    expect(await screen.findByText(/Connected/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: 'Server' })).toHaveFocus());
+  });
+
   it('a lockout (429) says how long to wait', async () => {
     renderApp('#/', fakeClient(() => jsonResponse(429, { ok: false, error: { code: 'RATE_LIMITED', message: 'x' } }, { 'Retry-After': '60' })));
     expect(await screen.findByText('Too many wrong tokens; try again in 60 seconds.')).toBeInTheDocument();

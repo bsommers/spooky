@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, FieldError, Form, Input, Label, TextField } from 'react-aria-components';
 import { ApiError } from '../../api/client';
 import type { GetResponse } from '../../api/client';
@@ -9,16 +9,19 @@ type Capabilities = GetResponse<'/api/capabilities'>;
 type State =
   | { kind: 'loading' }
   | { kind: 'ok'; caps: Capabilities }
-  | { kind: 'auth'; wrong: boolean; waitSeconds?: number }
+  | { kind: 'auth'; wrong: boolean; waitSeconds?: number; busy?: boolean }
   | { kind: 'error'; message: string };
 
 export function Overview() {
   const api = useApi();
   const [state, setState] = useState<State>({ kind: 'loading' });
+  const heading = useRef<HTMLHeadingElement>(null);
+  const submitted = useRef(false);
 
   const load = useCallback(
     async (wrongToken = false) => {
-      setState({ kind: 'loading' });
+      // Keep the token form mounted while a submitted token is being checked, so keyboard focus is not dropped to <body>.
+      setState((prev) => (prev.kind === 'auth' ? { ...prev, busy: true } : { kind: 'loading' }));
       try {
         setState({ kind: 'ok', caps: await api.get('/api/capabilities') });
       } catch (e) {
@@ -37,12 +40,22 @@ export function Overview() {
     void load();
   }, [load]);
 
+  // The form that had focus is replaced by the result: move focus to the result's heading instead of losing it.
+  useEffect(() => {
+    if (state.kind === 'ok' && submitted.current) {
+      submitted.current = false;
+      heading.current?.focus();
+    }
+  }, [state.kind]);
+
   return (
     <section aria-labelledby="ov-h" className="gw-page">
       <h1 id="ov-h">Overview</h1>
       <p className="gw-lede">Write in an author&apos;s voice, for the audience you have in mind. The screens for that arrive next; this page shows the server this app is talking to.</p>
-      <div className="gw-card" aria-live="polite">
-        <h2>Server</h2>
+      <div className="gw-card">
+        <h2 tabIndex={-1} ref={heading}>
+          Server
+        </h2>
         {state.kind === 'loading' && <p role="status">Checking the server...</p>}
         {state.kind === 'error' && (
           <p role="alert" className="gw-status gw-status--danger">
@@ -55,6 +68,8 @@ export function Overview() {
             onSubmit={(e) => {
               e.preventDefault();
               const value = String(new FormData(e.currentTarget).get('token') ?? '');
+              if (state.busy === true) return;
+              submitted.current = true;
               api.setToken(value);
               void load(true);
             }}
@@ -69,8 +84,8 @@ export function Overview() {
               <FieldError className="gw-field__error" />
             </TextField>
             <p className="gw-hint">The token stays in this page&apos;s memory only. Reloading the page forgets it.</p>
-            <Button type="submit" className="gw-btn gw-btn--primary">
-              Connect
+            <Button type="submit" className="gw-btn gw-btn--primary" isPending={state.busy === true}>
+              {state.busy === true ? 'Checking...' : 'Connect'}
             </Button>
           </Form>
         )}
