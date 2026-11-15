@@ -104,3 +104,32 @@ describe('secrets never leave through MCP', () => {
     }
   });
 });
+
+describe('a secret-shaped detector name is not echoed back', () => {
+  it('over HTTP and over MCP the error says how long the name was, not what it was', async () => {
+    const name = 'sk-ant-api03-AbCdEfGhIjKlMnOpQrSt';
+    const rig = await makeRuntime();
+    const server = await startTestServer(rig, { mcp: true });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    const mcp = createMcpServer(rig.runtime);
+    const client = new Client({ name: 'test', version: '1' });
+    await Promise.all([mcp.connect(a), client.connect(b)]);
+    try {
+      const r = await postJson(server, '/api/score', { text: 'A plain sentence to rate. And another one.', detectors: [name] });
+      expect(r.status).toBe(400);
+      expect(r.json().error.code).toBe('CONFIG_INVALID');
+      expect(r.text).not.toContain(name);
+      expect(r.text).not.toContain('sk-ant');
+      expect(r.text).toContain(`${name.length} characters`);
+      const m = await client.callTool({ name: 'score', arguments: { text: 'A plain sentence to rate. And another one.', detectors: [name] } });
+      expect(m.isError).toBe(true);
+      expect(JSON.stringify(m)).not.toContain('sk-ant');
+      expect(server.logs.join('\n')).not.toContain('sk-ant');
+    } finally {
+      await client.close();
+      await mcp.close();
+      await server.close();
+      rig.cleanup();
+    }
+  });
+});

@@ -101,7 +101,7 @@ describe('engine.score', () => {
   it('an unknown detector name is a ConfigError that lists the configured ones, raised before any filter or call', async () => {
     const d = detector('acme', () => 0.5);
     const engine = new Engine({ config: loadConfig(baseConfig), detectors: [d] });
-    await expect(engine.score(TEXT, { detectors: ['acme', 'nope'] })).rejects.toThrow(/unknown detector "nope"; configured: acme/);
+    await expect(engine.score(TEXT, { detectors: ['acme', 'nope'] })).rejects.toThrow(/unknown detector \(4 characters\); configured: acme/);
     expect(d.calls).toEqual([]);
     await expect(new Engine({ config: loadConfig(baseConfig) }).score(TEXT, { detectors: ['x'] })).rejects.toThrow(/none are configured/);
   });

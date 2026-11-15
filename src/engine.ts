@@ -234,7 +234,8 @@ export class Engine {
     const unknown = names.filter((n) => !this.#detectors.has(n));
     if (unknown.length > 0) {
       const valid = [...this.#detectors.keys()].sort();
-      throw new ConfigError(`unknown detector${unknown.length === 1 ? '' : 's'} ${unknown.map((n) => JSON.stringify(n.slice(0, 40))).join(', ')}; ${valid.length === 0 ? 'none are configured (scorer.detectors)' : `configured: ${valid.join(', ')}`}`);
+      // The name is caller input and may be secret-shaped: report how many (and how long), never the text (like UnknownAuthorError).
+      throw new ConfigError(`unknown detector${unknown.length === 1 ? '' : 's'} (${unknown.map((n) => `${n.length} characters`).join(', ')}); ${valid.length === 0 ? 'none are configured (scorer.detectors)' : `configured: ${valid.join(', ')}`}`);
     }
     const adapters = names.map((n) => this.#detectors.get(n) as DetectorAdapter);
 
