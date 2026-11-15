@@ -3,14 +3,14 @@ gsd_state_version: "1.0"
 milestone: v2
 milestone_name: scoring and humanizing (after v1 ships)
 status: unknown
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-11-15T04:23:33.607Z"
-state_head: 13bcf566eaa8d1d08a53c1d2771e5cf4a7419ef2
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-11-15T14:28:59.055Z"
+state_head: 99e826ca1447f4ae527cfcdfe196af7c58e4d6e6
 progress:
   total_phases: 11
   completed_phases: 2
   total_plans: 11
-  completed_plans: 7
+  completed_plans: 8
   percent: 18
 current_phase: 07
 current_phase_name: scorer
@@ -30,6 +30,7 @@ current_phase_name: scorer
 |------|----------|-------|-------|
 | Phase 01 P01 | 7 min | 3 tasks | 17 files |
 | Phase 07 P01 | 35 min | 5 tasks | 40 files |
+| Phase 09 P01 | 45 min | 7 tasks | 41 files |
 
 ## Decisions
 
@@ -38,9 +39,14 @@ current_phase_name: scorer
 - [Phase 01]: Config types added to types.ts as additive section (FND-02); strict zod objects reject typo keys
 - [Phase 01]: Plan 01-01 committed on branch gsd/phase-01-foundation because commit guard blocks protected main
 - [Phase 07]: Scorer defaults pre-registered, not tuned: AUC 0.7293 (CI 0.60-0.84); lexicalDiversity/repetition anti-predictive on corpus, reweighting deferred to a larger corpus
+- [Phase 09]: node:http server, no framework (user decision)
+- [Phase 09]: config get is read-only; no config set on any surface (user decision)
+- [Phase 09]: optional bearer token on loopback, required off loopback; tokenless residual risk documented (user decision)
+- [Phase 09]: self-hosted OFL fonts via fontsource; committed Playwright baselines (user decisions, apply from Phase 10)
+- [Phase 09]: humanize is a PENDING capability enumerated by the parity test, not faked
 
 ## Session
 
-**Last session:** 2026-11-15T04:23:33.465Z
-**Stopped at:** Completed 07-01-PLAN.md
+**Last session:** 2026-11-15T14:28:58.895Z
+**Stopped at:** Completed 09-01-PLAN.md
 **Resume file:** None

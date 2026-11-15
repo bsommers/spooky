@@ -70,15 +70,15 @@ Uniform-surface rule: every capability exists on every surface (library, CLI, HT
 
 ### Service layer, HTTP API, MCP
 
-- [ ] **API-01**: `src/service/operations.ts` declares each operation once (name, zod input/output schema, error mapping, handler over `Engine`); CLI, HTTP and MCP are generated/derived from it, none re-declares schemas.
-- [ ] **API-02**: Local HTTP server (`ghostwriter serve`): binds 127.0.0.1 by default; non-loopback bind requires explicit `--host` plus a bearer token; optional bearer token (constant-time compare, token from env var, never logged); no `Access-Control-Allow-Origin: *` (same-origin only, optional explicit origin allowlist); Host/Origin header checks against DNS rebinding.
-- [ ] **API-03**: Request limits: body size cap (default 1 MiB, ingest 10 MiB, configurable), JSON only, content-type enforced, request timeout, bounded concurrency; over-limit -> 413 before parsing.
-- [ ] **API-04**: Typed error -> HTTP status mapping mirrors CLI exit codes (usage/config/profile 400/422, unknown persona/author 404, filter failed 422, LLM failed 502, input too large 413, store corrupt 500, state locked 423/503) in one table shared with `EXIT_CODES`; body `{ok:false,error:{code,message}}`; unexpected errors by class name only.
-- [ ] **API-05**: `GET /openapi.json` serves an OpenAPI 3.1 document generated from the zod schemas; test validates it and fails on drift from the registered operations. `config get` never returns secrets (env var names only).
-- [ ] **API-06**: Parity test: enumerates the operations registry and fails when any operation lacks a library method, CLI command, HTTP route or MCP tool (and when a surface has a capability the registry lacks). Adds missing CLI commands (`authors`, `config get`; `score`/`humanize` arrive with Phases 7-8).
-- [ ] **MCP-01**: MCP server using the official `@modelcontextprotocol/sdk`; transports stdio and streamable HTTP (the latter under the API-02 auth/bind rules); one tool per operation with zod-derived input schema.
-- [ ] **MCP-02**: Tool inputs are untrusted: validated with the operation schema, size-capped, no path/shell interpolation, no file-system paths accepted (text only); tool output is data, errors map to MCP error results with the same codes.
-- [ ] **MCP-03**: Tool annotations (readOnlyHint/destructiveHint) set correctly; ingest is the only state-mutating tool; secrets never in tool results or logs; stdio server writes nothing but protocol to stdout.
+- [x] **API-01**: `src/service/operations.ts` declares each operation once (name, zod input/output schema, error mapping, handler over `Engine`); CLI, HTTP and MCP are generated/derived from it, none re-declares schemas.
+- [x] **API-02**: Local HTTP server (`ghostwriter serve`): binds 127.0.0.1 by default; non-loopback bind requires explicit `--host` plus a bearer token; optional bearer token (constant-time compare, token from env var, never logged); no `Access-Control-Allow-Origin: *` (same-origin only, optional explicit origin allowlist); Host/Origin header checks against DNS rebinding.
+- [x] **API-03**: Request limits: body size cap (default 1 MiB, ingest 10 MiB, configurable), JSON only, content-type enforced, request timeout, bounded concurrency; over-limit -> 413 before parsing.
+- [x] **API-04**: Typed error -> HTTP status mapping mirrors CLI exit codes (usage/config/profile 400/422, unknown persona/author 404, filter failed 422, LLM failed 502, input too large 413, store corrupt 500, state locked 423/503) in one table shared with `EXIT_CODES`; body `{ok:false,error:{code,message}}`; unexpected errors by class name only.
+- [x] **API-05**: `GET /openapi.json` serves an OpenAPI 3.1 document generated from the zod schemas; test validates it and fails on drift from the registered operations. `config get` never returns secrets (env var names only).
+- [x] **API-06**: Parity test: enumerates the operations registry and fails when any operation lacks a library method, CLI command, HTTP route or MCP tool (and when a surface has a capability the registry lacks). Adds missing CLI commands (`authors`, `config get`; `score`/`humanize` arrive with Phases 7-8).
+- [x] **MCP-01**: MCP server using the official `@modelcontextprotocol/sdk`; transports stdio and streamable HTTP (the latter under the API-02 auth/bind rules); one tool per operation with zod-derived input schema.
+- [x] **MCP-02**: Tool inputs are untrusted: validated with the operation schema, size-capped, no path/shell interpolation, no file-system paths accepted (text only); tool output is data, errors map to MCP error results with the same codes.
+- [x] **MCP-03**: Tool annotations (readOnlyHint/destructiveHint) set correctly; ingest is the only state-mutating tool; secrets never in tool results or logs; stdio server writes nothing but protocol to stdout.
 
 ### UI
 
