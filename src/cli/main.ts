@@ -271,7 +271,7 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
       opts: CommonOpts & LlmOpts & { author: string; persona: string; file?: string; exemplars?: number; maxTokens?: number; temperature?: number; humanize?: boolean; target?: number },
     ) => {
       const op = operation('generate');
-      if (opts.target !== undefined && opts.humanize !== true) throw new ConfigError('--target needs --humanize');
+      // `--target` without `--humanize` is rejected by the operation's input schema, like on HTTP and MCP (USAGE).
       const config = await resolveConfig(io, opts, true);
       const input = await readInput(io, file, opts.file, config.limits.maxInputChars * 4);
       const engine = await engineFor(config, opts, true);

@@ -84,7 +84,7 @@ describe('ghostwriter generate --humanize', () => {
   it('--target without --humanize is a usage error; with it the trace has humanizer entries', async () => {
     const bad = await runCli(['generate', '--author', 'terse', '--persona', 'exec', '--target', '0.2', '--config', cfg, '--state-dir', state], { stdin: 'Draft.' }, { llm: new MockLlmClient(() => AI) });
     expect(bad.code).toBe(2);
-    expect(bad.err).toContain('--target needs --humanize');
+    expect(bad.err).toContain('target needs humanize');
     const ok = await runCli(['generate', '--author', 'terse', '--persona', 'exec', '--humanize', '--target', '0.1', '--json', '--config', cfg, '--state-dir', state], { stdin: 'Draft.' }, { llm: new MockLlmClient(() => AI) });
     expect(ok.code, ok.err).toBe(0);
     expect(JSON.parse(ok.out).trace.some((t: { filter: string }) => t.filter === 'humanize')).toBe(true);

@@ -224,6 +224,13 @@ describe('the same failure, the same code, the table status on each surface', ()
       mcp: ['humanize', { text: DRAFT, authorId: 'nobody', llm: false }],
     },
     {
+      name: 'generate target without humanize (LW-04: the same on every surface)',
+      code: 'USAGE',
+      http: (s) => postJson(s, '/api/generate', { authorId: 'terse', persona: 'exec', text: DRAFT, target: 0.2 }),
+      cli: { argv: ['generate', '--author', 'terse', '--persona', 'exec', '--target', '0.2'], stdin: DRAFT },
+      mcp: ['generate', { authorId: 'terse', persona: 'exec', text: DRAFT, target: 0.2 }],
+    },
+    {
       name: 'invalid author id (usage)',
       code: 'USAGE',
       http: (s) => postJson(s, '/api/ingest', { authorId: '../x', name: 'N', text: 'One. Two. Three.' }),

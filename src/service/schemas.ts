@@ -50,7 +50,7 @@ export const generateInput = z.strictObject({
   humanize: z.boolean().optional(),
   /** Phase 8: humanizer target score (needs `humanize`). */
   target: z.number().min(0).max(1).optional(),
-});
+}).refine((v) => v.target === undefined || v.humanize === true, { error: 'target needs humanize: true', path: ['target'] });
 export const profileInput = z.strictObject({ authorId: authorIdSchema });
 export const humanizeInput = z.strictObject({
   text: textSchema,

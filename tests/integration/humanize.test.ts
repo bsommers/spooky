@@ -178,6 +178,15 @@ describe('Engine.generate with humanize', () => {
     expect(r.trace.some((t) => t.filter === 'persona-banned')).toBe(false);
   });
 
+  it('a target without humanize is a ConfigError before the model is called (LW-04)', async () => {
+    const llm = new MockLlmClient([]);
+    const e = new Engine({ config: loadConfig(CONFIG), llm, retry: fastRetry });
+    await e.ingest('terse', 'Terse Author', corpus());
+    await expect(e.generate('terse', 'exec', DRAFT, { target: 0.2 })).rejects.toBeInstanceOf(ConfigError);
+    await expect(e.generate('terse', 'exec', DRAFT, { humanize: false, target: 0.2 })).rejects.toBeInstanceOf(ConfigError);
+    expect(llm.requests).toHaveLength(0);
+  });
+
   it('validates the humanizer target before the model is called', async () => {
     const llm = new MockLlmClient([]);
     const e = new Engine({ config: loadConfig(CONFIG), llm, retry: fastRetry });

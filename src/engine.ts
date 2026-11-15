@@ -266,7 +266,9 @@ export class Engine {
    */
   async generate(authorId: string, personaKey: string, input: string, options: EngineGenerateOptions = {}): Promise<GenerateResult> {
     const { humanize, target, ...rest } = options;
-    if (humanize === true || target !== undefined) this.#humanizeSettings({ ...(target === undefined ? {} : { target }) }); // validate before the model is called
+    // `target` only steers the humanizer: asking for one without it is a mistake, rejected the same way on every surface.
+    if (target !== undefined && humanize !== true) throw new ConfigError('generate: target needs humanize: true');
+    if (humanize === true) this.#humanizeSettings({ ...(target === undefined ? {} : { target }) }); // validate before the model is called
     const r = await this.#orchestrator.generate(authorId, personaKey, input, rest);
     if (humanize !== true) return r;
     // The generated text already went through the post pipeline (style, then confidentiality). The humanizer runs on it and
