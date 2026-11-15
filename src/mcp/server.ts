@@ -24,11 +24,19 @@ export const MCP_INSTRUCTIONS =
   'Tools take author ids, never file paths. Text you pass may be redacted for secrets before it is used. ' +
   '`ingest` is the only tool that changes stored state.';
 
-export function createMcpServer(runtime: ServiceRuntime, ops: readonly AnyOperation[] = OPERATIONS): Server {
+/** `inflight` (optional) collects the promise of every running tool call so a caller can wait for the work to finish. */
+export function createMcpServer(runtime: ServiceRuntime, ops: readonly AnyOperation[] = OPERATIONS, inflight?: Set<Promise<unknown>>): Server {
   const server = new Server({ name: 'ghostwriter', version: packageVersion() }, { capabilities: { tools: {} }, instructions: MCP_INSTRUCTIONS });
   server.setRequestHandler(ListToolsRequestSchema, () => ({ tools: toolDefinitions(ops) }));
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const result = await callTool(runtime, request.params.name, request.params.arguments, ops);
+    const running = callTool(runtime, request.params.name, request.params.arguments, ops);
+    inflight?.add(running);
+    let result;
+    try {
+      result = await running;
+    } finally {
+      inflight?.delete(running);
+    }
     if (result === undefined) throw new McpError(ErrorCode.InvalidParams, 'unknown tool');
     return result;
   });
@@ -64,12 +72,23 @@ export async function serveStdio(runtime: ServiceRuntime, options: StdioOptions 
 
 /** Handle one streamable-HTTP MCP request (POST). `body` is the already size-limited, parsed JSON. */
 export async function handleMcpHttp(runtime: ServiceRuntime, req: IncomingMessage, res: ServerResponse, body: unknown, ops: readonly AnyOperation[] = OPERATIONS): Promise<void> {
-  const server = createMcpServer(runtime, ops);
+  const inflight = new Set<Promise<unknown>>();
+  const server = createMcpServer(runtime, ops, inflight);
   const transport = new StreamableHTTPServerTransport({ enableJsonResponse: true });
-  res.on('close', () => {
-    void transport.close();
-    void server.close();
+  const closed = new Promise<void>((resolve) => {
+    res.on('close', () => {
+      void transport.close();
+      void server.close();
+      resolve();
+    });
   });
   await server.connect(transport);
-  await transport.handleRequest(req, res, body);
+  const handled = transport.handleRequest(req, res, body);
+  handled.catch(() => undefined); // an error after the client left has nobody to report to
+  // The transport's promise never settles when the client hangs up mid-call, so do not wait on it alone.
+  await Promise.race([handled, closed]);
+  // Resolve only when the tool calls have finished, even if the client hung up: the caller holds a concurrency slot
+  // until then, so a dropped connection cannot start more work than the cap allows.
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  while (inflight.size > 0) await Promise.allSettled([...inflight]);
 }

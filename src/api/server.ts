@@ -195,12 +195,17 @@ export async function startApiServer(options: ApiServerOptions): Promise<ApiServ
         res.setHeader('Allow', 'POST');
         throw new SurfaceError('METHOD_NOT_ALLOWED', 'MCP over HTTP accepts POST only');
       }
+      // The slot is held until the work is DONE, not until the socket closes: a client that sends a request and drops
+      // the connection must not free a slot while its operation is still running (concurrency cap bypass).
       const release = gate.acquire();
-      res.once('close', release);
-      if (!isJsonContentType(req.headers['content-type'])) throw new SurfaceError('UNSUPPORTED_MEDIA_TYPE', 'Content-Type must be application/json');
-      checkDeclaredLength(req, limits.maxIngestBodyBytes);
-      const body = parseJsonBody(await readBody(req, { ...limits, maxBodyBytes: limits.maxIngestBodyBytes }));
-      await handleMcpHttp(runtime, req, res, body, ops);
+      try {
+        if (!isJsonContentType(req.headers['content-type'])) throw new SurfaceError('UNSUPPORTED_MEDIA_TYPE', 'Content-Type must be application/json');
+        checkDeclaredLength(req, limits.maxIngestBodyBytes);
+        const body = parseJsonBody(await readBody(req, { ...limits, maxBodyBytes: limits.maxIngestBodyBytes }));
+        await handleMcpHttp(runtime, req, res, body, ops);
+      } finally {
+        release();
+      }
       return;
     }
 
@@ -221,19 +226,21 @@ export async function startApiServer(options: ApiServerOptions): Promise<ApiServ
       res.setHeader('Allow', op.http.method);
       throw new SurfaceError('METHOD_NOT_ALLOWED', `use ${op.http.method} for this route`);
     }
-    const release = gate.acquire();
-    res.once('close', release);
-
-    let input: unknown;
-    if (op.http.method === 'GET') {
-      input = queryInput(url);
-    } else {
-      if (!isJsonContentType(req.headers['content-type'])) throw new SurfaceError('UNSUPPORTED_MEDIA_TYPE', 'Content-Type must be application/json');
-      const cap = op.mutates ? limits.maxIngestBodyBytes : limits.maxBodyBytes;
-      checkDeclaredLength(req, cap);
-      input = parseJsonBody(await readBody(req, { ...limits, maxBodyBytes: cap }));
+    const release = gate.acquire(); // released in `finally`, when the operation has finished (see the /mcp branch)
+    try {
+      let input: unknown;
+      if (op.http.method === 'GET') {
+        input = queryInput(url);
+      } else {
+        if (!isJsonContentType(req.headers['content-type'])) throw new SurfaceError('UNSUPPORTED_MEDIA_TYPE', 'Content-Type must be application/json');
+        const cap = op.mutates ? limits.maxIngestBodyBytes : limits.maxBodyBytes;
+        checkDeclaredLength(req, cap);
+        input = parseJsonBody(await readBody(req, { ...limits, maxBodyBytes: cap }));
+      }
+      sendJson(res, 200, await runtime.runDocument(op, input));
+    } finally {
+      release();
     }
-    sendJson(res, 200, await runtime.runDocument(op, input));
   }
 
   const server = createServer({ maxHeaderSize: 16 * 1024 }, (req, res) => {

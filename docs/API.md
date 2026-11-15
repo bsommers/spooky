@@ -55,7 +55,7 @@ Body: `{ "ok": false, "error": { "code": "UNKNOWN_AUTHOR", "message": "..." } }`
 - `--host`: anything but a loopback address needs `--token-env`, otherwise the server refuses to start (`CONFIG_INVALID`, exit 2).
 - `--allow-origin`: an exact browser origin (`http://localhost:5173`) that may call the API cross-origin. Never `*`, never `null`, no paths.
 - `--max-body`: request body cap in bytes for every route except ingest (default 1 MiB); `--max-ingest-body`: cap for `ingest` and `/mcp` (default 10 MiB). Both range from 1 KiB to 256 MiB. A body over the cap is 413 before it is read. (The engine accepts corpora up to 10 M characters, up to 40 MB of UTF-8; raise `--max-ingest-body` if you ingest more than 10 MiB through the API, or ingest with the CLI.)
-- Defaults you cannot change from the command line: 30 s to receive a request, 8 operations in flight (the ninth gets 503), 16 KiB of headers.
+- Defaults you cannot change from the command line: 30 s to receive a request, 8 operations in flight (the ninth gets 503), 16 KiB of headers. A concurrency slot is held until the operation has FINISHED, not until the socket closes: a client that sends a request and hangs up keeps its slot (the model call is not cancelled), so dropped connections cannot start more work than the cap. The same holds for `/mcp`.
 
 ## Threat model and the tokenless default
 The service sits in front of an LLM key and a private corpus. Threats and what stops them:

@@ -238,6 +238,91 @@ describe('size, shape and time limits', () => {
     );
   });
 
+  describe('the concurrency cap holds when clients drop their connections (slot freed on completion, not on socket close)', () => {
+    /** Send a complete request and hang up without reading the answer. */
+    const fireAndAbort = (port: number, path: string, payload: unknown, extraHeaders = ''): Promise<void> =>
+      new Promise((resolve) => {
+        const data = JSON.stringify(payload);
+        const sock = connect(port, '127.0.0.1');
+        sock.on('error', () => undefined);
+        sock.on('connect', () => {
+          sock.write(
+            `POST ${path} HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nContent-Type: application/json\r\n${extraHeaders}Content-Length: ${Buffer.byteLength(data)}\r\n\r\n${data}`,
+            () => setTimeout(() => {
+              sock.destroy();
+              resolve();
+            }, 25),
+          );
+        });
+      });
+    const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
+    function slowRig(): { script: never; stats: { started: number; active: number; peak: number }; release: () => void } {
+      let release: () => void = () => undefined;
+      const held = new Promise<void>((r) => (release = r));
+      const stats = { started: 0, active: 0, peak: 0 };
+      const script = async (): Promise<string> => {
+        stats.started += 1;
+        stats.active += 1;
+        stats.peak = Math.max(stats.peak, stats.active);
+        await held;
+        stats.active -= 1;
+        return CLEAN_ANSWER;
+      };
+      return { script: script as never, stats, release: () => release() };
+    }
+    const cap = { maxBodyBytes: 100_000, maxIngestBodyBytes: 100_000, readTimeoutMs: 2000, maxConcurrent: 2 };
+    const generate = { authorId: 'terse', persona: 'exec', text: 'Please rewrite this short draft.' };
+
+    it('REST: 10 fire-and-abort POSTs start at most maxConcurrent handlers; the next caller still gets 503 while they run', async () => {
+      const { script, stats, release } = slowRig();
+      await withServer({ limits: cap }, async (s) => {
+        for (let i = 0; i < 10; i++) await fireAndAbort(s.port, '/api/generate', generate);
+        for (let i = 0; i < 100 && stats.started < 2; i++) await sleep(10);
+        await sleep(100);
+        expect(stats.started).toBe(2);
+        expect(stats.peak).toBeLessThanOrEqual(2);
+        const busy = await postJson(s, '/api/generate', generate);
+        expect(busy.status).toBe(503);
+        expect(busy.json().error.code).toBe('OVERLOADED');
+        release();
+        for (let i = 0; i < 100 && stats.active > 0; i++) await sleep(10);
+        expect(stats.active).toBe(0);
+        expect(stats.peak).toBeLessThanOrEqual(2);
+        let ok = busy;
+        for (let i = 0; i < 100 && ok.status === 503; i++) {
+          await sleep(10);
+          ok = await postJson(s, '/api/generate', generate);
+        }
+        expect(ok.status).toBe(200); // slots came back
+      }, { script } as never);
+    });
+
+    it('MCP over HTTP: the same, for tools/call generate', async () => {
+      const { script, stats, release } = slowRig();
+      const call = { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'generate', arguments: generate } };
+      const accept = 'Accept: application/json, text/event-stream\r\n';
+      await withServer({ limits: cap, mcp: true }, async (s) => {
+        for (let i = 0; i < 10; i++) await fireAndAbort(s.port, '/mcp', call, accept);
+        for (let i = 0; i < 100 && stats.started < 2; i++) await sleep(10);
+        await sleep(100);
+        expect(stats.started).toBe(2);
+        expect(stats.peak).toBeLessThanOrEqual(2);
+        const busy = await raw(s, '/mcp', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' }, body: JSON.stringify(call) });
+        expect(busy.status).toBe(503);
+        release();
+        for (let i = 0; i < 100 && stats.active > 0; i++) await sleep(10);
+        expect(stats.peak).toBeLessThanOrEqual(2);
+        let ok = busy;
+        for (let i = 0; i < 100 && ok.status === 503; i++) {
+          await sleep(10);
+          ok = await raw(s, '/mcp', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' }, body: JSON.stringify(call) });
+        }
+        expect(ok.status).toBe(200); // slots came back
+      }, { script } as never);
+    });
+  });
+
   it('unknown routes are 404, wrong methods 405 with Allow, HEAD/PUT/DELETE never run an operation', async () => {
     await withServer({}, async (s, rig) => {
       expect((await raw(s, '/nope')).status).toBe(404);
