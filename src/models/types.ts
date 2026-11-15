@@ -106,6 +106,13 @@ export interface GenerateOptions {
   maxTokens?: number;
   temperature?: number;
 }
+/** What `Engine.generate` takes: the orchestrator's options plus the Phase 8 humanizer switch. */
+export interface EngineGenerateOptions extends GenerateOptions {
+  /** Run the humanizer loop on the generated text. */
+  humanize?: boolean;
+  /** Humanizer target score (default `config.humanize.targetScore`). Only with `humanize`. */
+  target?: number;
+}
 export interface GenerateResult {
   text: string;
   trace: TraceEntry[];
@@ -201,6 +208,14 @@ export interface ScorerConfig {
   detectors: DetectorConfig[];
 }
 
+/** Humanizer loop settings (Phase 8). */
+export interface HumanizeConfig {
+  /** Stop as soon as the local score is at or below this. */
+  targetScore: number;
+  /** At most this many iterations (each can cost one model call); 0 = never rewrite. */
+  maxIterations: number;
+}
+
 export interface Config {
   limits: { maxInputChars: number };
   chunk: { size: number; overlap: number };
@@ -220,6 +235,8 @@ export interface Config {
   personas: TargetPersonaConfig[];
   confidentiality?: ConfidentialityConfig;
   scorer?: ScorerConfig;
+  /** Phase 8. Absent section = defaults (`targetScore` 0.3, `maxIterations` 3). */
+  humanize?: HumanizeConfig;
 }
 
 /** One path-qualified config problem, e.g. `{ path: 'llm.model', message: 'required' }`. */
@@ -253,5 +270,57 @@ export interface ScoreResult {
   members: EnsembleMember[];
   excluded: EnsembleExclusion[];
   /** Confidentiality trace of the redaction that ran first. */
+  trace: TraceEntry[];
+}
+
+// ---------- 10. humanizer (Phase 8 additive) ----------
+export interface HumanizeOptions {
+  /** Author whose stylometric profile steers the model pass. Absent = no profile in the prompt. */
+  authorId?: string;
+  /** Stop at or below this local score. Default `config.humanize.targetScore` (0.3). */
+  target?: number;
+  /** At most this many iterations. Default `config.humanize.maxIterations` (3). */
+  maxIterations?: number;
+  /** Allow the model pass (one call per iteration at most). `false` = deterministic edits only. Default true. */
+  llm?: boolean;
+  maxTokens?: number;
+  temperature?: number;
+}
+/** One attempted edit of the loop. Numbers and fixed words only: never any text. */
+export interface HumanizeStep {
+  iteration: number;
+  step: 'deterministic' | 'llm';
+  /** The (at most two) worst-scoring features this iteration targeted. */
+  features: string[];
+  scoreBefore: number;
+  scoreAfter: number;
+  kept: boolean;
+  /** `improved` kept; the rest are reverts: `no_improvement`, `guard_rejected`, `llm_error`. */
+  outcome: 'improved' | 'no_improvement' | 'guard_rejected' | 'llm_error';
+  /** The confidentiality pass changed the candidate (a secret was removed from it). */
+  redacted: boolean;
+  /** Guard violations (fixed codes such as `number_changed`), empty when the guard passed. */
+  guard: string[];
+  /** Feature value after minus before, for every feature (negative = reads less machine-written). */
+  featureDeltas: Record<string, number>;
+  error?: string;
+}
+export interface HumanizeResult {
+  text: string;
+  initialScore: number;
+  finalScore: number;
+  reachedTarget: boolean;
+  /** Loop passes started (0 when the text was already at or below the target). */
+  iterations: number;
+  /** Model calls made (at most one per iteration). */
+  llmCalls: number;
+  /** Candidates the meaning guard rejected. */
+  guardRejections: number;
+  /** Feature value, final minus initial. */
+  featureDeltas: Record<string, number>;
+  featuresBefore: Record<string, number>;
+  featuresAfter: Record<string, number>;
+  steps: HumanizeStep[];
+  /** Confidentiality trace of the input redaction, then one entry per step. */
   trace: TraceEntry[];
 }

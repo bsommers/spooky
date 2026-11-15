@@ -35,7 +35,7 @@ const DELIMITER_LOOKALIKE = /<\s*\/?\s*(?:input|exemplars?)\b/gi;
  * on), so `<\u200binput>`, `<inpu\u200bt>` and fullwidth `＜/input＞` are caught. Only the offending `<` is rewritten,
  * in the original text; everything else is returned byte for byte.
  */
-function neutralize(text: string): string {
+export function neutralize(text: string): string {
   if (!text.includes('<') && /^[\u0000-\u007f]*$/.test(text)) return text;
   const { norm, starts } = normalizeWithMap(text);
   const hits: Array<[number, number]> = [];

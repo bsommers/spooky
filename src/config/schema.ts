@@ -5,6 +5,7 @@ import { DEFAULT_CHUNK, DEFAULT_LIMITS, DEFAULT_LLM, MAX_LLM_RETRIES } from '../
 import { DEFAULT_PERSONAS } from '../../config/targetPersonas.js';
 import { DETECTOR_KEY_ENV_MESSAGE, ENDPOINT_MESSAGES, detectorEndpointProblem, endpointProblem, isDetectorKeyEnvName } from '../llm/endpoint.js';
 import { DEFAULT_DETECTOR_TIMEOUT_MS, DEFAULT_LOCAL_WEIGHT, DEFAULT_SCORER_WEIGHTS } from '../../config/scorer.js';
+import { DEFAULT_HUMANIZE, MAX_HUMANIZE_ITERATIONS } from '../../config/humanize.js';
 import { DEFAULT_PIPELINE, KNOWN_FILTER_NAMES, firstFilterAfterFinalConfidentiality } from '../../config/filters.js';
 
 const positiveInt = z.number().int().positive();
@@ -173,6 +174,11 @@ const scorerSchema = z
       .default(() => []),
   });
 
+const humanizeSchema = z.strictObject({
+  targetScore: z.number().min(0).max(1).default(DEFAULT_HUMANIZE.targetScore),
+  maxIterations: z.number().int().min(0).max(MAX_HUMANIZE_ITERATIONS).default(DEFAULT_HUMANIZE.maxIterations),
+});
+
 export const configSchema = z.strictObject({
   limits: z
     .strictObject({ maxInputChars: positiveInt.default(DEFAULT_LIMITS.maxInputChars) })
@@ -193,4 +199,5 @@ export const configSchema = z.strictObject({
   personas: personasSchema.default(() => DEFAULT_PERSONAS.map((p) => structuredClone(p))),
   confidentiality: confidentialitySchema.optional(),
   scorer: scorerSchema.optional(),
+  humanize: humanizeSchema.optional(),
 });
