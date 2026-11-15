@@ -1,4 +1,4 @@
-# Checkpoint (2026-11-15, autonomous run mid-flight; refreshed pre-compact)
+# Checkpoint (2026-11-15, after P8 close; refreshed for compact)
 
 **Status (2026-11-15):** v1 P1-6 done, main pushed (e198796); branch gsd/phase-01-foundation unpushed. P7, P9 closed by hand (human_needed waived by user, WAIVER.md); P8 humanizer done+reviewed+fixed+verified+closed (mean AI score drop only 0.050, scorer weak AUC 0.694, no live-model run, guard heuristic limits in docs/HUMANIZING.md). Gate: unit 922, integration 285, system 65, security 472, torture 5, 0 skipped. NEXT: P10 UI foundation (plan .planning/phases/10-ui-foundation/10-01-PLAN.md; Black Cat/Tron themes, React Aria Components, 5 decisions accepted), then P11. Per phase: gsd_run query dispatch-isolation --raw --phase NN --force-isolation none, no isolation arg; sonnet agents; executor -> reviewer -> fixer -> verifier -> phase.complete -> ROADMAP -> commit explicit paths. No push/PR without say-so.
 
