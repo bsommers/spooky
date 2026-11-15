@@ -32,7 +32,7 @@ import type { FetchLike } from './llm/http.js';
 import type { CreateLlmClientOptions } from './llm/factory.js';
 import type { RetryOptions } from './llm/retry.js';
 import { ConfigError, FilterFailedError, InputTooLargeError } from './models/errors.js';
-import type { Config, DetectorAdapter, Embedder, EngineGenerateOptions, FilterSpec, GenerateResult, HumanizeOptions, HumanizeResult, LlmClient, ProviderConfig, ScoreOptions, ScoreResult, StylometricProfile, TargetPersonaConfig, VectorStore } from './models/types.js';
+import type { Config, DetectorAdapter, Embedder, EngineGenerateOptions, FilterSpec, GenerateResult, HumanizeOptions, HumanizeResult, LlmClient, ProviderConfig, ScoreOptions, ScoreResult, StylometricProfile, TargetPersonaConfig, TraceEntry, VectorStore } from './models/types.js';
 import { Orchestrator } from './orchestration/orchestrator.js';
 import { HttpDetectorAdapter, assertDetectorAdapter } from './scoring/detectorAdapter.js';
 import { runEnsemble } from './scoring/ensemble.js';
@@ -41,7 +41,7 @@ import { SourceManager } from './registry/sourceManager.js';
 import { withStateLock } from './registry/stateLock.js';
 import type { StateLockOptions } from './registry/stateLock.js';
 import type { SourceLimits } from './registry/sourceManager.js';
-import { TargetManager } from './registry/targetManager.js';
+import { TargetManager, findBannedPhrases } from './registry/targetManager.js';
 import { InMemoryVectorStore } from './store/inMemoryVectorStore.js';
 
 export const STORE_FILE = 'store.json';
@@ -271,8 +271,13 @@ export class Engine {
     if (humanize !== true) return r;
     // The generated text already went through the post pipeline (style, then confidentiality). The humanizer runs on it and
     // re-runs confidentiality on every candidate and on its result, so the text returned here is redacted last.
-    const h = await this.#humanizeRedacted(r.text, { authorId, ...(target === undefined ? {} : { target }), ...(rest.maxTokens === undefined ? {} : { maxTokens: rest.maxTokens }), ...(rest.temperature === undefined ? {} : { temperature: rest.temperature }) });
-    return { text: h.text, trace: [...r.trace, ...h.trace], promptTokensEstimate: r.promptTokensEstimate };
+    // The persona's banned phrases are enforced on every candidate (a rewrite that adds one is rejected) and re-checked on the
+    // result, so the `persona-banned` trace entry (and the CLI warning built on it) describes the text actually returned.
+    const persona = this.#targets.get(personaKey);
+    const h = await this.#humanizeRedacted(r.text, { authorId, ...(target === undefined ? {} : { target }), ...(rest.maxTokens === undefined ? {} : { maxTokens: rest.maxTokens }), ...(rest.temperature === undefined ? {} : { temperature: rest.temperature }) }, (t) => findBannedPhrases(t, persona));
+    const banned = findBannedPhrases(h.text, persona);
+    const bannedEntry: TraceEntry[] = banned.length > 0 ? [{ filter: 'persona-banned', modified: false, ms: 0, metadata: { found: true, count: banned.length } }] : [];
+    return { text: h.text, trace: [...r.trace.filter((t) => t.filter !== 'persona-banned'), ...h.trace, ...bannedEntry], promptTokensEstimate: r.promptTokensEstimate };
   }
 
   /**
@@ -317,7 +322,7 @@ export class Engine {
   }
 
   /** The loop on text that already went through confidentiality. Every candidate is redacted again by the same pre pipeline. */
-  async #humanizeRedacted(redacted: string, o: HumanizeOptions): Promise<HumanizeResult> {
+  async #humanizeRedacted(redacted: string, o: HumanizeOptions, banned?: (text: string) => readonly string[]): Promise<HumanizeResult> {
     const settings = this.#humanizeSettings(o);
     const profile = o.authorId === undefined ? undefined : this.#sources.getProfile(o.authorId);
     const redact = async (t: string): Promise<{ text: string; modified: boolean }> => {
@@ -326,7 +331,7 @@ export class Engine {
       return { text: out.text, modified: out.text !== t };
     };
     const filter = new HumanizeFilter({
-      deps: { score: (t) => this.#scorer.score(t), redact, llm: this.#getLlm, ...(this.#retry === undefined ? {} : { retry: this.#retry }) },
+      deps: { score: (t) => this.#scorer.score(t), redact, llm: this.#getLlm, ...(banned === undefined ? {} : { banned }), ...(this.#retry === undefined ? {} : { retry: this.#retry }) },
       ...settings,
       useLlm: o.llm !== false,
     });

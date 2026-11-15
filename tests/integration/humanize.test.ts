@@ -165,6 +165,18 @@ describe('Engine.generate with humanize', () => {
     expect(plain.trace.some((t) => t.filter === 'humanize')).toBe(false);
   });
 
+  it('a model rewrite that adds a persona-banned phrase is rejected, and persona-banned reflects the returned text (MD-03)', async () => {
+    const llm = new MockLlmClient((req: { system: string; user: string }) => (/<input>/.test(req.user) && /edit text so it reads/.test(req.system) ? `${joiner(req)} (synergy)` : GENERATED));
+    const e = new Engine({ config: loadConfig(CONFIG), llm, retry: fastRetry });
+    await e.ingest('terse', 'Terse Author', corpus());
+    const r = await e.generate('terse', 'exec', DRAFT, { humanize: true, target: 0.1 });
+    const llmSteps = r.trace.filter((t) => t.filter === 'humanize' && t.metadata.step === 'llm');
+    expect(llmSteps.length).toBeGreaterThan(0);
+    for (const t of llmSteps) expect(t.metadata).toMatchObject({ outcome: 'guard_rejected', guard: 'banned_phrase_added' });
+    expect(r.text.toLowerCase()).not.toContain('synergy');
+    expect(r.trace.some((t) => t.filter === 'persona-banned')).toBe(false);
+  });
+
   it('validates the humanizer target before the model is called', async () => {
     const llm = new MockLlmClient([]);
     const e = new Engine({ config: loadConfig(CONFIG), llm, retry: fastRetry });

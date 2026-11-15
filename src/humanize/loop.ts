@@ -27,6 +27,11 @@ export interface HumanizeLoopDeps {
   llm?: () => LlmClient;
   profile?: StylometricProfile;
   retry?: RetryOptions;
+  /**
+   * The persona's banned phrases found in a text (reported by name, as configured). A candidate that contains one the input
+   * did not already contain is rejected (`banned_phrase_added`): the humanizer must not undo what the style stage enforced.
+   */
+  banned?(text: string): readonly string[];
 }
 
 export interface HumanizeLoopOptions {
@@ -57,6 +62,7 @@ export async function runHumanizeLoop(input: string, deps: HumanizeLoopDeps, opt
   let iterations = 0;
   let llmCalls = 0;
   let guardRejections = 0;
+  const bannedAtStart = new Set(deps.banned?.(input) ?? []);
   let detFailedFrom: string | null = null; // the deterministic edits were reverted from this text: they would repeat
 
   const record = (step: HumanizeStep, ms: number): void => {
@@ -88,9 +94,11 @@ export async function runHumanizeLoop(input: string, deps: HumanizeLoopDeps, opt
     const candidate = red.text;
     const base = { iteration, step, features: [...features], scoreBefore: bestScore.score, redacted: red.modified, featureDeltas: {} as Record<string, number> };
     const guard = checkMeaning(input, candidate);
-    if (!guard.ok) {
+    const violations: string[] = [...guard.violations];
+    if (deps.banned !== undefined && deps.banned(candidate).some((p) => !bannedAtStart.has(p))) violations.push('banned_phrase_added');
+    if (violations.length > 0) {
       guardRejections++;
-      record({ ...base, scoreAfter: bestScore.score, kept: false, outcome: 'guard_rejected', guard: guard.violations }, performance.now() - t0);
+      record({ ...base, scoreAfter: bestScore.score, kept: false, outcome: 'guard_rejected', guard: violations }, performance.now() - t0);
       return false;
     }
     const scored = deps.score(candidate);
