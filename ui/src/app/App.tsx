@@ -12,6 +12,7 @@ import { Shell } from './Shell';
 // Every feature screen is its own lazy chunk: the first paint carries the shell only.
 const GenerateScreen = lazy(() => import('../screens/generate/GenerateScreen'));
 const AuthorsScreen = lazy(() => import('../screens/authors/AuthorsScreen'));
+const ScoreScreen = lazy(() => import('../screens/score/ScoreScreen'));
 const PersonasScreen = lazy(() => import('../screens/personas/PersonasScreen'));
 const SettingsScreen = lazy(() => import('../screens/settings/SettingsScreen'));
 
@@ -19,6 +20,7 @@ const SCREENS: Record<string, ReactNode> = {
   '/generate': <GenerateScreen />,
   '/authors': <AuthorsScreen />,
   '/personas': <PersonasScreen />,
+  '/score': <ScoreScreen />,
   '/settings': <SettingsScreen />,
 };
 

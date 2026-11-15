@@ -12,6 +12,7 @@ export const ROUTES: readonly RouteDef[] = [
   { path: '/generate', label: 'Generate', title: 'Generate' },
   { path: '/authors', label: 'Authors', title: 'Authors and ingest' },
   { path: '/personas', label: 'Personas', title: 'Personas' },
+  { path: '/score', label: 'Score / Humanize', title: 'Score and humanize' },
   { path: '/settings', label: 'Settings', title: 'Settings' },
   { path: '/kitchen-sink', label: 'Kitchen sink', title: 'Kitchen sink' },
 ];
