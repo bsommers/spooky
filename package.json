@@ -18,7 +18,12 @@
     "test": "vitest run",
     "verify": "scripts/verify.sh",
     "calibrate": "tsc -p tsconfig.build.json && node dist/scripts/calibrate.js",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "ui:install": "npm --prefix ui ci",
+    "ui:build": "npm --prefix ui run build",
+    "ui:test": "npm --prefix ui test",
+    "ui:e2e": "npm run build && npm run ui:build && npm --prefix ui run test:e2e",
+    "ui:e2e:container": "npm run build && npm run ui:build && ui/scripts/e2e-container.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.0",
@@ -35,6 +40,7 @@
   },
   "files": [
     "dist",
-    "!dist/scripts"
+    "!dist/scripts",
+    "ui/dist"
   ]
 }

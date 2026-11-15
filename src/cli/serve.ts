@@ -10,7 +10,8 @@ import { InvalidArgumentError } from 'commander';
 import { DEFAULT_HOST, isLoopbackBind } from '../api/auth.js';
 import { isOtherSystemsEnvName } from '../llm/endpoint.js';
 import { DEFAULT_PORT, startApiServer } from '../api/server.js';
-import type { ApiServer } from '../api/server.js';
+import { createStaticHandler, defaultUiDir } from '../api/static.js';
+import type { ApiServer, StaticHandler } from '../api/server.js';
 import { DEFAULT_API_LIMITS } from '../api/limits.js';
 import { defaultStateDir } from '../engine.js';
 import { ConfigError } from '../models/errors.js';
@@ -25,6 +26,9 @@ export interface ListenOpts {
   allowHost: string[];
   maxBody?: number;
   maxIngestBody?: number;
+  /** `--no-ui` sets this false. */
+  ui?: boolean;
+  uiDir?: string;
 }
 
 const int = (v: string): number => {
@@ -107,6 +111,20 @@ export async function startListening(
   const token = resolveToken(opts.tokenEnv, io.env, configuredKeyEnvs);
   const runtime = new ServiceRuntime(engine, { stateDir: opts.stateDir ?? defaultStateDir(io.env) });
   await runtime.markLoaded();
+  // The web UI is served from the same process and origin (Phase 10), only alongside the HTTP API it talks to.
+  let staticHandler: StaticHandler | undefined;
+  if (mode.api && opts.ui !== false) {
+    const dir = opts.uiDir ?? (await defaultUiDir());
+    if (dir !== undefined) {
+      try {
+        staticHandler = await createStaticHandler({ root: dir });
+      } catch {
+        if (opts.uiDir !== undefined) throw new ConfigError('--ui-dir must be a directory that holds a built UI (an index.html); build it with: npm run ui:build');
+      }
+    } else {
+      io.stderr('note: the web UI is not built (npm run ui:build), so / answers 404; the API is unaffected\n');
+    }
+  }
   const server = await startApiServer({
     runtime,
     ...(opts.host === undefined ? {} : { host: opts.host }),
@@ -117,9 +135,10 @@ export async function startListening(
     limits: { ...(opts.maxBody === undefined ? {} : { maxBodyBytes: opts.maxBody }), ...(opts.maxIngestBody === undefined ? {} : { maxIngestBodyBytes: opts.maxIngestBody }) },
     api: mode.api,
     mcp: mode.mcp,
+    ...(staticHandler === undefined ? {} : { staticHandler }),
     log: (line) => io.stderr(`${line}\n`),
   });
-  io.stderr(`listening on ${server.url}${mode.api ? ' (HTTP API, GET /openapi.json)' : ''}${mode.mcp ? ' (MCP at /mcp)' : ''}\n`);
+  io.stderr(`listening on ${server.url}${mode.api ? ' (HTTP API, GET /openapi.json)' : ''}${staticHandler === undefined ? '' : ' (web UI at /)'}${mode.mcp ? ' (MCP at /mcp)' : ''}\n`);
   if (token === undefined) {
     io.stderr(
       `note: no API token: any process on this machine that can reach ${server.url} can use it${isLoopbackBind(server.host) ? '' : ' (and the network can)'}; set one with --token-env (a random value, for example: openssl rand -hex 24)\n`,
@@ -135,6 +154,8 @@ export async function startListening(
 export function registerServe(program: Command, ctx: CliContext): void {
   addListenOptions(ctx.common(program.command('serve').description('serve the HTTP API (OpenAPI at /openapi.json); loopback only unless a token is set')))
     .option('--mcp', 'also serve MCP over streamable HTTP at /mcp')
+    .option('--no-ui', 'do not serve the web UI at /')
+    .option('--ui-dir <path>', 'serve the web UI from this directory (default: ui/dist next to the package)')
     .action(async (opts: CommonOpts & ListenOpts & { mcp?: boolean }) => {
       const signal = stopSignal(ctx.io);
       const server = await startListening(ctx, opts, { api: true, mcp: opts.mcp === true });

@@ -202,6 +202,34 @@ describe('system: HTTP server (spawned binary)', () => {
     }
   }, 60_000);
 
+  it('serve --ui-dir serves the built web UI at / next to the API; --no-ui does not; an unusable --ui-dir is a config error', async () => {
+    const uiDir = join(root, 'ui', 'dist'); // built by the UI tests' global setup / scripts/verify.sh
+    const withUi = await spawnListening(['serve', '--ui-dir', uiDir]);
+    try {
+      expect(withUi.err()).toContain('web UI at /');
+      const url = withUi.doc.listening.url;
+      const page = await fetch(`${url}/`);
+      expect(page.status).toBe(200);
+      expect(page.headers.get('content-security-policy')).toContain("script-src 'self'");
+      expect(await page.text()).toContain('<div id="root">');
+      expect((await fetch(`${url}/api/personas`)).status).toBe(200);
+      expect((await fetch(`${url}/api/nothing`)).headers.get('content-type')).toContain('application/json');
+    } finally {
+      expect(await withUi.stop()).toBe(0);
+    }
+    const noUi = await spawnListening(['serve', '--ui-dir', uiDir, '--no-ui']);
+    try {
+      expect((await fetch(`${noUi.doc.listening.url}/`)).status).toBe(404);
+      expect((await fetch(`${noUi.doc.listening.url}/api/personas`)).status).toBe(200);
+    } finally {
+      expect(await noUi.stop()).toBe(0);
+    }
+    const bad = spawnSync(process.execPath, [bin, 'serve', '--ui-dir', join(work, 'no-such-ui'), '--port', '0', '--json', ...baseArgs()], { env: cleanEnv(), encoding: 'utf8', timeout: 20_000 });
+    expect(bad.status).toBe(2);
+    expect(JSON.parse(bad.stdout).error.code).toBe('CONFIG_INVALID');
+    expect(bad.stdout).not.toContain('no-such-ui'); // the path is not echoed
+  }, 60_000);
+
   it('serve refuses a wildcard bind without a token: exit 2, nothing listening', async () => {
     const r = spawnSync(process.execPath, [bin, 'serve', '--host', '0.0.0.0', '--port', '0', '--json', ...baseArgs()], { env: cleanEnv(), encoding: 'utf8', timeout: 20_000 });
     expect(r.status).toBe(2);
