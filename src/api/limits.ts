@@ -17,6 +17,8 @@ export interface ApiLimits {
   readTimeoutMs: number;
   /** Operations (and MCP requests) running at the same time. */
   maxConcurrent: number;
+  /** Open sockets at once, authenticated or not (beyond this the server drops new connections); each is also cut off by the timeouts. */
+  maxConnections: number;
 }
 
 export const DEFAULT_API_LIMITS: Readonly<ApiLimits> = Object.freeze({
@@ -24,6 +26,7 @@ export const DEFAULT_API_LIMITS: Readonly<ApiLimits> = Object.freeze({
   maxIngestBodyBytes: 10 * 1024 * 1024,
   readTimeoutMs: 30_000,
   maxConcurrent: 8,
+  maxConnections: 256,
 });
 
 /** Hard ceilings for what the CLI flags may ask for. */

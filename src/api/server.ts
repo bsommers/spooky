@@ -156,6 +156,7 @@ export async function startApiServer(options: ApiServerOptions): Promise<ApiServ
     if (!Number.isInteger(v) || v < 1024 || v > MAX_BODY_CEILING) throw new ConfigError(`${flag} must be between 1024 and ${MAX_BODY_CEILING} bytes`);
   }
   if (!Number.isInteger(limits.maxConcurrent) || limits.maxConcurrent < 1) throw new ConfigError('max concurrency must be a positive integer');
+  if (!Number.isInteger(limits.maxConnections) || limits.maxConnections < 1) throw new ConfigError('max connections must be a positive integer');
   const origins = { allowedOrigins: new Set((options.allowOrigins ?? []).map(normalizeAllowedOrigin)) };
   const hosts = buildHostPolicy(host, token !== undefined, options.allowHosts ?? []);
   const ops = options.operations ?? OPERATIONS;
@@ -312,6 +313,7 @@ export async function startApiServer(options: ApiServerOptions): Promise<ApiServ
   server.requestTimeout = Math.max(limits.readTimeoutMs * 2, 10_000);
   server.headersTimeout = Math.min(limits.readTimeoutMs, 60_000);
   server.keepAliveTimeout = 5_000;
+  server.maxConnections = limits.maxConnections; // sockets held open before authentication are bounded too
 
   await new Promise<void>((resolve, reject) => {
     const onError = (err: Error): void => reject(err);

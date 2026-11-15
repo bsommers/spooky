@@ -159,7 +159,12 @@ export function buildHostPolicy(bindHost: string, hasToken: boolean, extraHosts:
   const hosts = new Set(['localhost', '127.0.0.1', '[::1]']);
   const configured = bindHost.toLowerCase();
   hosts.add(configured.includes(':') && !configured.startsWith('[') ? `[${configured}]` : configured);
-  for (const h of extraHosts) hosts.add(h.toLowerCase());
+  for (const h of extraHosts) {
+    // `example.com:8787` is accepted and means the name `example.com` (the Host check compares names, not ports).
+    const name = hostnameOfHostHeader(h);
+    if (name === undefined) throw new ConfigError('--allow-host must be a host name such as example.com (optionally with :port), or an IP address');
+    hosts.add(name);
+  }
   return { allowedHosts: hosts };
 }
 

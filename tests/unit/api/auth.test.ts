@@ -298,3 +298,54 @@ describe('the server throttles failed tokens per address', () => {
     }
   });
 });
+
+describe('--allow-host', () => {
+  it('a name with a port allows that name (the check compares names); a malformed value is a ConfigError that does not echo it', () => {
+    const policy = buildHostPolicy('127.0.0.1', false, ['Example.COM:8787', 'api.internal']);
+    for (const h of ['example.com', 'example.com:8787', 'example.com:9999', 'API.internal:1']) expect(() => checkHost(policy, h), h).not.toThrow();
+    expect(() => checkHost(policy, 'evil.example')).toThrow(SurfaceError);
+    for (const bad of ['', 'a b', 'a/b', 'sk-live abc', 'host:port', 'x'.repeat(300)]) {
+      let message = '';
+      try {
+        buildHostPolicy('127.0.0.1', false, [bad]);
+      } catch (e) {
+        expect(e).toBeInstanceOf(ConfigError);
+        message = (e as Error).message;
+      }
+      expect(message, bad).not.toBe('');
+      if (bad.length > 2) expect(message).not.toContain(bad);
+    }
+  });
+});
+
+describe('connection cap', () => {
+  it('sockets beyond maxConnections are dropped; a freed slot serves again; a bad value refuses to start', async () => {
+    const { connect } = await import('node:net');
+    const rig = await makeRuntime();
+    const server = await startTestServer(rig, { limits: { maxConnections: 2 } });
+    const open = (): Promise<import('node:net').Socket> =>
+      new Promise((resolve) => {
+        const s = connect(server.port, '127.0.0.1');
+        s.on('error', () => undefined);
+        s.on('connect', () => resolve(s));
+      });
+    try {
+      const a = await open();
+      const b = await open();
+      const c = await open();
+      const closed = await new Promise<boolean>((resolve) => {
+        c.on('close', () => resolve(true));
+        setTimeout(() => resolve(false), 500);
+      });
+      expect(closed).toBe(true); // the third was refused
+      a.destroy();
+      await new Promise((r) => setTimeout(r, 100));
+      expect((await raw(server, '/api/personas')).status).toBe(200);
+      b.destroy();
+      await expect(startApiServer({ runtime: rig.runtime, port: 0, limits: { maxConnections: 0 } })).rejects.toThrow(ConfigError);
+    } finally {
+      await server.close();
+      rig.cleanup();
+    }
+  });
+});
