@@ -42,7 +42,7 @@ describe('HttpDetectorAdapter', () => {
   });
 
   it('classifies failures without leaking the url, token or body', async () => {
-    const run = (fetchImpl: () => Promise<Response>) => new HttpDetectorAdapter({ ...cfg, apiKeyEnv: 'K' }, { env: { K: 'tok-secret' }, fetch: fetchImpl }).score('x');
+    const run = (fetchImpl: () => Promise<Response>) => new HttpDetectorAdapter({ ...cfg, apiKeyEnv: 'ACME_KEY' }, { env: { ACME_KEY: 'tok-secret' }, fetch: fetchImpl }).score('x');
     const e500 = await run(async () => json('boom tok-secret', { status: 500 })).catch((e: unknown) => e);
     expect(e500).toBeInstanceOf(LlmTransportError);
     expect((e500 as LlmTransportError).status).toBe(500);
@@ -63,8 +63,12 @@ describe('HttpDetectorAdapter', () => {
   it('applies the endpoint policy at construction', () => {
     expect(() => new HttpDetectorAdapter({ ...cfg, url: 'file:///etc/passwd' })).toThrow(ConfigError);
     expect(() => new HttpDetectorAdapter({ ...cfg, url: 'https://u:p@detect.example/' })).toThrow(ConfigError);
-    expect(() => new HttpDetectorAdapter({ ...cfg, url: 'http://detect.example/', apiKeyEnv: 'K' })).toThrow(/https/);
-    expect(() => new HttpDetectorAdapter({ ...cfg, url: 'http://127.0.0.1:9000/', apiKeyEnv: 'K' })).not.toThrow();
+    expect(() => new HttpDetectorAdapter({ ...cfg, url: 'http://detect.example/', apiKeyEnv: 'ACME_KEY' })).toThrow(/https/);
+    expect(() => new HttpDetectorAdapter({ ...cfg, url: 'http://detect.example/' })).toThrow(/https/); // keyless cleartext to a remote host
+    expect(() => new HttpDetectorAdapter({ ...cfg, url: 'http://169.254.169.254/' })).toThrow(/https/);
+    expect(() => new HttpDetectorAdapter({ ...cfg, apiKeyEnv: 'AWS_SECRET_ACCESS_KEY' })).toThrow(/apiKeyEnv/);
+    expect(() => new HttpDetectorAdapter({ ...cfg, apiKeyEnv: 'K' })).toThrow(/apiKeyEnv/);
+    expect(() => new HttpDetectorAdapter({ ...cfg, url: 'http://127.0.0.1:9000/', apiKeyEnv: 'ACME_KEY' })).not.toThrow();
     expect(() => new HttpDetectorAdapter({ ...cfg, name: 'local' })).toThrow(ConfigError);
   });
 });

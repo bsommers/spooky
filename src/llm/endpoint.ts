@@ -11,7 +11,7 @@ export function isLoopbackHost(hostname: string): boolean {
   return hostname === 'localhost' || IPV4_LOOPBACK.test(hostname) || hostname === '[::1]' || hostname === '::1';
 }
 
-export type EndpointProblem = 'invalid' | 'scheme' | 'credentials' | 'cleartext-key';
+export type EndpointProblem = 'invalid' | 'scheme' | 'credentials' | 'cleartext-key' | 'cleartext';
 
 /**
  * Check `raw` as an LLM endpoint. `withKey` = a credential will be attached to requests. Returns the problem, or
@@ -30,9 +30,33 @@ export function endpointProblem(raw: string, withKey: boolean): EndpointProblem 
   return undefined;
 }
 
+/**
+ * Check `raw` as the endpoint of a score DETECTOR. Stricter than an LLM endpoint: the text sent to a detector is the
+ * user's own prose (redacted, but still private), so plain http is accepted only for a loopback host, key or no key.
+ */
+export function detectorEndpointProblem(raw: string, withKey: boolean): EndpointProblem | undefined {
+  const base = endpointProblem(raw, withKey);
+  if (base !== undefined) return base;
+  const u = new URL(raw);
+  return u.protocol === 'http:' && !isLoopbackHost(u.hostname) ? 'cleartext' : undefined;
+}
+
+// A detector bearer token comes from an env var NAMED in the config. A config the user did not write must not be able to
+// name an arbitrary variable (AWS_SECRET_ACCESS_KEY, GITHUB_TOKEN, ...) and have it sent to a host of its choosing.
+const DETECTOR_KEY_ENV = /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*_(?:API_KEY|KEY|TOKEN)$/;
+const OTHER_SYSTEMS_ENV = /^(?:AWS|AZURE|GCP|GOOGLE|GCLOUD|GITHUB|GH|GITLAB|NPM|SSH|DOCKER|KUBE|HOME|PATH)_|(?:^|_)(?:SECRET|PASSWORD|PASSPHRASE|PRIVATE|CREDENTIALS?)(?:_|$)/;
+
+/** Is `name` an acceptable detector `apiKeyEnv`: upper-case, ending in `_KEY`, `_API_KEY` or `_TOKEN`, and not another system's credential? */
+export function isDetectorKeyEnvName(name: string): boolean {
+  return name.length <= 64 && DETECTOR_KEY_ENV.test(name) && !OTHER_SYSTEMS_ENV.test(name);
+}
+
+export const DETECTOR_KEY_ENV_MESSAGE = 'must be an upper-case variable name ending in _KEY, _API_KEY or _TOKEN (for example ACME_DETECTOR_KEY), and not a cloud, git or secret/password variable';
+
 export const ENDPOINT_MESSAGES: Readonly<Record<EndpointProblem, string>> = {
   invalid: 'is not a valid URL',
   scheme: 'must use http or https',
   credentials: 'must not embed credentials',
   'cleartext-key': 'must use https when an API key is sent (plain http is allowed only for localhost, 127.0.0.0/8 and ::1)',
+  cleartext: 'must use https (plain http is allowed only for localhost, 127.0.0.0/8 and ::1)',
 };

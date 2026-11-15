@@ -175,6 +175,12 @@ describe('scorer config (scorer.weights)', () => {
     expect(fails([det({ apiKeyEnv: 'sk-live-not-a-name' })])).toBe(true);
     expect(fails([det({ weight: -1 })])).toBe(true);
     expect(fails([det({}), det({})])).toBe(true);
+    // egress: keyless remote / private-address http is refused too (the text is the user's prose); loopback http is fine
+    for (const u of ['http://detect.example/v1', 'http://169.254.169.254/latest', 'http://10.0.0.5/score', 'http://192.168.1.2/score']) expect(fails([det({ url: u })]), u).toBe(true);
+    for (const u of ['http://localhost:8080/score', 'http://127.0.0.1:9/score', 'http://[::1]:9/score']) expect(fails([det({ url: u })]), u).toBe(false);
+    // apiKeyEnv: only names that look like a service key; never another system's credential
+    for (const n of ['AWS_SECRET_ACCESS_KEY', 'AWS_ACCESS_KEY_ID', 'GITHUB_TOKEN', 'DB_PASSWORD', 'PATH', 'HOME', 'lowercase_key', 'KEY', 'ACME']) expect(fails([det({ apiKeyEnv: n })]), n).toBe(true);
+    for (const n of ['ACME_KEY', 'ACME_DETECTOR_API_KEY', 'GHOSTWRITER_DETECTOR_TOKEN']) expect(fails([det({ apiKeyEnv: n })]), n).toBe(false);
   });
 });
 

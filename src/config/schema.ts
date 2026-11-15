@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { DEFAULT_CHUNK, DEFAULT_LIMITS, DEFAULT_LLM, MAX_LLM_RETRIES } from '../../config/settings.js';
 import { DEFAULT_PERSONAS } from '../../config/targetPersonas.js';
-import { ENDPOINT_MESSAGES, endpointProblem } from '../llm/endpoint.js';
+import { DETECTOR_KEY_ENV_MESSAGE, ENDPOINT_MESSAGES, detectorEndpointProblem, endpointProblem, isDetectorKeyEnvName } from '../llm/endpoint.js';
 import { DEFAULT_DETECTOR_TIMEOUT_MS, DEFAULT_LOCAL_WEIGHT, DEFAULT_SCORER_WEIGHTS } from '../../config/scorer.js';
 import { DEFAULT_PIPELINE, KNOWN_FILTER_NAMES, firstFilterAfterFinalConfidentiality } from '../../config/filters.js';
 
@@ -132,15 +132,18 @@ const detectorSchema = z
       .refine((v) => v !== 'local', { error: '"local" is reserved for the built-in heuristic' })
       .refine((v) => v !== '__proto__', { error: '"__proto__" is reserved' }),
     url: httpUrl,
-    apiKeyEnv: z.string().regex(ENV_NAME, 'must be an environment variable name, not a key').optional(),
+    apiKeyEnv: z
+      .string()
+      .regex(ENV_NAME, 'must be an environment variable name, not a key')
+      .refine(isDetectorKeyEnvName, { error: DETECTOR_KEY_ENV_MESSAGE })
+      .optional(),
     weight: weight.default(1),
     timeoutMs: positiveInt.max(120_000).default(DEFAULT_DETECTOR_TIMEOUT_MS),
   })
   .superRefine((d, ctx) => {
-    // The same key-egress rule as the LLM endpoints: a bearer token never travels over cleartext http to a non-loopback host.
-    if (d.apiKeyEnv !== undefined && endpointProblem(d.url, true) === 'cleartext-key') {
-      ctx.addIssue({ code: 'custom', path: ['url'], message: ENDPOINT_MESSAGES['cleartext-key'] });
-    }
+    // Stricter than the LLM endpoints: the text sent is the user's prose, so non-loopback http is refused with or without a key.
+    const problem = detectorEndpointProblem(d.url, d.apiKeyEnv !== undefined);
+    if (problem === 'cleartext' || problem === 'cleartext-key') ctx.addIssue({ code: 'custom', path: ['url'], message: ENDPOINT_MESSAGES[problem] });
   });
 
 const scorerSchema = z

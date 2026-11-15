@@ -3,7 +3,7 @@
 // adapter) so nothing here runs unless the caller names the detector explicitly, and `Engine.score` hands adapters
 // only text that already went through the confidentiality filter.
 import { MAX_DETECTOR_RESPONSE_BYTES } from '../../config/scorer.js';
-import { ENDPOINT_MESSAGES, endpointProblem } from '../llm/endpoint.js';
+import { DETECTOR_KEY_ENV_MESSAGE, ENDPOINT_MESSAGES, detectorEndpointProblem, isDetectorKeyEnvName } from '../llm/endpoint.js';
 import { DEFAULT_TIMEOUT_MS, classifyFetchError, httpError, positive, readCapped } from '../llm/http.js';
 import { LlmTransportError } from '../llm/retry.js';
 import type { FetchLike } from '../llm/http.js';
@@ -76,8 +76,9 @@ export class HttpDetectorAdapter implements DetectorAdapter {
 
   constructor(config: Pick<DetectorConfig, 'name' | 'url' | 'timeoutMs'> & { apiKeyEnv?: string | undefined }, options: HttpDetectorOptions = {}) {
     this.name = config.name;
-    const problem = endpointProblem(config.url, config.apiKeyEnv !== undefined);
+    const problem = detectorEndpointProblem(config.url, config.apiKeyEnv !== undefined);
     if (problem !== undefined) throw new ConfigError(`detector "${config.name}": url ${ENDPOINT_MESSAGES[problem]}`);
+    if (config.apiKeyEnv !== undefined && !isDetectorKeyEnvName(config.apiKeyEnv)) throw new ConfigError(`detector "${config.name}": apiKeyEnv ${DETECTOR_KEY_ENV_MESSAGE}`);
     this.#url = config.url;
     this.#apiKeyEnv = config.apiKeyEnv;
     this.#timeoutMs = positive(config.timeoutMs, DEFAULT_TIMEOUT_MS);

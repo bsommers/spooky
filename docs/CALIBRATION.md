@@ -157,7 +157,10 @@ license, note) and the harness refuses a file without an entry or an entry witho
   value; it does not validate their accuracy.
 - External adapters send the (already redacted) text to a third-party endpoint. They run only when you name them
   (`--detector <name>` / `engine.score(text, { detectors: [...] })`), and only for detectors declared in
-  `scorer.detectors`.
+  `scorer.detectors`. A detector URL must be https (plain http only for localhost, 127.0.0.0/8 and ::1, with or
+  without a key), and its `apiKeyEnv` must be an upper-case name ending in `_KEY`, `_API_KEY` or `_TOKEN` that is not
+  another system's credential (`AWS_*`, `GITHUB_*`, `*_SECRET_*`, ...), so a config file you did not write cannot
+  point a variable of its choosing at a host of its choosing.
 
 ## Reproduce
 
