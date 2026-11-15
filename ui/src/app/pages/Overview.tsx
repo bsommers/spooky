@@ -22,8 +22,11 @@ export function Overview() {
       try {
         setState({ kind: 'ok', caps: await api.get('/api/capabilities') });
       } catch (e) {
-        if (e instanceof ApiError && e.unauthorized) setState({ kind: 'auth', wrong: wrongToken });
-        else if (e instanceof ApiError && e.status === 429) setState({ kind: 'auth', wrong: true, ...(e.retryAfterSeconds === undefined ? {} : { waitSeconds: e.retryAfterSeconds }) });
+        if (e instanceof ApiError && e.unauthorized) {
+          // Forget the rejected token: otherwise every remount (navigation, StrictMode) resends it and the server counts each as a wrong guess.
+          api.setToken(undefined);
+          setState({ kind: 'auth', wrong: wrongToken });
+        } else if (e instanceof ApiError && e.status === 429) setState({ kind: 'auth', wrong: true, ...(e.retryAfterSeconds === undefined ? {} : { waitSeconds: e.retryAfterSeconds }) });
         else setState({ kind: 'error', message: e instanceof ApiError ? e.message : 'something went wrong' });
       }
     },

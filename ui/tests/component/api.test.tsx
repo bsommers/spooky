@@ -108,6 +108,25 @@ describe('Overview', () => {
     expect(JSON.stringify({ ...localStorage, ...sessionStorage })).not.toContain('right-token');
   });
 
+  it('a rejected token is forgotten: navigating away and back does not resend it', async () => {
+    const client = fakeClient(() => jsonResponse(401, { ok: false, error: { code: 'UNAUTHORIZED', message: 'a valid bearer token is required' } }));
+    const user = userEvent.setup();
+    renderApp('#/', client);
+    await user.type(await screen.findByLabelText('API token'), 'wrong-token-xxxxxxxxxxxx');
+    await user.click(screen.getByRole('button', { name: 'Connect' }));
+    expect(await screen.findByText('That token was not accepted.')).toBeInTheDocument();
+    expect(client.hasToken()).toBe(false);
+    const sentWithToken = client.calls.filter((c) => (c.init.headers as Record<string, string>).Authorization !== undefined).length;
+    expect(sentWithToken).toBe(1); // the one attempt the user made
+    await user.click(screen.getByRole('link', { name: 'Kitchen sink' }));
+    await screen.findByRole('heading', { level: 1, name: 'Kitchen sink' });
+    const before = client.calls.length;
+    await user.click(screen.getByRole('link', { name: 'Overview' }));
+    await screen.findByText('This server asks for an API token.');
+    expect(client.calls.length).toBeGreaterThan(before);
+    for (const c of client.calls.slice(before)) expect((c.init.headers as Record<string, string>).Authorization).toBeUndefined();
+  });
+
   it('a lockout (429) says how long to wait', async () => {
     renderApp('#/', fakeClient(() => jsonResponse(429, { ok: false, error: { code: 'RATE_LIMITED', message: 'x' } }, { 'Retry-After': '60' })));
     expect(await screen.findByText('Too many wrong tokens; try again in 60 seconds.')).toBeInTheDocument();
