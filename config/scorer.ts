@@ -1,20 +1,26 @@
-// AI-likeness scorer settings as data (SCR-01). The feature weights and curve constants were committed before the
-// calibration corpus was added and have not changed since (self-attested ordering). The stock-phrase list below is NOT
-// independent of the corpus; docs/CALIBRATION.md says what that does to the numbers.
+// AI-likeness scorer settings as data (SCR-01). The curve constants were committed before the calibration corpus was
+// added. The feature weights and the stock-word list were re-derived from the dev split only (docs/CALIBRATION.md);
+// the test split was not used for any decision.
 // Higher feature value = reads more machine-generated; every feature value is in [0,1].
 
 /** The six interpretable features, in the fixed order used for breakdowns and sums. */
 export const FEATURE_NAMES = ['burstiness', 'lexicalDiversity', 'cliche', 'punctuation', 'repetition', 'paragraphUniformity'] as const;
 export type FeatureName = (typeof FEATURE_NAMES)[number];
 
-/** Default weights; they sum to 1 but any non-negative set is accepted and normalized (src/scoring/scorer.ts). */
+/**
+ * Default weights; they sum to 1 but any non-negative set is accepted and normalized (src/scoring/scorer.ts). Derived
+ * on the dev split of the calibration corpus only, by the rule in scripts/calibrate.ts `deriveWeights` (feature AUC
+ * minus 0.5, eligible features only); `lexicalDiversity` and `repetition` point the wrong way on dev and get 0, and
+ * `paragraphUniformity` is computable on too few texts to carry weight. A test fails if these drift from the rule.
+ * The previous defaults (0.25, 0.15, 0.25, 0.10, 0.10, 0.15) are kept in scripts/calibrate.ts as LEGACY_WEIGHTS.
+ */
 export const DEFAULT_SCORER_WEIGHTS: Readonly<Record<FeatureName, number>> = {
-  burstiness: 0.25,
-  lexicalDiversity: 0.15,
-  cliche: 0.25,
-  punctuation: 0.1,
-  repetition: 0.1,
-  paragraphUniformity: 0.15,
+  burstiness: 0.323,
+  lexicalDiversity: 0,
+  cliche: 0.132,
+  punctuation: 0.545,
+  repetition: 0,
+  paragraphUniformity: 0,
 };
 
 /** Below this many words a score is still returned but flagged `low_confidence`. */
@@ -48,34 +54,25 @@ export const FEATURE_PARAMS = {
 } as const;
 
 /**
- * Connectives and stock phrases (literal, lower-case, matched on word boundaries; apostrophes may be straight or
- * curly): commonly cited "assistant prose" tells. NOT independent of the calibration corpus: the list was written by
- * the same model that wrote the AI fixtures, after them, with them in context, and phrases that appeared to be echoes
- * of a specific fixture were removed (tuning on the corpus). The `cliche` feature is test-set contaminated by
- * construction: its measured AUC, and the headline AUC that includes it, are optimistic (docs/CALIBRATION.md).
- *
- * KNOWN ISSUE (review IN-05, left open on purpose): the list still holds ordinary words that human prose uses freely
- * (essential, vital, significant, valuable, overall, navigate, journey, landscape, "of course", "not only", "beyond the").
- * Removing them was measured and drops the corpus AUC under the 0.70 ship gate; the gate is not lowered to fit, so the
- * list stays as measured until someone decides what to do about the gate (docs/CALIBRATION.md).
+ * Candidate stock words for the `cliche` feature: the single style words named in the text or figure labels of Kobak et
+ * al. 2024, "Delving into LLM-assisted writing in biomedical publications through excess vocabulary" (arXiv:2406.07016),
+ * a study of words whose frequency jumped in 2024 abstracts. Function and content words the paper lists (these, while,
+ * through, potential, findings) are excluded. No word was taken from the AI calibration fixtures.
+ */
+export const CLICHE_CANDIDATES: readonly string[] = [
+  'delve', 'delves', 'delved', 'delving', 'underscore', 'underscores', 'showcasing', 'grappling', 'garnered', 'aligning',
+  'pivotal', 'notably', 'additionally', 'significant', 'crucial', 'exhibited', 'insights', 'comprehensive', 'enhancing',
+  'particularly', 'within', 'across', 'valuable', 'highlights', 'offering', 'excels', 'intricate', 'meticulously', 'realm',
+];
+/** A candidate is dropped if it occurs more than this many times per 10,000 words in the human texts of the dev split (scripts/calibrate.ts `applyClicheRule`). */
+export const CLICHE_MAX_HUMAN_RATE_PER_10K = 2;
+
+/**
+ * The stock words the `cliche` feature counts: CLICHE_CANDIDATES filtered by the rule above, with the dev-split human
+ * texts of the calibration corpus. Regenerate with `npm run calibrate -- --dev-only` (key `clicheKept`); a test fails
+ * if this list drifts from the rule. It is not independent of the corpus in one respect only: the human dev texts
+ * decide which candidates are too common in ordinary prose. The AI fixtures play no part (docs/CALIBRATION.md).
  */
 export const CLICHE_PHRASES: readonly string[] = [
-  // connectives / signposts
-  'moreover', 'furthermore', 'additionally', 'in addition', 'consequently', 'overall', 'ultimately',
-  'in conclusion', 'in summary', 'to summarize', 'that said', 'of course', 'importantly', 'notably',
-  'it is important to note', "it's important to note", 'it is worth noting', "it's worth noting",
-  'it should be noted', 'needless to say', 'at the end of the day', 'when it comes to',
-  // stock vocabulary
-  'delve', 'delves', 'delving', 'tapestry', 'testament', 'landscape', 'realm', 'beacon', 'myriad',
-  'pivotal', 'crucial', 'vital', 'essential', 'robust', 'seamless', 'seamlessly', 'comprehensive',
-  'vibrant', 'foster', 'fosters', 'fostering', 'leverage', 'leverages', 'leveraging', 'harness', 'empower',
-  'empowers', 'unlock', 'navigate', 'embrace', 'embarking', 'journey', 'meaningful', 'valuable',
-  'significant', 'significantly', 'remarkable',
-  'transformative', 'holistic', 'streamline', 'cutting-edge', 'game-changer',
-  // stock frames
-  'plays a crucial role', 'plays a vital role', 'plays an important role', 'a wide range of', 'a variety of',
-  'in today\'s', 'ever-evolving', 'fast-paced', 'look no further', 'whether you are', 'whether you\'re',
-  'not only', 'serves as', 'stands as', 'beyond the',
-  'in the realm of', 'strike a balance', 'a balanced approach',
-  'make a difference',
+  'delve', 'delves', 'delved', 'delving', 'underscore', 'underscores', 'showcasing', 'grappling', 'garnered', 'aligning', 'pivotal', 'notably', 'additionally', 'significant', 'crucial', 'exhibited', 'insights', 'enhancing', 'across', 'valuable', 'offering', 'excels', 'intricate', 'meticulously', 'realm',
 ];

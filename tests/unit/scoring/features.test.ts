@@ -95,21 +95,21 @@ describe('lexicalDiversity (moving-average type-token ratio)', () => {
 
 describe('cliche (stock phrase and connective density)', () => {
   const stock =
-    'Moreover, this plays a crucial role in the ever-evolving landscape. Furthermore, it fosters a robust and seamless journey. ' +
-    'Additionally, we delve into the pivotal tapestry. Ultimately, it is important to note that it serves as a testament.';
+    'Additionally, we delve into the pivotal realm of crucial insights. Notably, the intricate results underscore a valuable and significant finding. ' +
+    'Delving further, we are showcasing meticulously garnered work, grappling with and enhancing it, and delved across it all.';
   const plain =
     'The bus was late again so I walked the long way past the bakery and the shut post office and got home with wet shoes and a cold, which lasted four days.';
   it('is high for dense stock phrasing and low for plain prose', () => {
     expect(cliche(prepareText(stock)).value).toBeGreaterThan(0.9);
     expect(cliche(prepareText(plain)).value).toBeLessThan(0.05);
   });
-  it('counts multi-word phrases once, longest match first', () => {
-    expect(countCliches(['it', 'plays', 'a', 'crucial', 'role', 'here'])).toBe(1); // not also "crucial"
-    expect(countCliches("it's important to note that x".split(' '))).toBe(1);
+  it('counts each listed stock word once per occurrence, ignoring words that are not on the list', () => {
+    expect(countCliches(['we', 'delve', 'into', 'the', 'realm', 'and', 'delve', 'again'])).toBe(3);
+    expect(countCliches(['moreover', 'furthermore', 'it', 'is', 'what', 'it', 'is'])).toBe(0);
     expect(countCliches([])).toBe(0);
   });
   it('is unavailable below 20 words', () => {
-    expect(cliche(prepareText('Moreover, furthermore.')).available).toBe(false);
+    expect(cliche(prepareText('We delve, additionally.')).available).toBe(false);
   });
 });
 
