@@ -8,6 +8,9 @@ import { findOperation, invokeOperation, successDocument } from './operations.js
 import type { AnyOperation } from './operations.js';
 import { SurfaceError } from './errors.js';
 
+/** A signature no real state directory can have (`#currentSignature` always has a `|`), so the next `refresh` reloads. */
+const STALE = '(stale)';
+
 export class ServiceRuntime {
   readonly engine: Engine;
   readonly #stateDir: string | undefined;
@@ -56,7 +59,10 @@ export class ServiceRuntime {
   async runOperation(op: AnyOperation, raw: unknown): Promise<Record<string, unknown>> {
     if (op.readsState) await this.refresh();
     const out = await invokeOperation(op, this.engine, raw);
-    if (op.mutates) await this.markLoaded();
+    // Do NOT record the state files as "seen" after our own write: a write by another process between our save and the
+    // stat would be marked as seen and never reloaded. Forget the signature instead; the next read re-reads the files
+    // (they hold what we just saved, plus anything another process added), which is cheap next to an ingest.
+    if (op.mutates) this.#signature = STALE;
     return out;
   }
 
