@@ -10,10 +10,12 @@ import { ROUTES, useHashRoute } from './route';
 import { Shell } from './Shell';
 
 // Every feature screen is its own lazy chunk: the first paint carries the shell only.
+const AuthorsScreen = lazy(() => import('../screens/authors/AuthorsScreen'));
 const PersonasScreen = lazy(() => import('../screens/personas/PersonasScreen'));
 const SettingsScreen = lazy(() => import('../screens/settings/SettingsScreen'));
 
 const SCREENS: Record<string, ReactNode> = {
+  '/authors': <AuthorsScreen />,
   '/personas': <PersonasScreen />,
   '/settings': <SettingsScreen />,
 };
