@@ -4,9 +4,10 @@
 //   const g = checkMeaning(before, after);   // { ok: false, violations: ['number_added', ...] }
 //
 // Checked, all on exact strings:
-//   - numbers (digits, with their separators and %): none dropped, none added or altered
-//   - proper nouns and acronyms (capitalized words away from a sentence start, and ALL-CAPS words): none dropped, and no
-//     capitalized word the original never had (a hallucinated name)
+//   - numbers (digits, with their sign or currency symbol, separators, % or a short unit): the same tokens, the same number
+//     of times, in the same order; so a swap ("3 fixes and 4 patches" -> "4 fixes and 3 patches") or a "$5" -> "5" fails
+//   - proper nouns and acronyms (capitalized words away from a sentence start, and ALL-CAPS words): none dropped, no
+//     capitalized word the original never had (a hallucinated name), counts and order kept (a permutation of names fails)
 //   - quoted spans ("..." and curly quotes), protected spans (code, URLs, blockquotes) and code identifiers: byte-identical
 //   - links: URLs, emails, bare hosts and markdown link targets form the same multiset (none added, swapped or dropped);
 //     no new code fence
@@ -14,7 +15,8 @@
 //   - deletion: at least HUMANIZE_MIN_CONTENT_KEPT of the original's distinct words (3+ letters) are still there
 //   - length: the word count stays within HUMANIZE_LENGTH_BOUNDS of the original
 // Known limits, stated in docs/HUMANIZING.md: a sentence-initial proper noun is not tracked as an entity unless it also
-// occurs elsewhere capitalized; negation flips, reordered facts and changed verbs pass. Violations are fixed codes, never text.
+// occurs elsewhere capitalized; scripts without capitals (Chinese, Japanese, Arabic) get no name protection; number WORDS
+// (three, four) are not tracked; negation flips, reordered facts and changed verbs pass. Violations are fixed codes, never text.
 import { HUMANIZE_LENGTH_BOUNDS, HUMANIZE_CONTENT_CHECK_MIN_VOCAB, HUMANIZE_MIN_CONTENT_KEPT, HUMANIZE_NOVEL_SENTENCE_MIN_WORDS, HUMANIZE_NOVEL_SENTENCE_OVERLAP, HUMANIZE_NOVEL_SENTENCE_TOLERANCE } from '../../config/humanize.js';
 import { PLACEHOLDER_RE } from '../filters/confidentiality.js';
 import { splitProtected } from '../filters/protectedSpans.js';
@@ -23,8 +25,10 @@ export type GuardViolation =
   | 'empty'
   | 'number_dropped'
   | 'number_added'
+  | 'number_reordered'
   | 'entity_dropped'
   | 'entity_added'
+  | 'entity_reordered'
   | 'quote_changed'
   | 'protected_changed'
   | 'identifier_dropped'
@@ -40,7 +44,8 @@ export interface GuardResult {
   violations: GuardViolation[];
 }
 
-const NUMBER_RE = /\p{N}+(?:[.,:/-]\p{N}+)*%?/gu;
+/** A number with its sign or currency symbol, separators, and a % or a short unit: "$5", "-5", "1,200", "12 km" are tokens. */
+const NUMBER_RE = /(?:[$€£¥]|(?<![\p{L}\p{N}])[+\-−])?\p{N}+(?:[.,:/-]\p{N}+)*(?:%|[ \u00a0]?(?:km|mi|cm|mm|kg|lb|oz|kb|mb|gb|tb|ms|min|hr|usd|eur|gbp)\b)?/giu;
 const CAPITALIZED_RE = /\p{Lu}[\p{L}\p{N}]*(?:['’]\p{L}+)?/gu;
 const WORD_RE = /[\p{L}\p{N}]+(?:['’][\p{L}]+)*/gu;
 /**
@@ -57,6 +62,9 @@ const IDENTIFIER_RES = [/\b[a-z][a-z0-9]*(?:[A-Z][a-z0-9]+)+\b/g, /\b[A-Za-z0-9]
 /** After a sentence terminator (and closers), a line start, or a list/heading marker: a capital here proves nothing. */
 const SENTENCE_START_TAIL = /(?:^|[.!?…][)"'”’\]]*\s+|\n\s*(?:(?:[-*+]|\d{1,3}[.)]|#{1,6})\s+)?)$/;
 
+/** Same token whatever the minus sign or the unit spacing: `−5` is `-5`, `12\u00a0km` is `12 km`, `KM` is `km`. */
+const normalizeNumber = (n: string): string => n.replace(/−/g, '-').replace(/\u00a0/g, ' ').toLowerCase();
+
 const strip = (s: string): string => s.replace(PLACEHOLDER_RE, ' ');
 
 const matches = (s: string, re: RegExp): string[] => [...s.matchAll(re)].map((m) => m[0]);
@@ -65,16 +73,16 @@ const isAcronym = (w: string): boolean => w.length >= 2 && w === w.toUpperCase()
 const hasInnerCapital = (w: string): boolean => /\p{Ll}\p{Lu}/u.test(w);
 
 /** Capitalized tokens that name something: not at a sentence start, or an acronym, or with an inner capital ("McDonald"). */
-function entities(text: string): { named: Set<string>; anyCapitalized: Set<string> } {
-  const named = new Set<string>();
-  const anyCapitalized = new Set<string>();
+function entities(text: string): { named: string[]; anyCapitalized: string[] } {
+  const named: string[] = [];
+  const anyCapitalized: string[] = [];
   for (const m of text.matchAll(CAPITALIZED_RE)) {
     const w = m[0];
     if (w.length < 2) continue; // "I", "A"
-    anyCapitalized.add(w);
+    anyCapitalized.push(w);
     const before = text.slice(Math.max(0, (m.index ?? 0) - 12), m.index ?? 0);
     const start = (m.index ?? 0) === 0 || SENTENCE_START_TAIL.test(before);
-    if (!start || isAcronym(w) || hasInnerCapital(w)) named.add(w);
+    if (!start || isAcronym(w) || hasInnerCapital(w)) named.push(w);
   }
   return { named, anyCapitalized };
 }
@@ -112,15 +120,29 @@ export function checkMeaning(before: string, after: string): GuardResult {
   const a = strip(after);
   for (const re of IDENTIFIER_RES) for (const id of matches(b, re)) if (!a.includes(id)) violations.add('identifier_dropped');
 
-  const nb = new Set(matches(b, NUMBER_RE));
-  const na = new Set(matches(a, NUMBER_RE));
-  for (const n of nb) if (!na.has(n)) violations.add('number_dropped');
-  for (const n of na) if (!nb.has(n)) violations.add('number_added');
+  // numbers: the same tokens, the same number of times, in the same order
+  const nb = matches(b, NUMBER_RE).map(normalizeNumber);
+  const na = matches(a, NUMBER_RE).map(normalizeNumber);
+  const cb = counts(nb);
+  const ca = counts(na);
+  for (const [n, c] of cb) if (c > (ca.get(n) ?? 0)) violations.add('number_dropped');
+  for (const [n, c] of ca) if (c > (cb.get(n) ?? 0)) violations.add('number_added');
+  if (!violations.has('number_dropped') && !violations.has('number_added') && nb.join('\u0000') !== na.join('\u0000')) violations.add('number_reordered');
 
+  // names: counted, and in the same order. A name that begins a sentence is not tracked as "named" (stated limit), so a
+  // named token may be matched by any capitalized occurrence on the other side.
   const eb = entities(b);
   const ea = entities(a);
-  for (const e of eb.named) if (!ea.anyCapitalized.has(e)) violations.add('entity_dropped');
-  for (const e of ea.named) if (!eb.anyCapitalized.has(e)) violations.add('entity_added');
+  const capAfter = counts(ea.anyCapitalized);
+  const capBefore = counts(eb.anyCapitalized);
+  for (const [e, c] of counts(eb.named)) if (c > (capAfter.get(e) ?? 0)) violations.add('entity_dropped');
+  for (const [e, c] of counts(ea.named)) {
+    if (c > (capBefore.get(e) ?? 0)) violations.add('entity_added');
+  }
+  const namedBoth = new Set(eb.named.filter((e) => ea.named.includes(e)));
+  const orderB = eb.named.filter((e) => namedBoth.has(e));
+  const orderA = ea.named.filter((e) => namedBoth.has(e));
+  if (orderB.length === orderA.length && orderB.join('\u0000') !== orderA.join('\u0000')) violations.add('entity_reordered');
 
   // links: the multiset of URLs, emails, bare hosts and markdown link targets must be the same; no new code fence
   const lb = counts(linkTokens(b));
