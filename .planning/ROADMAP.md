@@ -13,7 +13,7 @@
 | # | Phase | Goal | Requirements | Depends |
 |---|---|---|---|---|
 | 7 | AI-likeness scorer ✓ (2026-11-15, human-verification waived by user) | Deterministic [0,1] scorer, breakdown, detector adapter interface, calibration harness | SCR-* | 6 |
-| 8 | Humanizer loop | Score-driven bounded rewrite with meaning guard, wired as post filter, CLI `ghostwriter score` and `--humanize` | HUM-* | 7 |
+| 8 | Humanizer loop ✓ (2026-11-15) | Score-driven bounded rewrite with meaning guard, wired as post filter, CLI `ghostwriter score` and `--humanize` | HUM-* | 7 |
 
 Phase 7 success: calibration report on fixture corpus (AUC measured and recorded); scorer is deterministic. Phase 8 success: on the fixture AI texts the mean score drops by the measured amount recorded in docs, numbers/entities preserved on 100% of fixtures, no secrets reintroduced.
 
