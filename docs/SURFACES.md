@@ -1,6 +1,6 @@
 # Surfaces (milestone v3)
 
-Status: Phases 8 (humanize), 9 (registry, CLI, HTTP API, MCP, OpenAPI) and 10 (web UI foundation and theming, [UI.md](UI.md)) built. Phase 11 (the UI feature screens) is planned. Rule: every capability is available on every surface; one registry declares operations, adapters never re-declare them.
+Status: Phases 8 (humanize), 9 (registry, CLI, HTTP API, MCP, OpenAPI) and 10 (web UI foundation and theming, [UI.md](UI.md)) built. Phase 11 (the UI feature screens) built; every operation has a screen. Rule: every capability is available on every surface; one registry declares operations, adapters never re-declare them.
 
 ```mermaid
 flowchart LR
@@ -16,16 +16,16 @@ flowchart LR
 ## Surface matrix
 | Operation | Library | CLI | HTTP | MCP tool | UI |
 |---|---|---|---|---|---|
-| ingest | `engine.ingest` | `ghostwriter ingest` | `POST /api/ingest` | `ingest` | P11 |
-| generate (`humanize?`, `target?`) | `engine.generate` | `ghostwriter generate [--humanize --target]` | `POST /api/generate` | `generate` | P11 |
-| score | `engine.score` | `ghostwriter score` | `POST /api/score` | `score` | P11 (gated) |
-| profile | `engine.getProfile` | `ghostwriter profile <id>` | `GET /api/profile?authorId=` | `profile` | P11 |
-| list authors | `engine.listAuthors` | `ghostwriter authors` | `GET /api/authors` | `authors` | P11 |
-| list personas | `engine.listPersonas` | `ghostwriter personas` | `GET /api/personas` | `personas` | P11 |
-| list filters | `engine.listFilters` | `ghostwriter filters` | `GET /api/filters` | `filters` | P11 (trace/settings) |
-| config get (redacted) | `engine.getConfigView` | `ghostwriter config get` | `GET /api/config` | `config_get` | P11 |
-| capabilities | `describeCapabilities()` | `ghostwriter capabilities` | `GET /api/capabilities` | `capabilities` | P11 |
-| humanize | `engine.humanize` | `ghostwriter humanize` | `POST /api/humanize` | `humanize` | P11 (gated) |
+| ingest | `engine.ingest` | `ghostwriter ingest` | `POST /api/ingest` | `ingest` | Authors (ingest form) |
+| generate (`humanize?`, `target?`) | `engine.generate` | `ghostwriter generate [--humanize --target]` | `POST /api/generate` | `generate` | Generate |
+| score | `engine.score` | `ghostwriter score` | `POST /api/score` | `score` | Score / Humanize (Score) |
+| profile | `engine.getProfile` | `ghostwriter profile <id>` | `GET /api/profile?authorId=` | `profile` | Authors (profile view) |
+| list authors | `engine.listAuthors` | `ghostwriter authors` | `GET /api/authors` | `authors` | Authors, Generate |
+| list personas | `engine.listPersonas` | `ghostwriter personas` | `GET /api/personas` | `personas` | Personas, Generate |
+| list filters | `engine.listFilters` | `ghostwriter filters` | `GET /api/filters` | `filters` | Settings |
+| config get (redacted) | `engine.getConfigView` | `ghostwriter config get` | `GET /api/config` | `config_get` | Settings, limits on Generate |
+| capabilities | `describeCapabilities()` | `ghostwriter capabilities` | `GET /api/capabilities` | `capabilities` | Overview, nav gating |
+| humanize | `engine.humanize` | `ghostwriter humanize` | `POST /api/humanize` | `humanize` | Score / Humanize (Humanize) |
 
 **Pending capabilities.** A capability planned but not built is listed in `PENDING_CAPABILITIES` (`src/service/operations.ts`) and in the `pending` array of every `capabilities` call, so clients can tell "not built yet" from "does not exist"; it has no CLI command, route, tool or OpenAPI path, and the parity test fails the moment the Engine gains the method without a registry entry. The list is empty since Phase 8 built `humanize` ([HUMANIZING.md](HUMANIZING.md)): one registry entry gave it the CLI command, route, tool and OpenAPI path, and `generate` gained `humanize` and `target` on every surface. Its scores come from a weak, confounded heuristic (held-out AUC 0.694); every surface returns that caveat in the result.
 
