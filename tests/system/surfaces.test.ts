@@ -217,7 +217,7 @@ describe('system: HTTP server (spawned binary)', () => {
     } finally {
       expect(await withUi.stop()).toBe(0);
     }
-    const noUi = await spawnListening(['serve', '--ui-dir', uiDir, '--no-ui']);
+    const noUi = await spawnListening(['serve', '--no-ui']);
     try {
       expect((await fetch(`${noUi.doc.listening.url}/`)).status).toBe(404);
       expect((await fetch(`${noUi.doc.listening.url}/api/personas`)).status).toBe(200);
@@ -229,6 +229,13 @@ describe('system: HTTP server (spawned binary)', () => {
     expect(JSON.parse(bad.stdout).error.code).toBe('CONFIG_INVALID');
     expect(bad.stdout).not.toContain('no-such-ui'); // the path is not echoed
   }, 60_000);
+
+  it('serve --no-ui together with --ui-dir is a config error, not a silently ignored flag', () => {
+    const r = spawnSync(process.execPath, [bin, 'serve', '--no-ui', '--ui-dir', join(root, 'ui', 'dist'), '--port', '0', '--json', ...baseArgs()], { env: cleanEnv(), encoding: 'utf8', timeout: 20_000 });
+    expect(r.status).toBe(2);
+    expect(JSON.parse(r.stdout).error.code).toBe('CONFIG_INVALID');
+    expect(JSON.parse(r.stdout).error.message).toContain('--no-ui');
+  });
 
   it('serve refuses a wildcard bind without a token: exit 2, nothing listening', async () => {
     const r = spawnSync(process.execPath, [bin, 'serve', '--host', '0.0.0.0', '--port', '0', '--json', ...baseArgs()], { env: cleanEnv(), encoding: 'utf8', timeout: 20_000 });

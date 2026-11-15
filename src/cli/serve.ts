@@ -113,13 +113,17 @@ export async function startListening(
   await runtime.markLoaded();
   // The web UI is served from the same process and origin (Phase 10), only alongside the HTTP API it talks to.
   let staticHandler: StaticHandler | undefined;
+  if (opts.ui === false && opts.uiDir !== undefined) throw new ConfigError('--no-ui and --ui-dir contradict each other; give one of them');
   if (mode.api && opts.ui !== false) {
     const dir = opts.uiDir ?? (await defaultUiDir());
     if (dir !== undefined) {
       try {
         staticHandler = await createStaticHandler({ root: dir });
-      } catch {
+      } catch (e) {
         if (opts.uiDir !== undefined) throw new ConfigError('--ui-dir must be a directory that holds a built UI (an index.html); build it with: npm run ui:build');
+        // The default directory looked built but could not be served (a dangling or escaping symlink, a race): say so, not just 404.
+        const why = (e as NodeJS.ErrnoException).code ?? 'not a usable build';
+        io.stderr(`note: the web UI in the default directory could not be served (${why}), so / answers 404; the API is unaffected\n`);
       }
     } else {
       io.stderr('note: the web UI is not built (npm run ui:build), so / answers 404; the API is unaffected\n');
