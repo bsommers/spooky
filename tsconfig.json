@@ -14,6 +14,6 @@
     "resolveJsonModule": true,
     "types": ["node"]
   },
-  "include": ["src", "config", "tests", "vitest.config.ts"],
+  "include": ["src", "config", "scripts/calibrate.ts", "tests", "vitest.config.ts"],
   "exclude": ["node_modules", "dist"]
 }

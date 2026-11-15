@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "verify": "scripts/verify.sh",
+    "calibrate": "tsc -p tsconfig.build.json && node dist/scripts/calibrate.js",
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
@@ -31,6 +32,7 @@
     "vitest": "^4.1.12"
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/scripts"
   ]
 }

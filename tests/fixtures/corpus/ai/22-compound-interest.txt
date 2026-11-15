@@ -1,0 +1,7 @@
+Compound interest is the process of earning interest not only on your original deposit, but also on the interest that has already been added. It is often described as interest on interest, and it is one of the most powerful forces in personal finance.
+
+To see how it works, imagine you deposit $1,000 in an account that pays 5 percent annually. After the first year, you earn $50 in interest, bringing your balance to $1,050. In the second year, the 5 percent is calculated on $1,050 rather than $1,000, so you earn $52.50. The difference seems small at first, but it grows steadily over time.
+
+The formula is A = P(1 + r/n)^(nt), where P is the principal, r is the annual rate, n is the number of times interest is compounded per year, and t is the number of years. The more frequently interest compounds, the faster your balance grows.
+
+The key takeaway is that time matters. Starting early, even with small amounts, allows compounding to work in your favor. The same principle applies to debt, which is why high-interest balances can grow quickly if left unpaid.

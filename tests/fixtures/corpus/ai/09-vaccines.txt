@@ -1,0 +1,5 @@
+Vaccines work by teaching the immune system to recognize a disease before the body ever encounters it. To understand how, it helps to know what the immune system normally does. When a harmful germ enters the body, immune cells identify it as foreign and produce proteins called antibodies to neutralize it. This process takes time, which is why a first infection can make you very sick.
+
+A vaccine gives the immune system a safe preview. It contains a harmless piece or weakened form of the germ, or instructions for making a single protein from it. The body responds just as it would to a real threat, producing antibodies and creating specialized memory cells.
+
+These memory cells are the key to lasting protection. If the real germ appears later, the immune system recognizes it quickly and mounts a rapid, powerful response, often stopping the infection before symptoms develop. Some vaccines require booster doses to maintain this memory over time. When enough people in a community are vaccinated, the disease also has a harder time spreading, which protects those who cannot be vaccinated themselves.

@@ -1,0 +1,19 @@
+## Retry with Exponential Backoff
+
+The retry helper automatically re-attempts a failed operation, waiting longer between each attempt. This is useful for handling transient errors, such as network timeouts or rate limits, without overwhelming the target service.
+
+### How It Works
+
+When an operation fails, the helper waits for a short initial delay before trying again. After each subsequent failure, the delay is multiplied by a backoff factor, up to a configurable maximum. To prevent many clients from retrying at the same moment, a small random amount of jitter is added to each delay.
+
+### Options
+
+- maxAttempts: The maximum number of attempts, including the first. Defaults to 3.
+- initialDelayMs: The delay before the first retry. Defaults to 200.
+- factor: The multiplier applied to the delay after each failure. Defaults to 2.
+- maxDelayMs: The upper limit for any single delay. Defaults to 5000.
+- shouldRetry: An optional function that receives the error and returns true if the operation should be retried.
+
+### Notes
+
+Only retry operations that are idempotent. If all attempts fail, the helper throws the last error encountered.

@@ -1,0 +1,5 @@
+The sky appears blue because of a phenomenon called Rayleigh scattering. Sunlight looks white, but it is actually made up of all the colors of the rainbow, each with a different wavelength. As this light travels through Earth's atmosphere, it collides with gas molecules, mainly nitrogen and oxygen.
+
+These molecules are much smaller than the wavelengths of visible light, and they scatter shorter wavelengths far more strongly than longer ones. Blue light, with its short wavelength, is scattered in all directions across the sky, while red and orange light pass through more directly. When you look up, you see this scattered blue light coming from every part of the sky.
+
+You might wonder why the sky is not violet, since violet has an even shorter wavelength. The answer is that the sun emits less violet light, some of it is absorbed in the upper atmosphere, and our eyes are less sensitive to violet than to blue. At sunrise and sunset, light travels through more atmosphere, so most of the blue is scattered away, leaving the vivid reds and oranges we see on the horizon.

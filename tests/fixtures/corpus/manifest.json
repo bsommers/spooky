@@ -1,0 +1,589 @@
+{
+  "description": "Labeled calibration corpus for the AI-likeness scorer (Phase 7). One entry per file; scripts/calibrate.ts and tests/unit/scoring/corpus.test.ts reject a file without an entry and an entry without a file.",
+  "files": [
+    {
+      "file": "human/01-federalist-papers.txt",
+      "label": "human",
+      "source": "The Federalist Papers (Hamilton, Madison, Jay), 1787-88",
+      "url": "https://www.gutenberg.org/ebooks/1404",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/02-thoreau-walden.txt",
+      "label": "human",
+      "source": "Walden (Henry David Thoreau), 1854",
+      "url": "https://www.gutenberg.org/ebooks/205",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/03-darwin-origin.txt",
+      "label": "human",
+      "source": "On the Origin of Species (Charles Darwin), 1859",
+      "url": "https://www.gutenberg.org/ebooks/1228",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/04-franklin-autobiography.txt",
+      "label": "human",
+      "source": "Autobiography (Benjamin Franklin), written 1771-1790",
+      "url": "https://www.gutenberg.org/ebooks/148",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/05-emerson-essays.txt",
+      "label": "human",
+      "source": "Essays, First Series (Ralph Waldo Emerson), 1841",
+      "url": "https://www.gutenberg.org/ebooks/2944",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/06-twain-mississippi.txt",
+      "label": "human",
+      "source": "Life on the Mississippi (Mark Twain), 1883",
+      "url": "https://www.gutenberg.org/ebooks/245",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/07-twain-innocents.txt",
+      "label": "human",
+      "source": "The Innocents Abroad (Mark Twain), 1869",
+      "url": "https://www.gutenberg.org/ebooks/3176",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/08-austen-pride.txt",
+      "label": "human",
+      "source": "Pride and Prejudice (Jane Austen), 1813",
+      "url": "https://www.gutenberg.org/ebooks/1342",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/09-dickens-two-cities.txt",
+      "label": "human",
+      "source": "A Tale of Two Cities (Charles Dickens), 1859",
+      "url": "https://www.gutenberg.org/ebooks/98",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/10-dickens-expectations.txt",
+      "label": "human",
+      "source": "Great Expectations (Charles Dickens), 1861",
+      "url": "https://www.gutenberg.org/ebooks/1400",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/11-darwin-beagle.txt",
+      "label": "human",
+      "source": "The Voyage of the Beagle (Charles Darwin), 1839",
+      "url": "https://www.gutenberg.org/ebooks/3704",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/12-london-call.txt",
+      "label": "human",
+      "source": "The Call of the Wild (Jack London), 1903",
+      "url": "https://www.gutenberg.org/ebooks/215",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/13-doyle-holmes.txt",
+      "label": "human",
+      "source": "The Adventures of Sherlock Holmes (Arthur Conan Doyle), 1892",
+      "url": "https://www.gutenberg.org/ebooks/1661",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/14-james-pragmatism.txt",
+      "label": "human",
+      "source": "Pragmatism (William James), 1907",
+      "url": "https://www.gutenberg.org/ebooks/5116",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/15-thoreau-disobedience.txt",
+      "label": "human",
+      "source": "Civil Disobedience (Henry David Thoreau), 1849",
+      "url": "https://www.gutenberg.org/ebooks/71",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/16-wells-time-machine.txt",
+      "label": "human",
+      "source": "The Time Machine (H. G. Wells), 1895",
+      "url": "https://www.gutenberg.org/ebooks/35",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/17-wells-war-worlds.txt",
+      "label": "human",
+      "source": "The War of the Worlds (H. G. Wells), 1898",
+      "url": "https://www.gutenberg.org/ebooks/36",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/18-douglass-narrative.txt",
+      "label": "human",
+      "source": "Narrative of the Life of Frederick Douglass, 1845",
+      "url": "https://www.gutenberg.org/ebooks/23",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/19-mill-liberty.txt",
+      "label": "human",
+      "source": "On Liberty (John Stuart Mill), 1859",
+      "url": "https://www.gutenberg.org/ebooks/34901",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/20-washington-up-slavery.txt",
+      "label": "human",
+      "source": "Up from Slavery (Booker T. Washington), 1901",
+      "url": "https://www.gutenberg.org/ebooks/2376",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/21-melville-moby-dick.txt",
+      "label": "human",
+      "source": "Moby-Dick (Herman Melville), 1851",
+      "url": "https://www.gutenberg.org/ebooks/2701",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/22-stoker-dracula.txt",
+      "label": "human",
+      "source": "Dracula (Bram Stoker), 1897",
+      "url": "https://www.gutenberg.org/ebooks/345",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/23-gilman-wallpaper.txt",
+      "label": "human",
+      "source": "The Yellow Wallpaper (Charlotte Perkins Gilman), 1892",
+      "url": "https://www.gutenberg.org/ebooks/1952",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/24-carroll-alice.txt",
+      "label": "human",
+      "source": "Alice's Adventures in Wonderland (Lewis Carroll), 1865",
+      "url": "https://www.gutenberg.org/ebooks/11",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/25-bronte-jane-eyre.txt",
+      "label": "human",
+      "source": "Jane Eyre (Charlotte Bronte), 1847",
+      "url": "https://www.gutenberg.org/ebooks/1260",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/26-twain-huck-finn.txt",
+      "label": "human",
+      "source": "Adventures of Huckleberry Finn (Mark Twain), 1884",
+      "url": "https://www.gutenberg.org/ebooks/76",
+      "license": "public domain (Project Gutenberg text, header/footer removed)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/27-rfc1855-netiquette.txt",
+      "label": "human",
+      "source": "RFC 1855, Netiquette Guidelines (1995)",
+      "url": "https://www.rfc-editor.org/rfc/rfc1855.txt",
+      "license": "IETF Trust RFC text (reproduction permitted)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/28-rfc1925-twelve-truths.txt",
+      "label": "human",
+      "source": "RFC 1925, The Twelve Networking Truths (1996)",
+      "url": "https://www.rfc-editor.org/rfc/rfc1925.txt",
+      "license": "IETF Trust RFC text (reproduction permitted)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/29-rfc3935-ietf-mission.txt",
+      "label": "human",
+      "source": "RFC 3935, A Mission Statement for the IETF (2004)",
+      "url": "https://www.rfc-editor.org/rfc/rfc3935.txt",
+      "license": "IETF Trust RFC text (reproduction permitted)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/30-rfc5218-successful-protocol.txt",
+      "label": "human",
+      "source": "RFC 5218, What Makes for a Successful Protocol? (2008)",
+      "url": "https://www.rfc-editor.org/rfc/rfc5218.txt",
+      "license": "IETF Trust RFC text (reproduction permitted)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/31-rfc7282-consensus.txt",
+      "label": "human",
+      "source": "RFC 7282, On Consensus and Humming in the IETF (2014)",
+      "url": "https://www.rfc-editor.org/rfc/rfc7282.txt",
+      "license": "IETF Trust RFC text (reproduction permitted)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/32-rfc8890-end-users.txt",
+      "label": "human",
+      "source": "RFC 8890, The Internet is for End Users (2020)",
+      "url": "https://www.rfc-editor.org/rfc/rfc8890.txt",
+      "license": "IETF Trust RFC text (reproduction permitted)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/33-rfc1958-architecture.txt",
+      "label": "human",
+      "source": "RFC 1958, Architectural Principles of the Internet (1996)",
+      "url": "https://www.rfc-editor.org/rfc/rfc1958.txt",
+      "license": "IETF Trust RFC text (reproduction permitted)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/34-rfc3439-guidelines.txt",
+      "label": "human",
+      "source": "RFC 3439, Some Internet Architectural Guidelines and Philosophy (2002)",
+      "url": "https://www.rfc-editor.org/rfc/rfc3439.txt",
+      "license": "IETF Trust RFC text (reproduction permitted)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/35-rfc2775-transparency.txt",
+      "label": "human",
+      "source": "RFC 2775, Internet Transparency (2000)",
+      "url": "https://www.rfc-editor.org/rfc/rfc2775.txt",
+      "license": "IETF Trust RFC text (reproduction permitted)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/36-rfc8170-planning.txt",
+      "label": "human",
+      "source": "RFC 8170, Planning for Protocol Adoption and Subsequent Transitions (2017)",
+      "url": "https://www.rfc-editor.org/rfc/rfc8170.txt",
+      "license": "IETF Trust RFC text (reproduction permitted)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/37-rfc2551-roman.txt",
+      "label": "human",
+      "source": "RFC 2551, The Roman Standard Version of the Internet Engineering Task Force (1999)",
+      "url": "https://www.rfc-editor.org/rfc/rfc2551.txt",
+      "license": "IETF Trust RFC text (reproduction permitted)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/38-rfc4677-tao.txt",
+      "label": "human",
+      "source": "RFC 4677, The Tao of IETF (2006)",
+      "url": "https://www.rfc-editor.org/rfc/rfc4677.txt",
+      "license": "IETF Trust RFC text (reproduction permitted)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "human/39-rfc3552-security-text.txt",
+      "label": "human",
+      "source": "RFC 3552, Guidelines for Writing RFC Text on Security Considerations (2003)",
+      "url": "https://www.rfc-editor.org/rfc/rfc3552.txt",
+      "license": "IETF Trust RFC text (reproduction permitted)",
+      "note": "excerpt of whole paragraphs, line wraps joined; no other edits"
+    },
+    {
+      "file": "ai/01-remote-work.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write a short essay on the benefits of remote work.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/02-sleep.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write a short essay on why sleep matters.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/03-hash-table.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Explain how a hash table works.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/04-language-tips.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write a blog post with five tips for learning a new language.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/05-extension-email.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write an email to my manager asking for a deadline extension.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/06-water-bottle.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write a product description for a stainless steel water bottle.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/07-lighthouse.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write the opening of a short story about a lighthouse keeper.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/08-social-media.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write a short essay about social media and attention.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/09-vaccines.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Explain how vaccines work.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/10-cli-readme.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write the introduction of a README for a command-line tool called \"tidyfiles\" that organizes downloads folders.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/11-printing-press.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Summarize the impact of the printing press.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/12-car-free.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Argue for or against banning cars from downtown areas.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/13-lisbon.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write a travel blog post about a weekend in Lisbon.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/14-sky-blue.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Why is the sky blue?",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/15-interview-prep.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Give advice on preparing for a job interview.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/16-garage.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write a short scene where two siblings clean out their late father's garage.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/17-coastal-cities.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write a short essay on how coastal cities can adapt to climate change.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/18-git-rebase.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Explain the difference between git merge and git rebase.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/19-no-coffee.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write a casual blog post about a week without coffee.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/20-keyboard-review.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write a review of a mid-range mechanical keyboard.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/21-boredom.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write a short essay on the value of boredom.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/22-compound-interest.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Explain how compound interest works.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/23-graduation.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write a short graduation speech.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/24-backoff.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write documentation for a retry with exponential backoff helper.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/25-libraries.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write a short essay on the importance of public libraries.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/26-mars-colony.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write the opening of a story about the first day in a Mars colony.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/27-open-plan.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Argue about whether open-plan offices are a good idea.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/28-neural-net.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Explain how a neural network learns.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/29-garden-newsletter.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write a community garden newsletter update.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/30-urban-bees.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write a short essay on urban beekeeping.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/31-start-running.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "What is a good way to start running? Answer plainly and briefly.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/32-dreams.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Explain why we dream.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/33-teamwork.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Write a short essay on the importance of teamwork.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    },
+    {
+      "file": "ai/34-password-manager.txt",
+      "label": "ai",
+      "source": "written by Claude (Sonnet 5.5) in the phase 7 execution session, 2026-11, before any scorer feature was written or measured",
+      "prompt": "Explain why you should use a password manager.",
+      "license": "original text, Apache-2.0 with the repository",
+      "note": "single sample per prompt, no style steering beyond the genre named in the prompt"
+    }
+  ]
+}
