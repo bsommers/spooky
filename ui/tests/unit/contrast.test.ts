@@ -45,6 +45,14 @@ describe('theme palettes meet WCAG AA', () => {
     expect(() => checkThemes({ ...s, manifest: THEMES })).toThrow(/--gw-text-muted on --gw-bg.*needs 4.5:1/);
   });
 
+  it('--gw-border is guarded as a decorative separator: invisible (equal to a surface) fails, the shipped palettes pass', () => {
+    expect(CONTRAST_PAIRS.filter((p) => p.fg === '--gw-border').map((p) => [p.bg, p.min])).toEqual([['--gw-bg', 1.1], ['--gw-surface', 1.1], ['--gw-bg-raised', 1.1]]);
+    for (const t of loadThemes()) expect(failingPairs(t.tokens).filter((f) => f.pair.fg === '--gw-border'), t.id).toEqual([]);
+    const base = loadThemes().find((t) => t.id === 'black-cat')!;
+    const invisible = { ...base.tokens, '--gw-border': base.tokens['--gw-surface'] as string };
+    expect(failingPairs(invisible).some((f) => f.pair.fg === '--gw-border' && f.pair.bg === '--gw-surface')).toBe(true);
+  });
+
   it('a low-contrast focus ring fails at the 3:1 bar', () => {
     const base = loadThemes().find((t) => t.id === 'black-cat')!;
     const bad = { ...base.tokens, '--gw-focus-ring': '#26262c' };

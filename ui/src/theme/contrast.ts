@@ -20,12 +20,12 @@ export function contrastRatio(a: string, b: string): number {
 export interface ContrastPair {
   fg: string;
   bg: string;
-  /** 4.5 for text, 3 for large text, UI components and focus indicators. */
-  min: 3 | 4.5;
+  /** 4.5 for text, 3 for large text, UI components and focus indicators, 1.1 for decorative separators (see CONTRAST_PAIRS). */
+  min: 1.1 | 3 | 4.5;
   use: string;
 }
 
-const onAllSurfaces = (fg: string, min: 3 | 4.5, use: string): ContrastPair[] =>
+const onAllSurfaces = (fg: string, min: ContrastPair['min'], use: string): ContrastPair[] =>
   ['--gw-bg', '--gw-surface', '--gw-bg-raised'].map((bg) => ({ fg, bg, min, use }));
 
 /** The declared pairs every theme must satisfy (WCAG 2.2 AA). */
@@ -40,6 +40,11 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   ...onAllSurfaces('--gw-success', 4.5, 'success text'),
   ...onAllSurfaces('--gw-focus-ring', 3, 'focus indicator'),
   ...onAllSurfaces('--gw-accent', 3, 'UI component boundary'),
+  // --gw-border is a decorative separator (card, popover, header and footer rules) and the edge of text-labelled buttons. WCAG 1.4.11
+  // asks 3:1 only for a boundary that is the SOLE cue to a control, and every control here is identified by its text or label, so the
+  // border is exempt from 3:1. This floor only guards the token from becoming invisible (border equal to a surface = 1:1). A control that
+  // relies on its border alone must use --gw-accent (the 3:1 pair above), not --gw-border.
+  ...onAllSurfaces('--gw-border', 1.1, 'decorative separator (exempt from 1.4.11; controls carry text)'),
 ];
 
 export interface ContrastFailure {
