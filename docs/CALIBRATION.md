@@ -118,6 +118,10 @@ Headline AUC with parts of the scorer removed or the typography normalized in bo
 - The corpus has no modern casual human writing (blogs, emails, forum posts, student essays), which is where such a
   scorer would actually be used, and no AI text from any model other than one, or from prompts that ask for a human
   voice.
+- **The phrase list still contains ordinary words** (essential, vital, significant, valuable, overall, navigate,
+  journey, landscape, "of course", "not only", "beyond the"), which will fire on plain human prose outside this corpus.
+  Removing them on general grounds was measured: the point-estimate AUC on this corpus falls below the 0.70 gate. The
+  gate was not lowered to fit and the list was not changed; this needs a decision, and a better corpus, not a quiet edit.
 - The next fix is a larger, genre-matched corpus with several generator models and fixtures written without knowledge
   of the feature set, then re-deciding the weights and the phrase list on a held-out split.
 
