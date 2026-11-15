@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 milestone: v2
 milestone_name: scoring and humanizing (after v1 ships)
 status: unknown
-stopped_at: Phase 06 complete, ready to execute Phase 07
-last_updated: "2026-11-14T05:50:34.366Z"
-state_head: 23b7b6786ec83bef8245f390ef4893542681081c
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-11-15T04:23:33.607Z"
+state_head: 13bcf566eaa8d1d08a53c1d2771e5cf4a7419ef2
 progress:
-  total_phases: 8
+  total_phases: 11
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 6
-  percent: 25
+  total_plans: 11
+  completed_plans: 7
+  percent: 18
 current_phase: 07
 current_phase_name: scorer
 ---
@@ -29,6 +29,7 @@ current_phase_name: scorer
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P01 | 7 min | 3 tasks | 17 files |
+| Phase 07 P01 | 35 min | 5 tasks | 40 files |
 
 ## Decisions
 
@@ -36,9 +37,10 @@ current_phase_name: scorer
 - [Phase 01]: Personas configured as array (duplicate keys detectable); default pipeline = confidentiality:pre, style:post, confidentiality:post
 - [Phase 01]: Config types added to types.ts as additive section (FND-02); strict zod objects reject typo keys
 - [Phase 01]: Plan 01-01 committed on branch gsd/phase-01-foundation because commit guard blocks protected main
+- [Phase 07]: Scorer defaults pre-registered, not tuned: AUC 0.7293 (CI 0.60-0.84); lexicalDiversity/repetition anti-predictive on corpus, reweighting deferred to a larger corpus
 
 ## Session
 
-**Last session:** 2026-11-12T03:09:46.106Z
-**Stopped at:** Phase 06 complete, ready to execute Phase 07
+**Last session:** 2026-11-15T04:23:33.465Z
+**Stopped at:** Completed 07-01-PLAN.md
 **Resume file:** None
