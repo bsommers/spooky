@@ -113,6 +113,17 @@ if [ "$UI" -eq 1 ] && [ -z "$ONLY" ]; then
 fi
 
 echo
+echo "== build (tsc -p tsconfig.build.json: dist/ for the bundle scan and the e2e server) =="
+# The security tier's bundle scan loads the confidentiality filter from dist/, which is gitignored. Build it here so the
+# tests never run against a missing or stale dist/ (vitest's global setup also rebuilds a stale one for a bare `npm test`).
+if npx --no-install tsc -p tsconfig.build.json; then
+  echo "build: ok"
+else
+  echo "build: FAILED" >&2
+  FAIL=1
+fi
+
+echo
 echo "== tests =="
 VITEST_ARGS=(run --reporter=default --reporter=json "--outputFile.json=$TMP/results.json")
 if [ "$COVERAGE" -eq 1 ]; then
@@ -183,8 +194,8 @@ fi
 if [ "$UI" -eq 1 ] && [ "$E2E" -eq 1 ] && [ -z "$ONLY" ] && [ -d ui/node_modules ]; then
   echo
   echo "== web UI end-to-end (Playwright: visual, a11y with contrast, offline, CSP, themes) =="
-  # The suite drives the real `ghostwriter serve` from dist/, so rebuild it first.
-  if npx --no-install tsc -p tsconfig.build.json; then
+  # The suite drives the real `ghostwriter serve` from dist/, built above.
+  if [ -f dist/src/index.js ]; then
     if [ "${GW_E2E_CONTAINER:-0}" = "1" ]; then
       PLAYWRIGHT_JSON_OUTPUT_NAME="$TMP/e2e.json" ui/scripts/e2e-container.sh --reporter=json || FAIL=1
     else
@@ -192,7 +203,7 @@ if [ "$UI" -eq 1 ] && [ "$E2E" -eq 1 ] && [ -z "$ONLY" ] && [ -d ui/node_modules
     fi
     ui_report playwright "$TMP/e2e.json" "ui e2e" || FAIL=1
   else
-    echo "root build for the e2e server failed" >&2
+    echo "dist/ is missing: the root build above failed, so the e2e server cannot start" >&2
     FAIL=1
   fi
 fi

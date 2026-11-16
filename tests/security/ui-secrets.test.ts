@@ -2,11 +2,12 @@
 // environment; the optional API token is page memory only. These tests cover the static side: nothing in the built bundle
 // or the source can hold, store or hard-code a secret. The runtime side (storage after a full flow, API responses
 // carrying a planted key) is ui/tests/e2e/secrets.spec.ts.
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
+import { isStale } from '../helpers/staleness.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const uiDist = join(root, 'ui', 'dist');
@@ -84,6 +85,25 @@ describe('the scanner (so a clean bundle means something)', () => {
   it('entropy: random base64 is above the bar, English and hex identifiers are below', () => {
     expect(scanner.entropy(RANDOM)).toBeGreaterThan(4.5);
     expect(scanner.entropy('aaaaaaaabbbbbbbbccccccccdddddddd')).toBeLessThan(2.5);
+  });
+});
+
+describe('the filter the scanner loads (root dist/)', () => {
+  it('exists and is not older than src/: the global setup (tests/helpers/rootBuild.ts) builds it, so the scan never depends on script order or a stale build', () => {
+    const entry = join(root, 'dist', 'src', 'index.js');
+    expect(existsSync(entry), 'dist/src/index.js').toBe(true);
+    expect(isStale(entry, [join(root, 'src'), join(root, 'config')])).toBe(false);
+  });
+
+  it('the staleness check: missing output is stale, an older output is stale, a newer one is not', () => {
+    const d = dirWith({ 'src/a.ts': 'x', 'out/index.js': 'y' });
+    const out = join(d, 'out', 'index.js');
+    const old = new Date(Date.now() - 60_000);
+    utimesSync(join(d, 'src', 'a.ts'), old, old);
+    expect(isStale(join(d, 'out', 'nope.js'), [join(d, 'src')])).toBe(true);
+    expect(isStale(out, [join(d, 'src')])).toBe(false);
+    utimesSync(out, new Date(Date.now() - 120_000), new Date(Date.now() - 120_000));
+    expect(isStale(out, [join(d, 'src')])).toBe(true);
   });
 });
 
