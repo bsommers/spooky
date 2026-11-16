@@ -64,8 +64,9 @@ export const PERSONAS = {
 export const FILTERS = {
   ok: true,
   filters: [
-    { name: 'confidentiality', stage: 'both', onError: 'fail-closed', enabled: true },
+    { name: 'confidentiality', stage: 'pre', onError: 'fail-closed', enabled: true },
     { name: 'style', stage: 'post', onError: 'skip', enabled: true },
+    { name: 'confidentiality', stage: 'post', onError: 'fail-closed', enabled: true },
   ],
 };
 
@@ -75,10 +76,7 @@ export const CONFIG = {
     llm: { provider: 'anthropic', model: 'claude-example', maxTokens: 1500, temperature: 0.7, maxRetries: 2, apiKeyEnv: 'GW_E2E_FAKE_KEY', apiKeyEnvSet: true },
     limits: { maxInputChars: 5000 },
     chunk: { size: 800, overlap: 100 },
-    filters: [
-      { name: 'confidentiality', stage: 'both', onError: 'fail-closed', enabled: true },
-      { name: 'style', stage: 'post', onError: 'skip', enabled: true },
-    ],
+    filters: FILTERS.filters,
     personas: ['exec', 'engineer'],
     confidentiality: { blocklistTerms: 3, customRules: 1 },
     scorer: { localWeight: 1, weights: { punctuation: 0.5 }, detectors: [] },
@@ -95,8 +93,9 @@ export interface TraceFx {
 }
 export const TRACE: TraceFx[] = [
   { filter: 'confidentiality', modified: true, ms: 1.25, metadata: { email: 1, api_key: 0 } },
-  { filter: 'style', modified: true, ms: 3.5, metadata: { phrases_removed: 2, phrases_replaced: 1, rhythm: 'vary' } },
-  { filter: 'humanize', modified: false, ms: 0.5, metadata: {} },
+  { filter: 'llm', modified: true, ms: 120.75, metadata: { attempts: 1, exemplars: 2, chars: 76 } },
+  { filter: 'style', modified: true, ms: 3.5, metadata: { phrases_removed: 2, phrases_replaced: 1, rhythm: 'applied' } },
+  { filter: 'confidentiality', modified: false, ms: 0.5, metadata: {} },
 ];
 
 export const GENERATE_OK = {

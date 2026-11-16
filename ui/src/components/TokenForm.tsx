@@ -30,7 +30,7 @@ export function TokenForm({ wrong, waitSeconds, busy, onSubmit }: TokenFormProps
         <FieldError className="gw-field__error" />
       </TextField>
       <p className="gw-hint">The token stays in this page&apos;s memory only. Reloading the page forgets it.</p>
-      <Button type="submit" className="gw-btn gw-btn--primary" isPending={busy === true}>
+      <Button type="submit" className="gw-btn gw-btn--primary" aria-disabled={busy === true || undefined}>
         {busy === true ? 'Checking...' : 'Connect'}
       </Button>
     </Form>

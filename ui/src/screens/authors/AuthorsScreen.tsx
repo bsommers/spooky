@@ -138,7 +138,7 @@ function IngestForm({ onDone }: { onDone(authorId: string): void }) {
         )}
         <p className="gw-hint">Ingesting an id that already exists replaces that author&apos;s corpus and profile.</p>
         <div className="gw-row">
-          <Button type="submit" className="gw-btn gw-btn--primary" isDisabled={!ready} isPending={busy}>
+          <Button type="submit" className="gw-btn gw-btn--primary" isDisabled={!ready} aria-disabled={busy || undefined}>
             {busy ? 'Ingesting...' : 'Ingest'}
           </Button>
           {!ready && !busy && <span className="gw-hint">Needs a valid id, a name and some text.</span>}

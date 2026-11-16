@@ -109,8 +109,8 @@ function FilterTable() {
         </tr>
       </thead>
       <tbody>
-        {load.data.map((f) => (
-          <tr key={f.name}>
+        {load.data.map((f, i) => (
+          <tr key={`${f.name}-${f.stage}-${i}`}>
             <th scope="row">{f.name}</th>
             <td>{f.stage}</td>
             <td>{f.onError}</td>

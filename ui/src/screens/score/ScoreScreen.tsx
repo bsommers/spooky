@@ -94,7 +94,7 @@ function ScorePanel() {
       >
         <TextInput label="Text to score" value={text} onChange={setText} cap={cap} isDisabled={busy} />
         <div className="gw-row">
-          <Button type="submit" className="gw-btn gw-btn--primary" isDisabled={!ready} isPending={busy}>
+          <Button type="submit" className="gw-btn gw-btn--primary" isDisabled={!ready} aria-disabled={busy || undefined}>
             {busy ? 'Scoring...' : 'Score'}
           </Button>
         </div>
@@ -260,7 +260,7 @@ function HumanizePanel() {
           Allow a model pass (off = deterministic edits only)
         </Switch>
         <div className="gw-row">
-          <Button type="submit" className="gw-btn gw-btn--primary" isDisabled={!ready} isPending={busy}>
+          <Button type="submit" className="gw-btn gw-btn--primary" isDisabled={!ready} aria-disabled={busy || undefined}>
             {busy ? 'Humanizing...' : 'Humanize'}
           </Button>
         </div>

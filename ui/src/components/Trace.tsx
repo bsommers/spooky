@@ -10,12 +10,19 @@ export type TraceEntry = PostResponse<'/api/generate'>['trace'][number];
 
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 
+/**
+ * Counts from the trace. A filter can run more than once (confidentiality runs before the model and after it), so every
+ * entry of that name is summed. `undefined` means the filter did not report (absent, or it failed).
+ */
 export function countsFromTrace(trace: readonly TraceEntry[]): { banned: number | undefined; redactions: number | undefined } {
-  const style = trace.find((t) => t.filter === 'style');
-  const conf = trace.find((t) => t.filter === 'confidentiality');
+  const sum = (name: string, f: (e: TraceEntry) => number): number | undefined => {
+    const entries = trace.filter((t) => t.filter === name);
+    if (entries.length === 0 || entries.some((e) => e.error !== undefined)) return undefined;
+    return entries.reduce((n, e) => n + f(e), 0);
+  };
   return {
-    banned: style === undefined || style.error !== undefined ? undefined : num(style.metadata.phrases_removed) + num(style.metadata.phrases_replaced),
-    redactions: conf === undefined || conf.error !== undefined ? undefined : Object.values(conf.metadata).reduce<number>((a, v) => a + num(v), 0),
+    banned: sum('style', (e) => num(e.metadata.phrases_removed) + num(e.metadata.phrases_replaced)),
+    redactions: sum('confidentiality', (e) => Object.values(e.metadata).reduce<number>((a, v) => a + num(v), 0)),
   };
 }
 

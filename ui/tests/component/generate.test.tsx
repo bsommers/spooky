@@ -74,10 +74,10 @@ describe('Generate screen', () => {
     expect(sent).toEqual({ authorId: 'terse', persona: 'engineer', text: 'Please write the release note.' });
     const rows = within(screen.getByRole('table', { name: 'Filters that ran, in order' })).getAllByRole('row');
     expect(rows).toHaveLength(1 + GENERATE_OK.trace.length);
-    expect(rows[2]).toHaveTextContent('style');
-    expect(rows[2]).toHaveTextContent('Yes');
-    expect(rows[2]).toHaveTextContent('3.5');
-    expect(rows[2]).toHaveTextContent('phrases_removed: 2');
+    expect(rows[3]).toHaveTextContent('style');
+    expect(rows[3]).toHaveTextContent('Yes');
+    expect(rows[3]).toHaveTextContent('3.5');
+    expect(rows[3]).toHaveTextContent('phrases_removed: 2');
     expect(screen.getByTestId('live-region')).toHaveTextContent(`Generation finished: ${GENERATE_OK.text.length} characters`);
   });
 
@@ -99,7 +99,7 @@ describe('Generate screen', () => {
     await user.click(screen.getByRole('button', { name: 'Generate' }));
     await screen.findByRole('table', { name: 'Filters that ran, in order' });
     await user.type(screen.getByRole('searchbox', { name: /Filter the trace/ }), 'conf');
-    expect(within(screen.getByRole('table', { name: 'Filters that ran, in order' })).getAllByRole('row')).toHaveLength(2);
+    expect(within(screen.getByRole('table', { name: 'Filters that ran, in order' })).getAllByRole('row')).toHaveLength(3);
   });
 
   it('model output with markup, script and javascript: links is shown as literal text and never becomes an element', async () => {

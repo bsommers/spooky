@@ -319,3 +319,18 @@
 .gw-table-wrap {
   overflow-x: auto;
 }
+
+/* A disabled primary button reads as unavailable by shape and text, not only by a dimmed accent. */
+.gw-btn--primary[data-disabled],
+.gw-btn--primary[aria-disabled="true"] {
+  border-color: var(--gw-border);
+  background: var(--gw-surface);
+  color: var(--gw-text-muted);
+  box-shadow: none;
+  opacity: 1;
+}
+
+/* Busy: still focusable (focus is not lost when the button is pressed), but reads as unavailable. */
+.gw-btn[aria-disabled="true"] {
+  cursor: progress;
+}
