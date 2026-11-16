@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { HUMANIZE_CAVEAT } from '../../src/screens/score/caveat';
 import { ApiError } from '../../src/api/client';
-import { AUTHORS, CAPS_NO_PHASE8, CONFIG, ERR, GENERATE_OK, HOSTILE, PERSONAS } from '../helpers/fixtures';
-import { mockClient, renderApp, renderScreen } from '../helpers/app';
+import { AUTHORS, CAPS_NO_PHASE8, CONFIG, ERR, GENERATE_OK, HOSTILE, PERSONAS, respond } from '../helpers/fixtures';
+import { fakeClient, jsonResponse, mockClient, renderApp, renderScreen } from '../helpers/app';
 import { TYPED_CODES, recoversOnRetry, showsTypedError } from '../helpers/screens';
 import { describeViolations, runAxe } from '../helpers/axe';
 
@@ -102,6 +102,21 @@ describe('Generate screen', () => {
     const sent = client.calls.slice(before).map((c) => (c.init.headers as Record<string, string>).Authorization);
     expect(sent.length).toBeGreaterThan(0);
     expect(sent.every((h) => h === 'Bearer fresh-token-0123456789')).toBe(true); // the rejected token was never sent again
+  });
+
+  it('after the token is accepted on a gated screen, focus moves to the content (not <body>) and "Connected" is announced', async () => {
+    const user = userEvent.setup();
+    const client = fakeClient((url, init) => {
+      if ((init.headers as Record<string, string>).Authorization !== 'Bearer good-token-0123456789') return jsonResponse(401, ERR('UNAUTHORIZED', 'a valid bearer token is required'));
+      const r = respond(init.method ?? 'GET', url, typeof init.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined);
+      return jsonResponse(r.status, r.body);
+    });
+    renderApp('#/generate', client);
+    await user.type(await screen.findByLabelText('API token'), 'good-token-0123456789');
+    await user.click(screen.getByRole('button', { name: 'Connect' }));
+    await draft();
+    await waitFor(() => expect(screen.getByRole('main')).toHaveFocus());
+    expect(screen.getByTestId('live-region')).toHaveTextContent('Connected');
   });
 
   it('Cancel stops a stalled request: a calm cancelled notice (not an alert), focus stays on the form, and Generate works again', async () => {
