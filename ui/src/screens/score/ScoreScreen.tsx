@@ -75,6 +75,7 @@ function ScorePanel() {
     const signal = begin();
     setBusy(true);
     setError(undefined);
+    setResult(undefined); // never leave the previous result next to a new request or its error
     announce('Scoring...');
     try {
       const r = await api.post('/api/score', { text }, { signal });
@@ -239,6 +240,7 @@ function HumanizePanel() {
     const signal = begin();
     setBusy(true);
     setError(undefined);
+    setResult(undefined);
     announce('Humanizing...');
     try {
       const r = await api.post('/api/humanize', {
@@ -274,7 +276,7 @@ function HumanizePanel() {
         {configError !== undefined && <ErrorBanner error={configError} onRetry={reloadConfig} />}
         <TextInput label="Text to humanize" value={text} onChange={setText} cap={cap} isDisabled={busy} />
         <div className="gw-row gw-row--top">
-          <Picker label="Author profile (optional)" items={authorItems} value={authorId} onChange={setAuthorId} />
+          <Picker label="Author profile (optional)" items={authorItems} value={authorId} onChange={setAuthorId} isDisabled={busy} />
           <NumberInput label="Target score (0 to 1)" value={targetValue} onChange={setTarget} min={0} max={1} step={0.05} />
           <NumberInput label="Max iterations (0 to 10)" value={iterationsValue} onChange={setIterations} min={0} max={10} step={1} />
         </div>

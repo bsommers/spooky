@@ -119,6 +119,31 @@ describe('Generate screen', () => {
     expect(screen.getByTestId('live-region')).toHaveTextContent('Connected');
   });
 
+  it('a new request clears the previous output (so a failure never sits beside it), and the pickers are off while it runs', async () => {
+    const user = userEvent.setup();
+    let fail = false;
+    const client = mockClient({ 'POST /api/generate': () => (fail ? { status: 502, body: ERR('LLM_FAILED', 'the model call failed') } : { status: 200, body: GENERATE_OK }) });
+    const post = client.post.bind(client);
+    let release: () => void = () => undefined;
+    client.post = ((p: never, b: never) => new Promise((resolve) => (release = () => resolve(post(p, b))))) as never;
+    renderApp('#/generate', client);
+    await typeDraft(user);
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    await screen.findByRole('button', { name: 'Generating...' });
+    expect(screen.getByRole('button', { name: /Author/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Persona/ })).toBeDisabled();
+    release();
+    await screen.findByRole('region', { name: 'Generated text' });
+    expect(screen.getByRole('button', { name: /Persona/ })).toBeEnabled();
+    fail = true;
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    await screen.findByRole('button', { name: 'Generating...' });
+    expect(screen.queryByRole('region', { name: 'Generated text' })).toBeNull(); // cleared while the new request runs
+    release();
+    await screen.findByRole('alert');
+    expect(screen.queryByRole('region', { name: 'Generated text' })).toBeNull(); // and no stale output beside the error
+  });
+
   it('Cancel stops a stalled request: a calm cancelled notice (not an alert), focus stays on the form, and Generate works again', async () => {
     const user = userEvent.setup();
     const client = mockClient();

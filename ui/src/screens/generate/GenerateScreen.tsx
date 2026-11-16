@@ -62,6 +62,8 @@ export default function GenerateScreen() {
     const signal = begin();
     setBusy(true);
     setError(undefined);
+    setResult(undefined); // the output on screen belongs to the previous request: never show it next to a new one or its error
+    setResultHumanized(false);
     announce('Generating...');
     try {
       const r = await api.post('/api/generate', {
@@ -121,8 +123,8 @@ export default function GenerateScreen() {
           }}
         >
           <div className="gw-row gw-row--top">
-            <Picker label="Author" items={authorList.map((a) => ({ id: a.authorId, label: `${a.displayName} (${a.authorId})` }))} value={chosenAuthor} onChange={setAuthorId} />
-            <Picker label="Persona" items={personaList.map((p) => ({ id: p.key, label: p.name }))} value={chosenPersona} onChange={setPersona} />
+            <Picker label="Author" items={authorList.map((a) => ({ id: a.authorId, label: `${a.displayName} (${a.authorId})` }))} value={chosenAuthor} onChange={setAuthorId} isDisabled={busy} />
+            <Picker label="Persona" items={personaList.map((p) => ({ id: p.key, label: p.name }))} value={chosenPersona} onChange={setPersona} isDisabled={busy} />
           </div>
           <TextInput label="Draft" value={text} onChange={setText} cap={cap} isDisabled={busy} hint="Sent to the server's model after the confidentiality filter." />
           {canHumanize && (
