@@ -25,7 +25,8 @@ export default defineConfig({
     timezoneId: 'UTC',
   },
   webServer: {
-    command: `node ../dist/src/cli/bin.js serve --port ${PORT} --state-dir ${process.env.GW_E2E_STATE ?? '.e2e-state'}`,
+    // the real API server and built UI, with the model scripted (MockLlmClient) and one author ingested; see tests/e2e/server/start.mjs
+    command: `node tests/e2e/server/start.mjs --port ${PORT} --state-dir ${process.env.GW_E2E_STATE ?? '.e2e-state'}`,
     url: `http://127.0.0.1:${PORT}/`,
     reuseExistingServer: false,
     stdout: 'ignore',
