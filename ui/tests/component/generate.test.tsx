@@ -186,8 +186,8 @@ describe('Generate screen', () => {
     await showsTypedError('#/generate', key, 'LLM_FAILED', 502);
   });
 
-  it('retry after a failed load recovers', async () => {
-    await recoversOnRetry('#/generate', 'GET /api/personas', /^Draft$/);
+  it.each(['GET /api/authors', 'GET /api/personas', 'GET /api/config'])('retry after a failed load of %s recovers', async (key) => {
+    await recoversOnRetry('#/generate', key, /^Draft$/);
   });
 
   it('Copy output uses the clipboard and announces; without a clipboard it says so', async () => {

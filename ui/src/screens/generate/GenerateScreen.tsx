@@ -30,7 +30,7 @@ export default function GenerateScreen() {
   const { has } = useCapabilities();
   const [authors, reloadAuthors] = useLoad(() => api.get('/api/authors').then((r) => r.authors), [api]);
   const [personas, reloadPersonas] = useLoad(() => api.get('/api/personas').then((r) => r.personas), [api]);
-  const [config] = useLoad(() => api.get('/api/config').then((r) => r.config), [api]);
+  const [config, reloadConfig] = useLoad(() => api.get('/api/config').then((r) => r.config), [api]);
 
   const [authorId, setAuthorId] = useState<string | undefined>(undefined);
   const [persona, setPersona] = useState<string | undefined>(undefined);
@@ -96,6 +96,7 @@ export default function GenerateScreen() {
           onRetry={() => {
             reloadAuthors();
             reloadPersonas();
+            reloadConfig();
           }}
         />
       )}
