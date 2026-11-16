@@ -31,10 +31,10 @@ for (const theme of THEME_IDS) {
     await expect(page.getByTestId('profile')).toContainText('words');
 
     await page.getByRole('link', { name: 'Generate' }).click();
-    await page.getByLabel('Draft').waitFor();
+    await page.getByLabel('Draft', { exact: true }).waitFor();
     await page.getByRole('button', { name: /Author/ }).click();
     await page.getByRole('option', { name: new RegExp(`E2E ${theme}`) }).click();
-    await page.getByLabel('Draft').fill(DRAFT);
+    await page.getByLabel('Draft', { exact: true }).fill(DRAFT);
     await page.getByRole('button', { name: 'Generate' }).click();
     const out = page.getByRole('region', { name: 'Generated text' });
     await expect(out).toBeVisible();
@@ -70,7 +70,7 @@ test('every screen works with the network blocked except localhost, on the real 
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   }
   await page.getByRole('link', { name: 'Generate' }).click();
-  await page.getByLabel('Draft').fill(DRAFT);
+  await page.getByLabel('Draft', { exact: true }).fill(DRAFT);
   await page.getByRole('button', { name: 'Generate' }).click();
   await expect(page.getByRole('region', { name: 'Generated text' })).toBeVisible();
   expect(external).toEqual([]);
@@ -92,7 +92,7 @@ test('CSP: no violation and no console error or warning on any screen, including
   for (const theme of THEME_IDS) {
     for (const s of SCREENS) await openScreen(page, s, theme);
     await page.getByRole('link', { name: 'Generate' }).click();
-    await page.getByLabel('Draft').fill(DRAFT);
+    await page.getByLabel('Draft', { exact: true }).fill(DRAFT);
     await page.getByRole('button', { name: 'Generate' }).click();
     await page.getByRole('region', { name: 'Generated text' }).waitFor();
     await page.getByRole('button', { name: /Persona/ }).click();
@@ -123,7 +123,7 @@ test('secrets: a key planted in the server environment never reaches the browser
   await page.getByLabel('API token').fill('memory-only-token-0123456789');
   await page.getByRole('button', { name: 'Use token' }).click();
   await page.getByRole('link', { name: 'Generate' }).click();
-  await page.getByLabel('Draft').fill(DRAFT);
+  await page.getByLabel('Draft', { exact: true }).fill(DRAFT);
   await page.getByRole('button', { name: 'Generate' }).click();
   await page.getByRole('region', { name: 'Generated text' }).waitFor();
   await page.getByRole('link', { name: 'Authors' }).click();

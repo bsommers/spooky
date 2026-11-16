@@ -80,7 +80,7 @@ for (const theme of THEME_IDS) {
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
     await expect(persona).toContainText('Engineer');
-    await page.getByLabel('Draft').fill('A draft.');
+    await page.getByLabel('Draft', { exact: true }).fill('A draft.');
     await page.getByRole('button', { name: 'Generate' }).focus();
     await page.keyboard.press('Space');
     await expect(page.getByRole('region', { name: 'Generated text' })).toBeVisible();
@@ -89,7 +89,7 @@ for (const theme of THEME_IDS) {
   test(`${theme}: Enter in the ingest form submits; the live region says when generation finished, and a failure is said once by the alert`, async ({ page }) => {
     await mockApi(page);
     await openScreen(page, screen('generate'), theme);
-    await page.getByLabel('Draft').fill('A draft.');
+    await page.getByLabel('Draft', { exact: true }).fill('A draft.');
     await page.getByRole('button', { name: 'Generate' }).click();
     await expect(page.getByTestId('live-region')).toContainText('Generation finished');
     await page.unrouteAll();

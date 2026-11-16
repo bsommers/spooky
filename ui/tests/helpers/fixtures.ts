@@ -1,5 +1,6 @@
 // Deterministic API documents for the component, accessibility and visual tiers. Pure data (no test-runner imports), so
 // vitest and Playwright share them. Timings are fixed numbers; nothing here depends on the clock or the machine.
+import { TOPIC_CAVEAT } from '../../src/screens/generate/topicCaveat';
 const op = (name: string, method: 'GET' | 'POST', path: string, mutates = false) => ({
   name,
   description: `${name} operation`,
@@ -103,6 +104,15 @@ export const GENERATE_OK = {
   text: 'The decision is made. Ship it on Friday.\nQuestions go to the release owner.',
   trace: TRACE,
   promptTokensEstimate: 412,
+  mode: 'rewrite',
+};
+
+/** What the server answers to a `mode: "topic"` request: new text, the mode, and the fixed caveat (config/topic.ts). */
+export const GENERATE_TOPIC_OK = {
+  ...GENERATE_OK,
+  text: 'Small teams ship faster because fewer people have to agree.\nThe notes do not say how many releases there were.',
+  mode: 'topic',
+  caveat: TOPIC_CAVEAT,
 };
 
 export const SCORE_OK = {
@@ -188,7 +198,7 @@ export function respond(method: string, url: string, body: unknown, overrides: O
       return { status: 200, body: { ok: true, profile: p } };
     }
     case 'POST /api/generate':
-      return { status: 200, body: GENERATE_OK };
+      return { status: 200, body: (body as { mode?: string } | undefined)?.mode === 'topic' ? GENERATE_TOPIC_OK : GENERATE_OK };
     case 'POST /api/score':
       return { status: 200, body: SCORE_OK };
     case 'POST /api/humanize':

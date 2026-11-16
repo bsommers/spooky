@@ -59,10 +59,10 @@ test('a server that requires a token: no screen shows data before it, a wrong to
   await page.goto('/#/generate');
   await expect(page.getByText('This server asks for an API token.')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'Generate' })).toBeVisible();
-  await expect(page.getByLabel('Draft')).toHaveCount(0);
+  await expect(page.getByLabel('Draft', { exact: true })).toHaveCount(0);
   await connect(page, WRONG);
   await expect(page.getByText('That token was not accepted.')).toBeVisible();
-  await expect(page.getByLabel('Draft')).toHaveCount(0);
+  await expect(page.getByLabel('Draft', { exact: true })).toHaveCount(0);
   await nowhere(page, seen, WRONG);
   // nothing in the page text names the model's key either
   expect(await page.locator('body').innerText()).not.toContain(PLANTED_KEY);
@@ -72,10 +72,10 @@ test('the right token opens the gate, moves focus to the content and announces i
   const seen = watch(page);
   await page.goto('/#/generate');
   await connect(page, E2E_TOKEN);
-  await page.getByLabel('Draft').waitFor();
+  await page.getByLabel('Draft', { exact: true }).waitFor();
   await expect(page.locator('main')).toBeFocused();
   await expect(page.getByTestId('live-region')).toContainText('Connected');
-  await page.getByLabel('Draft').fill(DRAFT);
+  await page.getByLabel('Draft', { exact: true }).fill(DRAFT);
   await page.getByRole('button', { name: 'Generate' }).click();
   await expect(page.getByRole('region', { name: 'Generated text' })).toBeVisible();
   await page.getByRole('link', { name: 'Authors' }).click();
@@ -89,12 +89,12 @@ test('a token that stops working mid-session sends the app back to the token for
   const seen = watch(page);
   await page.goto('/#/generate');
   await connect(page, E2E_TOKEN);
-  await page.getByLabel('Draft').fill(DRAFT);
+  await page.getByLabel('Draft', { exact: true }).fill(DRAFT);
   // the server (or a proxy) now refuses the token on the next call
   await page.route('**/api/generate', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ ok: false, error: { code: 'UNAUTHORIZED', message: 'a valid bearer token is required' } }) }));
   await page.getByRole('button', { name: 'Generate' }).click();
   await expect(page.getByText('That token was not accepted.')).toBeVisible();
-  await expect(page.getByLabel('Draft')).toHaveCount(0);
+  await expect(page.getByLabel('Draft', { exact: true })).toHaveCount(0);
   const count = seen.authHeaders.length;
   await page.getByRole('link', { name: 'Personas' }).click(); // moving around while signed out sends nothing with the old token
   await expect(page.getByText('That token was not accepted.')).toBeVisible();
@@ -118,7 +118,7 @@ test('too many wrong tokens locks the address out: the page says to wait, forget
   expect(locked).toBe(true);
   await connect(page, E2E_TOKEN);
   await expect(page.getByText(/Too many wrong tokens; try again in \d+ seconds/)).toBeVisible();
-  await expect(page.getByLabel('Draft')).toHaveCount(0);
+  await expect(page.getByLabel('Draft', { exact: true })).toHaveCount(0);
   await nowhere(page, seen, WRONG);
   await nowhere(page, seen, E2E_TOKEN);
 });

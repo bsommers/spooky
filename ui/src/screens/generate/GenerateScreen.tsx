@@ -2,7 +2,7 @@
 // The output is the server's answer rendered as plain text. The trace and the indicators show what the safety filters did,
 // as counts. Nothing from the model is ever interpreted as markup.
 import { useRef, useState } from 'react';
-import { Button, Form, Switch } from 'react-aria-components';
+import { Button, Form, Label, Radio, RadioGroup, Switch } from 'react-aria-components';
 import type { ApiError, PostResponse } from '../../api/client';
 import { useCapabilities } from '../../api/capabilities';
 import { useApi } from '../../api/context';
@@ -15,12 +15,22 @@ import { NumberInput } from '../../components/NumberInput';
 import { Picker } from '../../components/Picker';
 import { PlainText } from '../../components/PlainText';
 import { Loading, Section } from '../../components/Section';
+import { TopicCaveat } from '../../components/TopicCaveat';
 import { TextInput } from '../../components/TextInput';
 import { Indicators, TraceTable } from '../../components/Trace';
 import { useAbortable } from '../../components/useAbortable';
 import { useLoad } from '../../components/useLoad';
 
 type Result = PostResponse<'/api/generate'>;
+type Mode = 'rewrite' | 'topic';
+type LengthChoice = 'auto' | 'short' | 'medium' | 'long';
+
+const LENGTHS: readonly { id: LengthChoice; label: string }[] = [
+  { id: 'auto', label: 'Let the model choose' },
+  { id: 'short', label: 'Short' },
+  { id: 'medium', label: 'Medium' },
+  { id: 'long', label: 'Long' },
+];
 
 export default function GenerateScreen() {
   const api = useApi();
@@ -34,7 +44,12 @@ export default function GenerateScreen() {
 
   const [authorId, setAuthorId] = useState<string | undefined>(undefined);
   const [persona, setPersona] = useState<string | undefined>(undefined);
+  const [mode, setMode] = useState<Mode>('rewrite');
+  // Each mode keeps its own text, so switching the mode never throws away what was typed.
   const [text, setText] = useState('');
+  const [topic, setTopic] = useState('');
+  const [notes, setNotes] = useState('');
+  const [length, setLength] = useState<LengthChoice>('auto');
   const [humanize, setHumanize] = useState(false);
   // undefined = the user has not edited it: the field shows the server's configured default and the request omits it.
   const [target, setTarget] = useState<number | undefined>(undefined);
@@ -50,8 +65,12 @@ export default function GenerateScreen() {
   const chosenPersona = persona ?? personaList[0]?.key;
   const cap = config.kind === 'ok' ? config.data.limits.maxInputChars : undefined;
   const defaultTarget = config.kind === 'ok' ? config.data.humanize.targetScore : Number.NaN;
-  const over = cap !== undefined && text.length > cap;
-  const empty = text.trim() === '';
+  const isTopic = mode === 'topic';
+  const mainText = isTopic ? topic : text;
+  const mainOver = cap !== undefined && mainText.length > cap;
+  const notesOver = isTopic && cap !== undefined && notes.length > cap;
+  const over = mainOver || notesOver;
+  const empty = mainText.trim() === '';
   const canHumanize = has('humanize');
   const showCaveat = canHumanize && (humanize || resultHumanized);
   const targetBad = canHumanize && humanize && !Number.isFinite(target ?? defaultTarget);
@@ -69,7 +88,8 @@ export default function GenerateScreen() {
       const r = await api.post('/api/generate', {
         authorId: chosenAuthor,
         persona: chosenPersona,
-        text,
+        text: mainText,
+        ...(isTopic ? { mode: 'topic' as const, ...(notes.trim() === '' ? {} : { notes }), ...(length === 'auto' ? {} : { length }) } : {}),
         ...(canHumanize && humanize ? { humanize: true, ...(target === undefined ? {} : { target }) } : {}),
       }, { signal });
       setResult(r);
@@ -90,7 +110,7 @@ export default function GenerateScreen() {
   return (
     <section aria-labelledby="gen-h" className="gw-page">
       <h1 id="gen-h">Generate</h1>
-      <p className="gw-lede">Write a draft in an author&apos;s voice for a persona. The text goes to the server&apos;s model through its safety filters; the answer is shown as plain text.</p>
+      <p className="gw-lede">Write in an author&apos;s voice for a persona: rewrite a draft you have, or write new text about a topic. What you type goes to the server&apos;s model through its safety filters; the answer is shown as plain text.</p>
       {loading && <Loading what="authors, personas and limits" />}
       {loadError !== undefined && (
         <ErrorBanner
@@ -126,7 +146,31 @@ export default function GenerateScreen() {
             <Picker label="Author" items={authorList.map((a) => ({ id: a.authorId, label: `${a.displayName} (${a.authorId})` }))} value={chosenAuthor} onChange={setAuthorId} isDisabled={busy} />
             <Picker label="Persona" items={personaList.map((p) => ({ id: p.key, label: p.name }))} value={chosenPersona} onChange={setPersona} isDisabled={busy} />
           </div>
-          <TextInput label="Draft" value={text} onChange={setText} cap={cap} isDisabled={busy} hint="Sent to the server's model after the confidentiality filter." />
+          <RadioGroup className="gw-modes" value={mode} onChange={(v) => setMode(v as Mode)} orientation="horizontal" isDisabled={busy}>
+            <Label className="gw-label">What should the model do?</Label>
+            <div className="gw-radios">
+              <Radio value="rewrite" className="gw-radio">
+                <span className="gw-radio__dot" />
+                Rewrite my draft
+              </Radio>
+              <Radio value="topic" className="gw-radio">
+                <span className="gw-radio__dot" />
+                Write about a topic
+              </Radio>
+            </div>
+          </RadioGroup>
+          {isTopic ? (
+            <>
+              <p className="gw-hint" data-testid="topic-help">
+                The model writes new text from the topic and your notes, in the author&apos;s voice. Nothing is looked up online: it has no web search and may state things that are wrong, so it is told to take specific facts, numbers, names and quotes only from your notes.
+              </p>
+              <TextInput label="Topic we're researching" value={topic} onChange={setTopic} cap={cap} rows={3} isDisabled={busy} hint="A subject, not a draft. Sent to the server's model after the confidentiality filter." />
+              <TextInput label="Notes and facts to use (optional)" value={notes} onChange={setNotes} cap={cap} rows={8} isDisabled={busy} hint="The only place the model may take specific facts from. Also filtered before it is sent." />
+              <Picker label="Length" items={LENGTHS} value={length} onChange={(id) => setLength(id as LengthChoice)} isDisabled={busy} />
+            </>
+          ) : (
+            <TextInput label="Draft" value={text} onChange={setText} cap={cap} isDisabled={busy} hint="Sent to the server's model after the confidentiality filter." />
+          )}
           {canHumanize && (
             <div className="gw-row">
               <Switch className="gw-switch" isSelected={humanize} onChange={setHumanize}>
@@ -155,7 +199,7 @@ export default function GenerateScreen() {
               </Button>
             )}
             {!ready && !busy && (
-              <span className="gw-hint">{empty ? 'Write a draft to enable Generate.' : over ? 'The draft is over the limit.' : targetBad ? 'Enter a target score from 0 to 1.' : 'Waiting for the server limits.'}</span>
+              <span className="gw-hint">{empty ? (isTopic ? 'Write a topic to enable Generate.' : 'Write a draft to enable Generate.') : notesOver ? 'The notes are over the limit.' : over ? (isTopic ? 'The topic is over the limit.' : 'The draft is over the limit.') : targetBad ? 'Enter a target score from 0 to 1.' : 'Waiting for the server limits.'}</span>
             )}
           </div>
         </Form>
@@ -164,6 +208,7 @@ export default function GenerateScreen() {
       {result !== undefined && (
         <div className="gw-stack" aria-busy={busy}>
           <Section title="Output">
+            {result.mode === 'topic' && <TopicCaveat text={result.caveat} />}
             <PlainText text={result.text} label="Generated text" />
             <div className="gw-row">
               <CopyButton text={result.text} label="Copy output" />

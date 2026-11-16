@@ -1,9 +1,10 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { TOPIC_CAVEAT } from '../../src/screens/generate/topicCaveat';
 import { HUMANIZE_CAVEAT } from '../../src/screens/score/caveat';
 import { ApiError } from '../../src/api/client';
-import { AUTHORS, CAPS_NO_PHASE8, CONFIG, ERR, GENERATE_OK, HOSTILE, PERSONAS, respond } from '../helpers/fixtures';
+import { AUTHORS, CAPS_NO_PHASE8, CONFIG, ERR, GENERATE_OK, GENERATE_TOPIC_OK, HOSTILE, PERSONAS, respond } from '../helpers/fixtures';
 import { fakeClient, jsonResponse, mockClient, renderApp, renderScreen } from '../helpers/app';
 import { TYPED_CODES, recoversOnRetry, showsTypedError } from '../helpers/screens';
 import { describeViolations, runAxe } from '../helpers/axe';
@@ -367,13 +368,15 @@ describe('Generate screen', () => {
       await waitFor(() => expect(persona).toHaveFocus());
     });
 
-    it('Tab order: author, persona, draft, then Generate once it is enabled; Space activates the button; no trap', async () => {
+    it('Tab order: author, persona, mode, draft, then Generate once it is enabled; Space activates the button; no trap', async () => {
       const user = userEvent.setup();
       renderScreen('#/generate');
       const author = await screen.findByRole('button', { name: /Author/ });
       author.focus();
       await user.tab();
       expect(screen.getByRole('button', { name: /Persona/ })).toHaveFocus();
+      await user.tab();
+      expect(screen.getByRole('radio', { name: 'Rewrite my draft' })).toHaveFocus(); // the mode switch is one tab stop
       await user.tab();
       expect(screen.getByLabelText('Draft')).toHaveFocus();
       await user.keyboard('A draft');
@@ -409,6 +412,199 @@ describe('Generate screen', () => {
       expect(describeViolations((await runAxe(container)).violations)).toBe('');
       release();
       void PERSONAS;
+    });
+  });
+});
+
+describe('Generate screen: topic mode', () => {
+  const topicBox = () => screen.findByLabelText("Topic we're researching");
+  const notesBox = () => screen.findByLabelText('Notes and facts to use (optional)');
+  async function toTopic(user: ReturnType<typeof userEvent.setup>) {
+    await draft();
+    await user.click(screen.getByRole('radio', { name: 'Write about a topic' }));
+    return topicBox();
+  }
+  async function type(user: ReturnType<typeof userEvent.setup>, box: HTMLElement, text: string) {
+    await user.click(box);
+    await user.paste(text);
+  }
+
+  it('starts in "Rewrite my draft" with a two-option mode switch; the topic fields appear only after switching', async () => {
+    const user = userEvent.setup();
+    renderScreen('#/generate');
+    await draft();
+    const group = screen.getByRole('radiogroup', { name: 'What should the model do?' });
+    const radios = within(group).getAllByRole('radio');
+    expect(radios.map((r) => r.closest('label')?.textContent)).toEqual(['Rewrite my draft', 'Write about a topic']);
+    expect(screen.getByRole('radio', { name: 'Rewrite my draft' })).toBeChecked();
+    expect(screen.queryByLabelText("Topic we're researching")).toBeNull();
+    expect(screen.queryByTestId('topic-help')).toBeNull();
+    await toTopic(user);
+    expect(screen.getByRole('radio', { name: 'Write about a topic' })).toBeChecked();
+    expect(screen.queryByLabelText('Draft')).toBeNull();
+    expect(await notesBox()).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Length/ })).toHaveTextContent('Let the model choose');
+  });
+
+  it('says in plain words that the model writes new text from the topic and notes and that nothing is looked up online', async () => {
+    const user = userEvent.setup();
+    renderScreen('#/generate');
+    await toTopic(user);
+    const help = screen.getByTestId('topic-help');
+    expect(help).toHaveTextContent('writes new text from the topic and your notes');
+    expect(help).toHaveTextContent('Nothing is looked up online');
+    expect(help).toHaveTextContent('only from your notes');
+  });
+
+  it('the arrow keys move between the two modes (one tab stop)', async () => {
+    const user = userEvent.setup();
+    renderScreen('#/generate');
+    await draft();
+    screen.getByRole('radio', { name: 'Rewrite my draft' }).focus();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('radio', { name: 'Write about a topic' })).toBeChecked();
+    expect(await topicBox()).toBeInTheDocument();
+  });
+
+  it('cannot submit a blank topic; notes alone do not enable Generate; the hint names the topic', async () => {
+    const user = userEvent.setup();
+    const client = mockClient();
+    renderApp('#/generate', client);
+    await toTopic(user);
+    await type(user, await notesBox(), 'Some facts.');
+    expect(screen.getByRole('button', { name: 'Generate' })).toBeDisabled();
+    expect(screen.getByText('Write a topic to enable Generate.')).toBeInTheDocument();
+    await type(user, await topicBox(), '   ');
+    expect(screen.getByRole('button', { name: 'Generate' })).toBeDisabled();
+    expect(client.calls.filter((c) => c.url === '/api/generate')).toHaveLength(0);
+  });
+
+  it('sends mode, the topic as text, the notes and the chosen length; the result shows the server caveat before the text', async () => {
+    const user = userEvent.setup();
+    let sent: unknown;
+    const client = mockClient({ 'POST /api/generate': ({ body }) => ((sent = body), { status: 200, body: GENERATE_TOPIC_OK }) });
+    renderApp('#/generate', client);
+    await toTopic(user);
+    await type(user, await topicBox(), 'Why small teams ship faster');
+    await type(user, await notesBox(), 'The team shipped 12 releases in 2024.');
+    await user.click(screen.getByRole('button', { name: /Length/ }));
+    await user.click(await screen.findByRole('option', { name: 'Short' }));
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    const out = await screen.findByRole('region', { name: 'Generated text' });
+    expect(out.textContent).toBe(GENERATE_TOPIC_OK.text);
+    expect(sent).toEqual({ authorId: 'terse', persona: 'exec', text: 'Why small teams ship faster', mode: 'topic', notes: 'The team shipped 12 releases in 2024.', length: 'short' });
+    const caveat = screen.getByTestId('topic-caveat');
+    expect(caveat).toHaveAttribute('role', 'note');
+    expect(caveat).toHaveTextContent(TOPIC_CAVEAT);
+    expect(caveat.compareDocumentPosition(out) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy(); // read before the text
+  });
+
+  it('omits blank notes and the "let the model choose" length from the request', async () => {
+    const user = userEvent.setup();
+    let sent: unknown;
+    const client = mockClient({ 'POST /api/generate': ({ body }) => ((sent = body), { status: 200, body: GENERATE_TOPIC_OK }) });
+    renderApp('#/generate', client);
+    await toTopic(user);
+    await type(user, await topicBox(), 'A topic');
+    await type(user, await notesBox(), '  \n ');
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    await screen.findByRole('region', { name: 'Generated text' });
+    expect(sent).toEqual({ authorId: 'terse', persona: 'exec', text: 'A topic', mode: 'topic' });
+  });
+
+  it('shows the caveat on a topic result even when the server omitted it, and never on a rewrite result', async () => {
+    const user = userEvent.setup();
+    const { caveat: _drop, ...noCaveat } = GENERATE_TOPIC_OK;
+    void _drop;
+    const client = mockClient({ 'POST /api/generate': ({ body }) => ({ status: 200, body: (body as { mode?: string }).mode === 'topic' ? noCaveat : GENERATE_OK }) });
+    renderApp('#/generate', client);
+    await toTopic(user);
+    await type(user, await topicBox(), 'A topic');
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    await screen.findByRole('region', { name: 'Generated text' });
+    expect(screen.getByTestId('topic-caveat')).toHaveTextContent(TOPIC_CAVEAT);
+    // switching modes does not hide the caveat of the result on screen (it belongs to that result) ...
+    await user.click(screen.getByRole('radio', { name: 'Rewrite my draft' }));
+    expect(screen.getByTestId('topic-caveat')).toBeInTheDocument();
+    // ... and a rewrite result has none
+    await typeDraft(user);
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Generated text' }).textContent).toBe(GENERATE_OK.text));
+    expect(screen.queryByTestId('topic-caveat')).toBeNull();
+  });
+
+  it('the topic and the notes each have their own cap: counts, over-the-limit errors and a named reason', async () => {
+    const user = userEvent.setup();
+    const cap = CONFIG.config.limits.maxInputChars;
+    renderScreen('#/generate');
+    await toTopic(user);
+    await type(user, await topicBox(), 'A topic');
+    const notes = await notesBox();
+    await type(user, notes, 'n'.repeat(cap));
+    expect(screen.getByRole('button', { name: 'Generate' })).toBeEnabled();
+    await user.keyboard('zz');
+    expect(await screen.findByText('2 characters over the limit of 5,000.')).toBeInTheDocument();
+    expect(notes).toBeInvalid();
+    expect(screen.getByRole('button', { name: 'Generate' })).toBeDisabled();
+    expect(screen.getByText('The notes are over the limit.')).toBeInTheDocument();
+  });
+
+  it('switching modes keeps what was typed in each, and only the active mode is sent', async () => {
+    const user = userEvent.setup();
+    let sent: unknown;
+    const client = mockClient({ 'POST /api/generate': ({ body }) => ((sent = body), { status: 200, body: GENERATE_OK }) });
+    renderApp('#/generate', client);
+    await typeDraft(user, 'My draft text.');
+    await user.click(screen.getByRole('radio', { name: 'Write about a topic' }));
+    await type(user, await topicBox(), 'My topic');
+    await user.click(screen.getByRole('radio', { name: 'Rewrite my draft' }));
+    expect(await draft()).toHaveValue('My draft text.');
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    await screen.findByRole('region', { name: 'Generated text' });
+    expect(sent).toEqual({ authorId: 'terse', persona: 'exec', text: 'My draft text.' }); // no mode, notes or length
+    await user.click(screen.getByRole('radio', { name: 'Write about a topic' }));
+    expect(await topicBox()).toHaveValue('My topic');
+  });
+
+  it('humanize still works in topic mode and sends both', async () => {
+    const user = userEvent.setup();
+    let sent: unknown;
+    const client = mockClient({ 'POST /api/generate': ({ body }) => ((sent = body), { status: 200, body: GENERATE_TOPIC_OK }) });
+    renderApp('#/generate', client);
+    await toTopic(user);
+    await type(user, await topicBox(), 'A topic');
+    await user.click(await screen.findByRole('switch', { name: /Humanize/ }));
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    await screen.findByRole('region', { name: 'Generated text' });
+    expect(sent).toMatchObject({ mode: 'topic', humanize: true });
+    expect(screen.getByTestId('topic-caveat')).toBeInTheDocument();
+  });
+
+  it('a topic result with markup in it, and a hostile caveat, are literal text and never elements', async () => {
+    const user = userEvent.setup();
+    const hostile = { ...GENERATE_TOPIC_OK, text: `${HOSTILE.img}\n${HOSTILE.script}`, caveat: HOSTILE.mixed };
+    renderApp('#/generate', mockClient({ 'POST /api/generate': () => ({ status: 200, body: hostile }) }));
+    await toTopic(user);
+    await type(user, await topicBox(), 'A topic');
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    const out = await screen.findByRole('region', { name: 'Generated text' });
+    expect(out.textContent).toBe(hostile.text);
+    expect(screen.getByTestId('topic-caveat')).toHaveTextContent(HOSTILE.mixed);
+    expect(document.querySelector('[data-testid="topic-caveat"] a, [data-testid="topic-caveat"] b, [role="region"] img, [role="region"] script')).toBeNull();
+    expect((window as unknown as { __pwned?: number }).__pwned).toBeUndefined();
+  });
+
+  describe('axe', () => {
+    it.each(['idle', 'over the cap', 'result'] as const)('topic mode, %s state has no violations', async (state) => {
+      const user = userEvent.setup();
+      const { container } = renderApp('#/generate', mockClient());
+      await toTopic(user);
+      await type(user, await topicBox(), state === 'over the cap' ? 'x'.repeat(5001) : 'A topic');
+      if (state === 'result') {
+        await user.click(screen.getByRole('button', { name: 'Generate' }));
+        await screen.findByRole('region', { name: 'Generated text' });
+      }
+      expect(describeViolations((await runAxe(container)).violations)).toBe('');
     });
   });
 });

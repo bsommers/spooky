@@ -33,7 +33,7 @@ export async function settle(page: Page): Promise<void> {
 
 /** The feature screens, by the heading each one shows. */
 export const SCREENS = [
-  { name: 'generate', hash: '#/generate', heading: 'Generate', ready: (p: Page) => p.getByLabel('Draft').waitFor() },
+  { name: 'generate', hash: '#/generate', heading: 'Generate', ready: (p: Page) => p.getByLabel('Draft', { exact: true }).waitFor() },
   { name: 'authors', hash: '#/authors', heading: 'Authors and ingest', ready: (p: Page) => p.getByTestId('profile').waitFor() },
   { name: 'personas', hash: '#/personas', heading: 'Personas', ready: (p: Page) => p.getByRole('listbox', { name: 'Personas' }).waitFor() },
   { name: 'score', hash: '#/score', heading: 'Score and humanize', ready: (p: Page) => p.getByLabel('Text to score').waitFor() },

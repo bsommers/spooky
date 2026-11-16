@@ -17,8 +17,13 @@ const VIEWPORTS = [
 const screen = (name: string) => SCREENS.find((s) => s.name === name)!;
 
 async function generate(page: Page): Promise<void> {
-  await page.getByLabel('Draft').fill('Please write the release note for Friday. Keep it short.');
+  await page.getByLabel('Draft', { exact: true }).fill('Please write the release note for Friday. Keep it short.');
   await page.getByRole('button', { name: 'Generate' }).click();
+}
+
+async function toTopic(page: Page): Promise<void> {
+  await page.getByRole('radio', { name: 'Write about a topic' }).check({ force: true });
+  await page.getByLabel("Topic we're researching").waitFor();
 }
 
 interface State {
@@ -32,6 +37,19 @@ interface State {
 const STATES: State[] = [
   { name: 'generate', screen: 'generate', phone: true },
   { name: 'generate-result', screen: 'generate', phone: false, after: async (p) => { await generate(p); await p.getByRole('region', { name: 'Generated text' }).waitFor(); } },
+  { name: 'generate-topic', screen: 'generate', phone: true, after: toTopic },
+  {
+    name: 'generate-topic-result',
+    screen: 'generate',
+    phone: false,
+    after: async (p) => {
+      await toTopic(p);
+      await p.getByLabel("Topic we're researching").fill('Why small teams ship faster');
+      await p.getByLabel('Notes and facts to use (optional)').fill('The team shipped 12 releases in 2024.');
+      await p.getByRole('button', { name: 'Generate' }).click();
+      await p.getByRole('region', { name: 'Generated text' }).waitFor();
+    },
+  },
   {
     name: 'generate-error',
     screen: 'generate',

@@ -10,7 +10,7 @@ test.use({ bypassCSP: true }); // axe is injected by the test; the app's CSP is 
 
 const screen = (name: string) => SCREENS.find((s) => s.name === name)!;
 const gen = async (p: Page) => {
-  await p.getByLabel('Draft').fill('Please write the release note.');
+  await p.getByLabel('Draft', { exact: true }).fill('Please write the release note.');
   await p.getByRole('button', { name: 'Generate' }).click();
 };
 
@@ -28,12 +28,12 @@ for (const theme of THEME_IDS) {
     const held = new Promise<void>((r) => (release = r));
     await mockApi(page, { 'POST /api/generate': () => ({ status: 200, body: { ok: true, text: 'x', trace: [], promptTokensEstimate: 1 } }) }, {});
     await openScreen(page, screen('generate'), theme);
-    await page.getByLabel('Draft').fill('x'.repeat(5001));
+    await page.getByLabel('Draft', { exact: true }).fill('x'.repeat(5001));
     await expect(page.getByText('1 characters over the limit of 5,000.')).toBeVisible();
     expect(await axeViolations(page), 'over the cap').toBe('');
     await page.unrouteAll();
     await mockApi(page);
-    await page.getByLabel('Draft').fill('Please write the release note.');
+    await page.getByLabel('Draft', { exact: true }).fill('Please write the release note.');
     await page.getByRole('button', { name: 'Generate' }).click();
     await page.getByRole('region', { name: 'Generated text' }).waitFor();
     expect(await axeViolations(page), 'result').toBe('');
