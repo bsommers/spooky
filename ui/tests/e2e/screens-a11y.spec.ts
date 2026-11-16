@@ -76,7 +76,7 @@ for (const theme of THEME_IDS) {
     await page.unrouteAll();
     await page.goto('about:blank'); // a fresh page load: the capability list is read once per load
     await mockApi(page, { 'GET /api/capabilities': () => ({ status: 200, body: { ok: true, operations: [], pending: [] } }) });
-    await openScreen(page, { ...screen('score'), ready: (p: Page) => p.getByTestId('unavailable').waitFor() }, theme);
+    await openScreen(page, { ...screen('score'), ready: (p: Page) => p.getByTestId('unavailable').first().waitFor() }, theme);
     expect(await axeViolations(page), 'gated off').toBe('');
   });
 }

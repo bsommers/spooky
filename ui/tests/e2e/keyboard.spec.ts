@@ -86,7 +86,7 @@ for (const theme of THEME_IDS) {
     await expect(page.getByRole('region', { name: 'Generated text' })).toBeVisible();
   });
 
-  test(`${theme}: Enter in the ingest form submits; the live region says when generation finished and when it failed`, async ({ page }) => {
+  test(`${theme}: Enter in the ingest form submits; the live region says when generation finished, and a failure is said once by the alert`, async ({ page }) => {
     await mockApi(page);
     await openScreen(page, screen('generate'), theme);
     await page.getByLabel('Draft').fill('A draft.');
@@ -95,7 +95,9 @@ for (const theme of THEME_IDS) {
     await page.unrouteAll();
     await mockApi(page, { 'POST /api/generate': () => ({ status: 502, body: ERR('LLM_FAILED', 'm') }) });
     await page.getByRole('button', { name: 'Generate' }).click();
-    await expect(page.getByTestId('live-region')).toContainText('Generation failed: LLM_FAILED');
+    // the failure is said once, by the alert; the polite live region no longer repeats it
+    await expect(page.getByRole('alert')).toHaveAttribute('data-code', 'LLM_FAILED');
+    await expect(page.getByTestId('live-region')).toHaveText('');
 
     await page.unrouteAll();
     await mockApi(page);
