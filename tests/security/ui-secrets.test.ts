@@ -40,6 +40,9 @@ const ANTHROPIC = 'sk-ant-' + 'api03-' + 'Zy9Xw8Vu7Ts6Rq5Po4Nm3Lk2Ji1';
 const GITHUB = 'ghp_' + 'aB3dE5gH7jK9mN1pQ3sT5vW7yZ9bD1fH3jL5';
 const AWS = 'AKIA' + 'IOSFODNN7EXAMPLE';
 const RANDOM = 'q8Zr1VxN4kLw0TyP7bGm3HcJ6sDfA2uEoX9iRnB5';
+// Base64 uses "/" too: an AWS-style secret access key shape with a slash, with and without "+" and "=" (a path-looking secret).
+const SLASHED = 'wJalrXUtnFEMI' + '/K7MDENGbPxRfiCYzq8e3Vh2Tq9';
+const SLASHED_LEADING = '/' + 'wJalrXUtnFEMIK7MDENGbPxRfiCYzq8e3Vh2Tq9aB';
 const PLANTED = 'sk-' + 'planted-canary-8d41f0c7a95e2b6d1034';
 
 describe('the scanner (so a clean bundle means something)', () => {
@@ -50,6 +53,9 @@ describe('the scanner (so a clean bundle means something)', () => {
     ['an AWS access key', `aws=${AWS}`],
     ['a private key block', '-----BEGIN RSA PRIVATE KEY-----\nMIIB\n-----END RSA PRIVATE KEY-----'],
     ['a long high-entropy token', `var x="${RANDOM}"`],
+    ['a high-entropy secret with a slash in it (not a path)', `var x="${SLASHED}"`],
+    ['a high-entropy secret that starts with a slash', `var x="${SLASHED_LEADING}"`],
+    ['a slash-bearing secret with no quotes around it', `aws_secret_access_key=${SLASHED}`],
     ['a hard-coded password literal', 'const cfg = {password: "correct-horse-battery-staple"}'],
     ['a token assigned from a long literal', 'const apiKey = "abcdefghijklmnopqrstuvwxyz0123"'],
   ])('flags %s', async (_name, body) => {
@@ -68,6 +74,8 @@ describe('the scanner (so a clean bundle means something)', () => {
     const body = [
       'import("./ScoreScreen-BoZo5lpW.js");const e={password:!0,range:!0};fetch(u,{credentials:`omit`});',
       'const path="/assets/very-long-descriptive-chunk-name-without-secrets.js";',
+      'const rel="./components/screens/generate/with-a-long-but-lowercase-path-name";',
+      'import("./assets/ScoreScreen-BoZo5lpW.js");const u="assets/chunks/Generate-BoZo5lpWxQ.css";',
       'class VeryLongIdentifierNameThatIsJustCodeAndNotAKeyAtAll{}',
     ].join('\n');
     expect(await scanner.scanDir(dirWith({ 'assets/index-DXn5wVGR.js': body }))).toEqual([]);

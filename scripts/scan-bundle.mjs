@@ -39,12 +39,23 @@ function* walk(dir) {
 /** `password: "..."` / `apiKey = '...'` with a 16+ character literal on the right. */
 const SECRET_LITERAL = /(?:password|passwd|secret|api[_-]?key|apikey|private[_-]?key|token)["'`]?\s{0,5}[:=]\s{0,5}["'`][^"'`\s]{16,}["'`]/i;
 
+/**
+ * A file path, not a secret. Base64 uses `/` too, so slashes alone prove nothing: a 40-character secret access key with a
+ * `/` in it must still reach the entropy check. A path has a file extension (`.` is not a base64 character) or is a
+ * lowercase-only relative or absolute path; anything else with a slash is treated as a possible secret.
+ */
+function isPath(token) {
+  if (!/^[./-]*(?:[A-Za-z0-9_-]+\/)+[A-Za-z0-9._-]+$/.test(token)) return false;
+  if (/\.[A-Za-z0-9]{1,8}$/.test(token)) return true;
+  return /^\.{0,2}\//.test(token) && /^[a-z0-9_./-]+$/.test(token);
+}
+
 /** A token that is a known, public build artifact rather than a secret. */
 function benign(token) {
   return (
     /^[A-Za-z]+$/.test(token) || // a long identifier or word
     /^(?:[a-z]+[-_.]?){4,}$/i.test(token) || // kebab/snake/camel-ish names
-    /^[./-]*(?:[A-Za-z0-9_-]+\/){1,}[A-Za-z0-9._-]+$/.test(token) // a path
+    isPath(token)
   );
 }
 
