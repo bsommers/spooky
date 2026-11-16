@@ -61,7 +61,7 @@ const CLI_ONLY_FLAGS: Record<string, Record<string, string>> = {
  */
 const CLI_FIELDS: Record<string, Record<string, string>> = {
   ingest: { authorId: '--author', name: '--name', text: '--file' },
-  generate: { authorId: '--author', persona: '--persona', text: '--file', exemplars: '--exemplars', maxTokens: '--max-tokens', temperature: '--temperature', humanize: '--humanize', target: '--target' },
+  generate: { authorId: '--author', persona: '--persona', text: '--file', mode: '--topic', notes: '--notes-file', length: '--length', exemplars: '--exemplars', maxTokens: '--max-tokens', temperature: '--temperature', humanize: '--humanize', target: '--target' },
   humanize: { text: '--file', authorId: '--author', target: '--target', maxIterations: '--max-iterations', llm: '--no-llm' },
   score: { text: '--file', detectors: '--detector' },
   profile: { authorId: '<id>' },

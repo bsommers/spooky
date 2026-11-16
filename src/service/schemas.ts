@@ -3,6 +3,7 @@
 // output schemas. Inputs are strict objects: an unknown field is an error, never ignored.
 import { z } from 'zod';
 import { MAX_HUMANIZE_ITERATIONS } from '../../config/humanize.js';
+import { GENERATE_MODES, TOPIC_LENGTHS } from '../../config/topic.js';
 import { AUTHOR_ID, MAX_DISPLAY_NAME } from '../registry/profileFile.js';
 
 // eslint-disable-next-line no-control-regex
@@ -42,7 +43,14 @@ export const ingestInput = z.strictObject({ authorId: authorIdSchema, name: disp
 export const generateInput = z.strictObject({
   authorId: authorIdSchema,
   persona: personaKeySchema,
+  /** The draft to rewrite (mode `rewrite`, the default) or the topic to write about (mode `topic`). */
   text: textSchema,
+  /** `rewrite` (default): `text` is a draft. `topic`: `text` is a subject and the model writes NEW text about it. No web research. */
+  mode: z.enum(GENERATE_MODES).optional(),
+  /** Topic mode only: facts and source material the caller supplies. Capped like `text` (`limits.maxInputChars`), redacted like it. */
+  notes: textSchema.optional(),
+  /** Topic mode only: the length to aim for. */
+  length: z.enum(TOPIC_LENGTHS).optional(),
   exemplars: z.number().int().min(0).max(20).optional(),
   maxTokens: z.number().int().min(1).max(200_000).optional(),
   temperature: z.number().min(0).max(1).optional(),
@@ -50,7 +58,10 @@ export const generateInput = z.strictObject({
   humanize: z.boolean().optional(),
   /** Phase 8: humanizer target score (needs `humanize`). */
   target: z.number().min(0).max(1).optional(),
-}).refine((v) => v.target === undefined || v.humanize === true, { error: 'target needs humanize: true', path: ['target'] });
+})
+  .refine((v) => v.target === undefined || v.humanize === true, { error: 'target needs humanize: true', path: ['target'] })
+  .refine((v) => v.notes === undefined || v.mode === 'topic', { error: 'notes need mode "topic"', path: ['notes'] })
+  .refine((v) => v.length === undefined || v.mode === 'topic', { error: 'length needs mode "topic"', path: ['length'] });
 export const profileInput = z.strictObject({ authorId: authorIdSchema });
 export const humanizeInput = z.strictObject({
   text: textSchema,
@@ -144,7 +155,15 @@ export const authorsOutput = z.object({ authors: z.array(profileSchema) });
 export const personasOutput = z.object({ personas: z.array(personaSchema) });
 export const filtersOutput = z.object({ filters: z.array(filterSpecSchema) });
 export const configOutput = z.object({ config: configViewSchema });
-export const generateOutput = z.object({ text: z.string(), trace: z.array(traceEntrySchema), promptTokensEstimate: z.number() });
+export const generateOutput = z.object({
+  text: z.string(),
+  trace: z.array(traceEntrySchema),
+  promptTokensEstimate: z.number(),
+  /** Which mode produced `text`. */
+  mode: z.enum(GENERATE_MODES),
+  /** Topic mode only, fixed text: facts are not verified (nothing was looked up). Absent in rewrite mode. */
+  caveat: z.string().optional(),
+});
 export const scoreOutput = z.object({
   score: z.number(),
   local: scoreBreakdownSchema,

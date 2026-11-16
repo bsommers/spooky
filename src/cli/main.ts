@@ -5,6 +5,8 @@
 //   ghostwriter score    [file | --file <path>] [--detector <name>]...        (stdin when no file)
 //   ghostwriter humanize [file | --file <path>] [--author <id>] [--target <t>] [--max-iterations <n>] [--no-llm]
 //   ghostwriter generate ... [--humanize [--target <t>]]                      (humanizer loop on the result)
+//   ghostwriter generate --author <id> --persona <key> --topic <text> [--notes-file <path>] [--length short|medium|long]
+//                                                                           (write NEW text about a topic; no research)
 //   ghostwriter personas | filters | authors | profile <id> | config get | capabilities
 //   ghostwriter serve [--host --port --token-env --allow-origin --max-body --mcp]   (HTTP API, src/api)
 //   ghostwriter mcp [--stdio | --http]                                              (MCP server, src/mcp)
@@ -18,13 +20,14 @@
 // names, by the engine; this file never sees, prints or logs one. Unexpected errors are reported by class name only,
 // because their messages can embed text from the draft being processed.
 import { readFile, stat } from 'node:fs/promises';
-import { Command, CommanderError, InvalidArgumentError } from 'commander';
+import { Command, CommanderError, InvalidArgumentError, Option } from 'commander';
+import { TOPIC_LENGTHS } from '../../config/topic.js';
 import { loadConfig } from '../config/load.js';
 import { Engine, defaultStateDir } from '../engine.js';
 import type { EngineOptions } from '../engine.js';
 import { ConfigError, GhostwriterError, InputTooLargeError } from '../models/errors.js';
 import type { Config } from '../models/types.js';
-import { EXIT_CODES, describeError } from '../service/errors.js';
+import { EXIT_CODES, SurfaceError, describeError } from '../service/errors.js';
 import { OPERATIONS, invokeOperation, operation, successDocument } from '../service/operations.js';
 import type { AnyOperation } from '../service/operations.js';
 import { registerMcp } from './mcp.js';
@@ -251,11 +254,14 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
   common(
     program
       .command('generate')
-      .description('rewrite a draft in an author\'s voice for a persona (draft from a file or stdin)')
-      .argument('[file]', 'draft file (default: stdin)')
+      .description('rewrite a draft in an author\'s voice for a persona (draft from a file or stdin), or with --topic write NEW text about a topic (no web research; facts are not verified)')
+      .argument('[file]', 'draft file (default: stdin); not with --topic')
       .requiredOption('--author <id>', 'author id (must have been ingested)')
       .requiredOption('--persona <key>', 'target persona key (see `ghostwriter personas`)')
-      .option('--file <path>', 'draft file; "-" is stdin')
+      .option('--file <path>', 'draft file; "-" is stdin; not with --topic')
+      .option('--topic <text>', 'write new text about this topic instead of rewriting a draft; nothing is looked up online: the model uses the topic, --notes-file and its own knowledge, and may be wrong')
+      .option('--notes-file <path>', 'with --topic: a file of facts and source material to use ("-" is stdin); the only source of specific facts; same size limit as a draft')
+      .addOption(new Option('--length <length>', 'with --topic: the length to aim for').choices(TOPIC_LENGTHS))
       .option('--exemplars <n>', 'writing samples to include in the prompt (0-20)', parseInt10)
       .option('--max-tokens <n>', 'maximum output tokens', parseInt10)
       .option('--temperature <t>', 'sampling temperature, 0 to 1', parseUnit)
@@ -268,17 +274,26 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
   ).action(
     async (
       file: string | undefined,
-      opts: CommonOpts & LlmOpts & { author: string; persona: string; file?: string; exemplars?: number; maxTokens?: number; temperature?: number; humanize?: boolean; target?: number },
+      opts: CommonOpts & LlmOpts & { author: string; persona: string; file?: string; topic?: string; notesFile?: string; length?: string; exemplars?: number; maxTokens?: number; temperature?: number; humanize?: boolean; target?: number },
     ) => {
       const op = operation('generate');
       // `--target` without `--humanize` is rejected by the operation's input schema, like on HTTP and MCP (USAGE).
+      // Topic mode and draft mode do not mix: the topic is the whole input, so a draft file or stdin would be silently ignored.
+      if (opts.topic !== undefined && (file !== undefined || opts.file !== undefined)) throw new SurfaceError('USAGE', '--topic and a draft file (argument or --file) cannot be combined: give either a draft to rewrite or a topic to write about');
+      if (opts.topic === undefined && opts.notesFile !== undefined) throw new SurfaceError('USAGE', '--notes-file needs --topic (notes are only for writing about a topic)');
+      if (opts.topic === undefined && opts.length !== undefined) throw new SurfaceError('USAGE', '--length needs --topic (it is only for writing about a topic)');
       const config = await resolveConfig(io, opts, true);
-      const input = await readInput(io, file, opts.file, config.limits.maxInputChars * 4);
+      const topic = opts.topic !== undefined;
+      const input = topic ? (opts.topic as string) : await readInput(io, file, opts.file, config.limits.maxInputChars * 4);
+      const notes = opts.notesFile === undefined ? undefined : await readInput(io, undefined, opts.notesFile, config.limits.maxInputChars * 4);
       const engine = await engineFor(config, opts, true);
       const data = await invokeOperation(op, engine, {
         authorId: opts.author,
         persona: opts.persona,
         text: input,
+        ...(topic ? { mode: 'topic' } : {}),
+        ...(notes === undefined ? {} : { notes }),
+        ...(opts.length === undefined ? {} : { length: opts.length }),
         ...(opts.exemplars === undefined ? {} : { exemplars: opts.exemplars }),
         ...(opts.maxTokens === undefined ? {} : { maxTokens: opts.maxTokens }),
         ...(opts.temperature === undefined ? {} : { temperature: opts.temperature }),

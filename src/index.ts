@@ -10,7 +10,9 @@ export type { ConfidentialityOptions, CustomRule } from './filters/confidentiali
 export { StyleFilter } from './filters/style.js';
 export type { PhraseEntry, RhythmSettings, StyleOptions } from './filters/style.js';
 export { TargetManager, findBannedPhrases } from './registry/targetManager.js';
-export { buildPrompt } from './pipeline/promptBuilder.js';
+export { buildPrompt, TOPIC_HONESTY_RULES } from './pipeline/promptBuilder.js';
+export { TOPIC_CAVEAT, TOPIC_LENGTHS, GENERATE_MODES } from '../config/topic.js';
+export type { GenerateMode, TopicLength } from '../config/topic.js';
 export type { BuildPromptArgs, BuiltPrompt } from './pipeline/promptBuilder.js';
 export { splitProtected, join as joinSegments } from './filters/protectedSpans.js';
 export type { Segment } from './filters/protectedSpans.js';

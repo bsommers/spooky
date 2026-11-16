@@ -121,7 +121,7 @@ const ingest = define({
 const generate = define({
   name: 'generate',
   description:
-    "Rewrite a draft in an ingested author's voice for a target persona. Calls the configured language model; the draft is redacted first and the result is checked again. With humanize, the result is then run through the humanizer loop (up to maxIterations more model calls; scored by a weak local heuristic).",
+    "Rewrite a draft in an ingested author's voice for a target persona (mode rewrite, the default), or write NEW text about a topic in that voice (mode topic: text is the topic; optional notes are facts and source material you supply, optional length is short, medium or long). Topic mode does no research and has no web search: the model writes from the topic, the notes and its own knowledge, may state things that are wrong, and the result carries a fixed caveat that facts are not verified. Calls the configured language model; the draft (or topic and notes) is redacted first and the result is checked again. With humanize, the result is then run through the humanizer loop (up to maxIterations more model calls; scored by a weak local heuristic).",
   input: S.generateInput,
   output: S.generateOutput,
   mutates: false,
@@ -129,17 +129,21 @@ const generate = define({
   readsState: true,
   engineMethod: 'generate',
   http: { method: 'POST', path: '/api/generate' },
-  cli: { command: ['generate'], arguments: [], flags: ['--author', '--persona', '--file', '--exemplars', '--max-tokens', '--temperature', '--humanize', '--target'], derived: false },
-  render: (o) => o.text,
+  cli: { command: ['generate'], arguments: [], flags: ['--author', '--persona', '--file', '--topic', '--notes-file', '--length', '--exemplars', '--max-tokens', '--temperature', '--humanize', '--target'], derived: false },
+  render: (o) => (o.caveat === undefined ? o.text : `${o.text}\n\nnote: ${o.caveat}`),
   async handler(engine, input) {
+    const mode = input.mode ?? 'rewrite';
     const r = await engine.generate(input.authorId, input.persona, input.text, {
+      ...(input.mode === undefined ? {} : { mode: input.mode }),
+      ...(input.notes === undefined ? {} : { notes: input.notes }),
+      ...(input.length === undefined ? {} : { length: input.length }),
       ...(input.exemplars === undefined ? {} : { exemplarCount: input.exemplars }),
       ...(input.maxTokens === undefined ? {} : { maxTokens: input.maxTokens }),
       ...(input.temperature === undefined ? {} : { temperature: input.temperature }),
       ...(input.humanize === true ? { humanize: true } : {}),
       ...(input.target === undefined ? {} : { target: input.target }),
     });
-    return { text: r.text, trace: r.trace, promptTokensEstimate: r.promptTokensEstimate };
+    return { text: r.text, trace: r.trace, promptTokensEstimate: r.promptTokensEstimate, mode, ...(r.caveat === undefined ? {} : { caveat: r.caveat }) };
   },
 });
 

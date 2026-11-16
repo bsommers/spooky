@@ -2,6 +2,7 @@
 // Sections 1-7 are .planning/CONTRACTS.md verbatim (error classes live in ./errors.ts); section 8 is Phase 1 additive (config shapes).
 
 import type { FeatureName } from '../../config/scorer.js';
+import type { GenerateMode, TopicLength } from '../../config/topic.js';
 
 // ---------- 1. filters ----------
 export type Stage = 'pre' | 'post';
@@ -102,6 +103,12 @@ export interface LlmClient {
 
 // ---------- 5. orchestrator ----------
 export interface GenerateOptions {
+  /** `rewrite` (default): the input is a draft to rewrite. `topic`: the input is a subject to write NEW text about. */
+  mode?: GenerateMode;
+  /** Topic mode only: facts and source material the user supplies (size-capped like the input, redacted like it). */
+  notes?: string;
+  /** Topic mode only: the length to aim for. */
+  length?: TopicLength;
   exemplarCount?: number;
   maxTokens?: number;
   temperature?: number;
@@ -117,6 +124,8 @@ export interface GenerateResult {
   text: string;
   trace: TraceEntry[];
   promptTokensEstimate: number;
+  /** Present on every topic-mode result: `TOPIC_CAVEAT` (facts are not verified). Absent in rewrite mode. */
+  caveat?: string;
 }
 
 // ---------- 6. LLM providers ----------

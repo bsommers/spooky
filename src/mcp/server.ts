@@ -21,7 +21,7 @@ import { packageVersion } from '../service/version.js';
 import { callTool, toolDefinitions } from './tools.js';
 
 export const MCP_INSTRUCTIONS =
-  'Ghostwriter: rewrite drafts in an ingested author\'s voice for a target persona, and score how machine-written a text reads. ' +
+  'Ghostwriter: rewrite drafts, or write new text about a topic (no research: facts are not verified), in an ingested author\'s voice for a target persona, and score how machine-written a text reads. ' +
   'Tools take author ids, never file paths. Text you pass may be redacted for secrets before it is used. ' +
   '`ingest` is the only tool that changes stored state.';
 

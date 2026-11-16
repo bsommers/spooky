@@ -11,6 +11,7 @@ import { Engine } from '../../src/engine.js';
 import { MockLlmClient } from '../../src/llm/mockClient.js';
 import { LlmTransportError } from '../../src/llm/retry.js';
 import { ERROR_TABLE } from '../../src/service/errors.js';
+import { TOPIC_CAVEAT } from '../../config/topic.js';
 import { HUMANIZE_CAVEAT, OPERATIONS, invokeOperation } from '../../src/service/operations.js';
 import { readFileSync } from 'node:fs';
 import type { ApiServer } from '../../src/api/server.js';
@@ -23,6 +24,8 @@ const __dirname_ = dirname(fileURLToPath(import.meta.url));
 const CONFIG = { llm: { model: 'm', maxRetries: 0 }, personas: [PERSONA], limits: { maxInputChars: 5000 } };
 const DRAFT = 'Please rewrite this short draft so it reads plainly. We ship on Friday. The team agrees.';
 const AI_TEXT = readFileSync(join(__dirname_, '..', 'fixtures', 'corpus', 'ai', '08-social-media.txt'), 'utf8');
+const TOPIC = 'Why small teams ship faster';
+const NOTES = 'Fact: the team shipped 12 releases in 2024. Fact: median review time was 3 hours.';
 const SCORE_TEXT = 'This is a plain paragraph. It has a few sentences, some short and some a little longer than the others. Then it ends.';
 
 /** Wall-clock fields differ between runs; everything else must be equal. */
@@ -117,7 +120,20 @@ const cases: Case[] = [
     mcp: { authorId: 'terse', persona: 'exec', text: DRAFT },
     engine: async () => {
       const r = await rig.engine.generate('terse', 'exec', DRAFT);
-      return { text: r.text, trace: r.trace, promptTokensEstimate: r.promptTokensEstimate };
+      return { text: r.text, trace: r.trace, promptTokensEstimate: r.promptTokensEstimate, mode: 'rewrite' };
+    },
+  },
+  {
+    // Topic mode: the same operation, the same data on every surface, and the fixed caveat on all of them. The CLI takes the
+    // topic inline and reads the notes from stdin (`--notes-file -`).
+    op: 'generate',
+    http: (s) => postJson(s, '/api/generate', { authorId: 'terse', persona: 'exec', text: TOPIC, mode: 'topic', notes: NOTES, length: 'short' }),
+    cli: { argv: ['generate', '--author', 'terse', '--persona', 'exec', '--topic', TOPIC, '--notes-file', '-', '--length', 'short'], stdin: NOTES },
+    mcp: { authorId: 'terse', persona: 'exec', text: TOPIC, mode: 'topic', notes: NOTES, length: 'short' },
+    engine: async () => {
+      const r = await rig.engine.generate('terse', 'exec', TOPIC, { mode: 'topic', notes: NOTES, length: 'short' });
+      expect(r.caveat).toBe(TOPIC_CAVEAT);
+      return { text: r.text, trace: r.trace, promptTokensEstimate: r.promptTokensEstimate, mode: 'topic', caveat: r.caveat };
     },
   },
 ];

@@ -26,7 +26,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Rewrite a draft in an ingested author's voice for a target persona. Calls the configured language model; the draft is redacted first and the result is checked again. With humanize, the result is then run through the humanizer loop (up to maxIterations more model calls; scored by a weak local heuristic). */
+        /** Rewrite a draft in an ingested author's voice for a target persona (mode rewrite, the default), or write NEW text about a topic in that voice (mode topic: text is the topic; optional notes are facts and source material you supply, optional length is short, medium or long). Topic mode does no research and has no web search: the model writes from the topic, the notes and its own knowledge, may state things that are wrong, and the result carries a fixed caveat that facts are not verified. Calls the configured language model; the draft (or topic and notes) is redacted first and the result is checked again. With humanize, the result is then run through the humanizer loop (up to maxIterations more model calls; scored by a weak local heuristic). */
         post: operations["generate"];
         delete?: never;
         options?: never;
@@ -373,6 +373,11 @@ export interface operations {
                     authorId: string;
                     persona: string;
                     text: string;
+                    /** @enum {string} */
+                    mode?: "rewrite" | "topic";
+                    notes?: string;
+                    /** @enum {string} */
+                    length?: "short" | "medium" | "long";
                     exemplars?: number;
                     maxTokens?: number;
                     temperature?: number;
@@ -402,6 +407,9 @@ export interface operations {
                             error?: string;
                         }[];
                         promptTokensEstimate: number;
+                        /** @enum {string} */
+                        mode: "rewrite" | "topic";
+                        caveat?: string;
                     };
                 };
             };

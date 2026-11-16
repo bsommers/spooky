@@ -259,7 +259,10 @@ export class Engine {
   }
 
   /**
-   * Rewrite `input` in the voice of `authorId` for `personaKey`. See `Orchestrator.generate` for the flow and errors.
+   * Rewrite `input` in the voice of `authorId` for `personaKey`, or (`options.mode: 'topic'`) write NEW text about the topic
+   * `input` in that voice, using `options.notes` (facts the caller supplies) and aiming for `options.length`. Topic mode does no
+   * research: the model writes from the topic, the notes and its own knowledge, may be wrong, and the result carries
+   * `caveat` (`TOPIC_CAVEAT`). See `Orchestrator.generate` for the flow and errors.
    * `options.humanize` then runs the humanizer loop (`humanize()`) on the generated text, targeting `options.target`; the
    * result's trace gains the humanizer's entries. The humanizer never fails the generation: if it cannot improve the text it
    * returns it unchanged.
@@ -279,7 +282,7 @@ export class Engine {
     const h = await this.#humanizeRedacted(r.text, { authorId, ...(target === undefined ? {} : { target }), ...(rest.maxTokens === undefined ? {} : { maxTokens: rest.maxTokens }), ...(rest.temperature === undefined ? {} : { temperature: rest.temperature }) }, (t) => findBannedPhrases(t, persona));
     const banned = findBannedPhrases(h.text, persona);
     const bannedEntry: TraceEntry[] = banned.length > 0 ? [{ filter: 'persona-banned', modified: false, ms: 0, metadata: { found: true, count: banned.length } }] : [];
-    return { text: h.text, trace: [...r.trace.filter((t) => t.filter !== 'persona-banned'), ...h.trace, ...bannedEntry], promptTokensEstimate: r.promptTokensEstimate };
+    return { text: h.text, trace: [...r.trace.filter((t) => t.filter !== 'persona-banned'), ...h.trace, ...bannedEntry], promptTokensEstimate: r.promptTokensEstimate, ...(r.caveat === undefined ? {} : { caveat: r.caveat }) };
   }
 
   /**

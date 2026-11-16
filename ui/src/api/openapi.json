@@ -262,7 +262,7 @@
     "/api/generate": {
       "post": {
         "operationId": "generate",
-        "summary": "Rewrite a draft in an ingested author's voice for a target persona. Calls the configured language model; the draft is redacted first and the result is checked again. With humanize, the result is then run through the humanizer loop (up to maxIterations more model calls; scored by a weak local heuristic).",
+        "summary": "Rewrite a draft in an ingested author's voice for a target persona (mode rewrite, the default), or write NEW text about a topic in that voice (mode topic: text is the topic; optional notes are facts and source material you supply, optional length is short, medium or long). Topic mode does no research and has no web search: the model writes from the topic, the notes and its own knowledge, may state things that are wrong, and the result carries a fixed caveat that facts are not verified. Calls the configured language model; the draft (or topic and notes) is redacted first and the result is checked again. With humanize, the result is then run through the humanizer loop (up to maxIterations more model calls; scored by a weak local heuristic).",
         "tags": [
           "read"
         ],
@@ -323,13 +323,24 @@
                     },
                     "promptTokensEstimate": {
                       "type": "number"
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "rewrite",
+                        "topic"
+                      ]
+                    },
+                    "caveat": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "ok",
                     "text",
                     "trace",
-                    "promptTokensEstimate"
+                    "promptTokensEstimate",
+                    "mode"
                   ],
                   "additionalProperties": false
                 }
@@ -476,6 +487,24 @@
                   },
                   "text": {
                     "type": "string"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "rewrite",
+                      "topic"
+                    ]
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "length": {
+                    "type": "string",
+                    "enum": [
+                      "short",
+                      "medium",
+                      "long"
+                    ]
                   },
                   "exemplars": {
                     "type": "integer",
