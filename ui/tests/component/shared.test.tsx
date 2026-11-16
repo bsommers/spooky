@@ -93,6 +93,24 @@ describe('capability gating and the auth gate', () => {
     expect(await screen.findByText('ok score=false humanize=false generate=true')).toBeInTheDocument();
   });
 
+  it('overlapping reloads: the newest answer is kept even when an older request answers after it', async () => {
+    const releases: Array<(r: Response) => void> = [];
+    const client = fakeClient(() => new Promise<Response>((r) => releases.push(r)));
+    let reload: (wrong?: boolean) => Promise<void> = async () => undefined;
+    function Grab() {
+      reload = useCapabilities().reload;
+      return <Probe />;
+    }
+    wrap(client, <Grab />);
+    await waitFor(() => expect(releases).toHaveLength(1));
+    act(() => void reload());
+    await waitFor(() => expect(releases).toHaveLength(2));
+    await act(async () => releases[1]!(jsonResponse(200, CAPS_FULL)));
+    expect(await screen.findByText(/^ok /)).toBeInTheDocument();
+    await act(async () => releases[0]!(jsonResponse(503, ERR('OVERLOADED', 'late and stale'))));
+    expect(screen.getByText(/^ok /)).toBeInTheDocument(); // the older failure did not overwrite it
+  });
+
   it('AuthGate: loading status, then children; on 401 the token form; a right token opens the gate; the token is never stored', async () => {
     const user = userEvent.setup();
     const client = fakeClient((_url, init) =>

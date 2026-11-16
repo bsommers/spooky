@@ -181,6 +181,46 @@ describe('Overview', () => {
     await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: 'Server' })).toHaveFocus());
   });
 
+  it('a token with a character fetch cannot send is reported as that, not as "could not reach the server"; nothing is sent', async () => {
+    const user = userEvent.setup();
+    const client = fakeClient(() => jsonResponse(401, { ok: false, error: { code: 'UNAUTHORIZED', message: 'a valid bearer token is required' } }));
+    renderApp('#/', client);
+    await user.type(await screen.findByLabelText('API token'), 'token-with-a-snowman-\u2603-in-it');
+    const before = client.calls.length;
+    await user.click(screen.getByRole('button', { name: 'Connect' }));
+    expect(await screen.findByText(/The token contains characters that cannot be sent/)).toBeInTheDocument();
+    expect(client.calls.length).toBe(before);
+    expect(screen.queryByText(/could not reach the server/)).toBeNull();
+    // the client guards the same way for a token set from elsewhere (Settings)
+    const c = fakeClient();
+    c.setToken('bad-\u2603-token-0123456789');
+    expect(await c.get('/api/capabilities').catch((e) => e)).toMatchObject({ code: 'BAD_TOKEN' });
+    expect(c.calls).toHaveLength(0);
+    expect(c.hasToken()).toBe(false);
+  });
+
+  it('a pasted token with a trailing newline or space is trimmed, not rejected', async () => {
+    const user = userEvent.setup();
+    const client = fakeClient((_url, init) => ((init.headers as Record<string, string>).Authorization === 'Bearer right-token-0123456789' ? jsonResponse(200, CAPABILITIES) : jsonResponse(401, { ok: false, error: { code: 'UNAUTHORIZED', message: 'x' } })));
+    renderApp('#/', client);
+    await user.click(await screen.findByLabelText('API token'));
+    await user.paste('right-token-0123456789 \n');
+    await user.click(screen.getByRole('button', { name: 'Connect' }));
+    expect(await screen.findByText(/Connected/)).toBeInTheDocument();
+  });
+
+  it('a 429 that is not the token lockout is an ordinary error, not "too many wrong tokens"; the real lockout forgets the held token', async () => {
+    const other = renderApp('#/', fakeClient(() => jsonResponse(429, { ok: false, error: { code: 'OVERLOADED', message: 'busy elsewhere' } })));
+    expect(await screen.findByRole('alert')).toHaveTextContent('busy elsewhere');
+    expect(screen.queryByText(/Too many wrong tokens/)).toBeNull();
+    other.unmount();
+    const locked = fakeClient(() => jsonResponse(429, { ok: false, error: { code: 'RATE_LIMITED', message: 'x' } }, { 'Retry-After': '30' }));
+    locked.setToken('held-token-0123456789');
+    renderApp('#/', locked);
+    expect(await screen.findByText(/try again in 30 seconds/)).toBeInTheDocument();
+    expect(locked.hasToken()).toBe(false);
+  });
+
   it('a lockout (429) says how long to wait', async () => {
     renderApp('#/', fakeClient(() => jsonResponse(429, { ok: false, error: { code: 'RATE_LIMITED', message: 'x' } }, { 'Retry-After': '60' })));
     expect(await screen.findByText('Too many wrong tokens; try again in 60 seconds.')).toBeInTheDocument();

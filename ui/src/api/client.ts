@@ -17,6 +17,11 @@ export type PostResponse<P extends PostPath> = OkBody<NonNullable<paths[P]['post
 export type GetQuery<P extends GetPath> = QueryOf<NonNullable<paths[P]['get']>>;
 export type PostBody<P extends PostPath> = BodyOf<NonNullable<paths[P]['post']>>;
 
+/** A value `fetch` can carry in a header: bytes only (no character above U+00FF), no control characters. Anything else throws a TypeError inside fetch. */
+export function isHeaderSafe(value: string): boolean {
+  return !/[^\t\x20-\x7E\x80-\xFF]/.test(value);
+}
+
 /** The server's error document, as thrown. `status` 0 means the request never got an answer. */
 export class ApiError extends Error {
   constructor(
@@ -75,6 +80,11 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     for (const [k, v] of Object.entries(query ?? {})) if (v !== undefined) qs.set(k, String(v));
     const url = `${base}${path}${qs.size > 0 ? `?${qs.toString()}` : ''}`;
     const headers: Record<string, string> = { Accept: 'application/json' };
+    if (token !== undefined && !isHeaderSafe(token)) {
+      // fetch would throw a TypeError for the header, which would read as "could not reach the server". Say what is wrong, and do not keep it.
+      token = undefined;
+      throw new ApiError(0, 'BAD_TOKEN', 'the token contains characters that cannot be sent');
+    }
     const sentToken = token;
     if (sentToken !== undefined) headers.Authorization = `Bearer ${sentToken}`;
     if (body !== undefined) headers['Content-Type'] = 'application/json';

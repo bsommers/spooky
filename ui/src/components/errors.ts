@@ -29,6 +29,7 @@ export const ERROR_COPY: Readonly<Record<string, ErrorCopy>> = {
   STATE_LOCKED: { title: 'Another process is using the server state.', hint: 'Try again in a moment.' },
   CONFIG_INVALID: { title: 'The server configuration is invalid.' },
   NETWORK: { title: 'The server could not be reached.', hint: 'Check that ghostwriter serve is running.' },
+  BAD_TOKEN: { title: 'The token contains unsupported characters.', hint: 'Paste the token again, exactly as the server printed it.' },
   ABORTED: { title: 'The request was cancelled.', hint: 'The server may still finish work it had already started.' },
   CLIENT_TIMEOUT: { title: 'The server did not answer in time.', hint: 'The request may still be running on the server. Try again, or use shorter text.' },
   BAD_RESPONSE: { title: 'The server sent something this page cannot read.' },
