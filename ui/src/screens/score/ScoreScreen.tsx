@@ -40,10 +40,20 @@ function Unavailable({ what }: { what: string }) {
 type ServerConfig = GetResponse<'/api/config'>['config'];
 
 /** The server's configuration: the input cap and the humanize defaults the panels start from. */
-function useServerConfig(): ServerConfig | undefined {
+function useServerConfig() {
   const api = useApi();
-  const [config] = useLoad(() => api.get('/api/config').then((r) => r.config), [api]);
-  return config.kind === 'ok' ? config.data : undefined;
+  const [load, reload] = useLoad(() => api.get('/api/config').then((r) => r.config), [api]);
+  const config: ServerConfig | undefined = load.kind === 'ok' ? load.data : undefined;
+  return { config, error: load.kind === 'error' ? load.error : undefined, reload };
+}
+
+/** Why the submit button is off, in words. Empty when it is on. */
+function whyNot({ empty, over, waiting, numbers }: { empty: boolean; over: boolean; waiting: boolean; numbers?: boolean }, action: string): string {
+  if (waiting) return 'Waiting for the server limits.';
+  if (empty) return `Write some text to enable ${action}.`;
+  if (over) return 'The text is over the limit.';
+  if (numbers === false) return 'Enter a target score and a number of iterations.';
+  return '';
 }
 
 function ScorePanel() {
@@ -51,13 +61,14 @@ function ScorePanel() {
   const announce = useAnnounce();
   const { begin, cancel } = useAbortable();
   const submitButton = useRef<HTMLButtonElement>(null);
-  const config = useServerConfig();
+  const { config, error: configError, reload: reloadConfig } = useServerConfig();
   const cap = config?.limits.maxInputChars;
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | undefined>(undefined);
   const [result, setResult] = useState<ScoreResult | undefined>(undefined);
   const ready = text.trim() !== '' && cap !== undefined && text.length <= cap;
+  const why = whyNot({ empty: text.trim() === '', over: cap !== undefined && text.length > cap, waiting: cap === undefined }, 'Score');
 
   const submit = async () => {
     if (!ready || busy) return;
@@ -89,6 +100,7 @@ function ScorePanel() {
           void submit();
         }}
       >
+        {configError !== undefined && <ErrorBanner error={configError} onRetry={reloadConfig} />}
         <TextInput label="Text to score" value={text} onChange={setText} cap={cap} isDisabled={busy} />
         <div className="gw-row">
           <Button ref={submitButton} type="submit" className="gw-btn gw-btn--primary" isDisabled={!ready} aria-disabled={busy || undefined}>
@@ -105,6 +117,7 @@ function ScorePanel() {
               Cancel
             </Button>
           )}
+          {!ready && !busy && <span className="gw-hint">{why}</span>}
         </div>
       </Form>
       {error !== undefined && <ErrorBanner error={error} />}
@@ -202,7 +215,7 @@ function HumanizePanel() {
   const announce = useAnnounce();
   const { begin, cancel } = useAbortable();
   const submitButton = useRef<HTMLButtonElement>(null);
-  const config = useServerConfig();
+  const { config, error: configError, reload: reloadConfig } = useServerConfig();
   const cap = config?.limits.maxInputChars;
   const [authors] = useLoad(() => api.get('/api/authors').then((r) => r.authors), [api]);
   const [text, setText] = useState('');
@@ -218,6 +231,7 @@ function HumanizePanel() {
   const iterationsValue = iterations ?? config?.humanize.maxIterations ?? Number.NaN;
   const numbersOk = Number.isFinite(targetValue) && Number.isFinite(iterationsValue);
   const ready = text.trim() !== '' && cap !== undefined && text.length <= cap && numbersOk;
+  const why = whyNot({ empty: text.trim() === '', over: cap !== undefined && text.length > cap, waiting: cap === undefined, numbers: numbersOk }, 'Humanize');
   const authorItems = [{ id: NO_AUTHOR, label: 'No author profile' }, ...(authors.kind === 'ok' ? authors.data.map((a) => ({ id: a.authorId, label: `${a.displayName} (${a.authorId})` })) : [])];
 
   const submit = async () => {
@@ -257,6 +271,7 @@ function HumanizePanel() {
           void submit();
         }}
       >
+        {configError !== undefined && <ErrorBanner error={configError} onRetry={reloadConfig} />}
         <TextInput label="Text to humanize" value={text} onChange={setText} cap={cap} isDisabled={busy} />
         <div className="gw-row gw-row--top">
           <Picker label="Author profile (optional)" items={authorItems} value={authorId} onChange={setAuthorId} />
@@ -284,6 +299,7 @@ function HumanizePanel() {
               Cancel
             </Button>
           )}
+          {!ready && !busy && <span className="gw-hint">{why}</span>}
         </div>
       </Form>
       {error !== undefined && <ErrorBanner error={error} />}

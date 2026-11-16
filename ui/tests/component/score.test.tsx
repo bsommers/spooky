@@ -89,6 +89,22 @@ describe('Score panel', () => {
     expect(button).toBeEnabled();
   });
 
+  it('says why Score is off (empty, over the limit, waiting for limits), and a failed config load shows a banner whose Try again recovers', async () => {
+    const user = userEvent.setup();
+    let failed = false;
+    renderScreen('#/score', { 'GET /api/config': () => (failed ? { status: 200, body: CONFIG } : ((failed = true), { status: 503, body: ERR('OVERLOADED', 'busy') })) });
+    const retry = await screen.findByRole('button', { name: 'Try again' }, { timeout: 4000 });
+    expect(screen.getByText('Waiting for the server limits.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Score' })).toBeDisabled();
+    await user.click(retry);
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull());
+    expect(await screen.findByText('Write some text to enable Score.')).toBeInTheDocument();
+    await paste(user, /Text to score/, 'x'.repeat(5001));
+    expect(screen.getByText('The text is over the limit.')).toBeInTheDocument();
+    await user.keyboard('{Backspace}');
+    expect(screen.queryByText(/enable Score|over the limit/)).toBeNull();
+  });
+
   it('shows busy, then the score, per-feature contribution with bars, the ensemble and the trace', async () => {
     const user = userEvent.setup();
     let release: () => void = () => undefined;
@@ -206,6 +222,18 @@ describe('Humanize panel', () => {
     await user.click(run);
     await screen.findByTestId('score-before');
     expect(bodies).toEqual([{ text: 'A draft.', target: 0.5, maxIterations: 2, llm: true }]);
+  });
+
+  it('Humanize says why it is off: empty text, then a cleared number', async () => {
+    const user = userEvent.setup();
+    renderScreen('#/score');
+    await openHumanize(user);
+    expect(await screen.findByText('Write some text to enable Humanize.')).toBeInTheDocument();
+    await paste(user, /Text to humanize/, 'A draft.');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Humanize' })).toBeEnabled());
+    await user.clear(screen.getByRole('textbox', { name: /Target score/ }));
+    await user.tab();
+    expect(await screen.findByText('Enter a target score and a number of iterations.')).toBeInTheDocument();
   });
 
   it('a target that was not reached says so; an empty history says no edit was attempted', async () => {
