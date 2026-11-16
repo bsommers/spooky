@@ -15,6 +15,16 @@ const BANNED_PROPS = new Set(['innerHTML', 'outerHTML', 'srcdoc', 'insertAdjacen
 const BANNED_CALLS = new Set(['eval', 'Function', 'execScript']);
 const TIMERS = new Set(['setTimeout', 'setInterval', 'setImmediate']);
 const URL_ATTRS = new Set(['href', 'src', 'action', 'formAction', 'xlinkHref', 'data', 'poster']);
+/** Attribute names that setAttribute must not receive from data: the URL ones above (any case), the markup one, and event handlers. */
+const isUrlAttrName = (name: string): boolean => {
+  const n = name.toLowerCase();
+  return [...URL_ATTRS].some((a) => a.toLowerCase() === n) || n === 'srcdoc' || n === 'formaction' || n === 'xlink:href' || n.startsWith('on');
+};
+/** Elements whose attributes can load or navigate: a spread of unknown props onto one of them could carry a URL. */
+const URL_TAGS = new Set(['a', 'img', 'iframe', 'form', 'object', 'embed', 'source', 'video', 'audio', 'area', 'link', 'base', 'input', 'button', 'track', 'use', 'image']);
+/** Markdown, HTML parsing and sanitizing libraries: text from the model must never go through one. */
+export const MARKUP_PACKAGE = /^(?:react-markdown|marked|markdown-it|markdown-to-jsx|remark|rehype|unified|micromark|mdast|hast|mdx|@mdx-js|html-react-parser|react-html-parser|htmr|interweave|dompurify|isomorphic-dompurify|sanitize-html|showdown|snarkdown|parse5|htmlparser2|cheerio)/;
+const isLocation = (e: ts.Expression, sf: ts.SourceFile): boolean => /(?:^|\.)location$/.test(e.getText(sf));
 
 export function violations(code: string, opts: { strictUrls: boolean }): string[] {
   const sf = ts.createSourceFile('x.tsx', code, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TSX);
@@ -29,8 +39,35 @@ export function violations(code: string, opts: { strictUrls: boolean }): string[
       if (name === 'dangerouslySetInnerHTML') at(n, 'dangerouslySetInnerHTML');
       if (opts.strictUrls && URL_ATTRS.has(name) && n.initializer !== undefined && !ts.isStringLiteral(n.initializer)) {
         const inner = ts.isJsxExpression(n.initializer) ? n.initializer.expression : undefined;
-        // a template of a fixed prefix and a route constant (`#${r.path}`) is the shell's own navigation; anything else is data
-        if (!(inner !== undefined && ts.isTemplateExpression(inner) && inner.head.text.startsWith('#'))) at(n, `${name} from an expression`);
+        // exactly `#${path}` or `#${x.path}` (a route constant from ROUTES) is the shell's own navigation; anything else is data
+        const isRoute =
+          inner !== undefined &&
+          ts.isTemplateExpression(inner) &&
+          inner.head.text === '#' &&
+          inner.templateSpans.length === 1 &&
+          inner.templateSpans[0]!.literal.text === '' &&
+          ((ts.isIdentifier(inner.templateSpans[0]!.expression) && inner.templateSpans[0]!.expression.text === 'path') ||
+            (ts.isPropertyAccessExpression(inner.templateSpans[0]!.expression) && inner.templateSpans[0]!.expression.name.text === 'path'));
+        if (!isRoute) at(n, `${name} from an expression`);
+      }
+    }
+    if (opts.strictUrls && ts.isJsxSpreadAttribute(n)) {
+      const el = n.parent.parent;
+      if ((ts.isJsxOpeningElement(el) || ts.isJsxSelfClosingElement(el)) && URL_TAGS.has(el.tagName.getText(sf))) at(n, `spread props onto <${el.tagName.getText(sf)}>`);
+    }
+    // navigation sinks: location.href = x, location = x, location.assign(x), location.replace(x), window.open(x)
+    if (ts.isBinaryExpression(n) && n.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+      const l = n.left;
+      if (ts.isPropertyAccessExpression(l) && l.name.text === 'href' && isLocation(l.expression, sf)) at(n, 'location.href = ...');
+      if (isLocation(l, sf)) at(n, 'location = ...');
+    }
+    if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression)) {
+      const callee = n.expression;
+      if ((callee.name.text === 'assign' || callee.name.text === 'replace') && isLocation(callee.expression, sf)) at(n, `location.${callee.name.text}()`);
+      if (callee.name.text === 'open' && /^(?:window|self|globalThis|top|parent)$/.test(callee.expression.getText(sf))) at(n, 'window.open()');
+      if (callee.name.text === 'setAttribute' || callee.name.text === 'setAttributeNS') {
+        const arg = n.arguments[callee.name.text === 'setAttribute' ? 0 : 1];
+        if (arg === undefined || !ts.isStringLiteralLike(arg) || isUrlAttrName(arg.text)) at(n, `${callee.name.text}(${arg?.getText(sf) ?? ''})`);
       }
     }
     if (ts.isPropertyAccessExpression(n) && BANNED_PROPS.has(n.name.text)) at(n, `.${n.name.text}`);
@@ -44,7 +81,12 @@ export function violations(code: string, opts: { strictUrls: boolean }): string[
       if (TIMERS.has(name) && n.arguments?.[0] !== undefined && ts.isStringLiteralLike(n.arguments[0])) at(n, `${name}(string)`);
       if (name === 'DOMParser' || name === 'parseFromString') at(n, name);
     }
-    if (ts.isImportDeclaration(n) && ts.isStringLiteral(n.moduleSpecifier) && /^(?:react-markdown|marked|markdown-it|remark|rehype|dompurify|sanitize-html|showdown|snarkdown)/.test(n.moduleSpecifier.text)) at(n, `import ${n.moduleSpecifier.text}`);
+    if (ts.isImportDeclaration(n) && ts.isStringLiteral(n.moduleSpecifier) && MARKUP_PACKAGE.test(n.moduleSpecifier.text)) at(n, `import ${n.moduleSpecifier.text}`);
+    // import('react-markdown') and require('marked'); a computed specifier cannot be proven safe
+    if (ts.isCallExpression(n) && (n.expression.kind === ts.SyntaxKind.ImportKeyword || (ts.isIdentifier(n.expression) && n.expression.text === 'require'))) {
+      const arg = n.arguments[0];
+      if (arg !== undefined && ts.isStringLiteralLike(arg) && MARKUP_PACKAGE.test(arg.text)) at(n, `import(${arg.text})`);
+    }
     ts.forEachChild(n, visit);
   };
   visit(sf);
@@ -69,6 +111,25 @@ describe('the checker (so clean means something)', () => {
     ['a markdown renderer', 'import Markdown from "react-markdown";'],
     ['a link built from data', 'const a = <a href={model.url}>x</a>;'],
     ['an image built from data', 'const a = <img src={text} />;'],
+    ['location.href assigned', 'location.href = x;'],
+    ['window.location.href assigned', 'window.location.href = model.url;'],
+    ['location assigned', 'window.location = x;'],
+    ['location.assign', 'location.assign(x);'],
+    ['window.location.replace', 'window.location.replace(x);'],
+    ['window.open', 'window.open(x);'],
+    ['setAttribute href', 'el.setAttribute("href", x);'],
+    ['setAttribute with a computed name', 'el.setAttribute(name, x);'],
+    ['setAttribute for an event handler', 'el.setAttribute("onclick", x);'],
+    ['setAttribute src in odd case', 'el.setAttribute("SrcDoc", x);'],
+    ['spread props onto a link', 'const a = <a {...p}>x</a>;'],
+    ['spread props onto an image', 'const a = <img {...p} />;'],
+    ['a dynamic markdown import', 'const M = await import("react-markdown");'],
+    ['require of a sanitizer', 'const d = require("dompurify");'],
+    ['micromark', 'import { micromark } from "micromark";'],
+    ['mdx', 'import { evaluate } from "@mdx-js/mdx";'],
+    ['html-react-parser', 'import parse from "html-react-parser";'],
+    ['a # link carrying data', 'const a = <a href={`#${model.x}`}>x</a>;'],
+    ['a # link with a data tail', 'const a = <a href={`#${r.path}${model.x}`}>x</a>;'],
   ])('flags %s', (_n, code) => {
     expect(violations(code, strict).length, code).toBeGreaterThan(0);
   });
@@ -79,6 +140,11 @@ describe('the checker (so clean means something)', () => {
       'const s = "innerHTML is banned";',
       'const a = <a href="#/authors">Ingest</a>;',
       'const b = <Link href={`#${r.path}`}>x</Link>;',
+      'const c = <a href={`#${path}`}>x</a>;',
+      'const route = parseHash(window.location.hash);',
+      'root.setAttribute("data-theme", id);',
+      'const d = <Input {...props} />;',
+      'const e = await import("./ScoreScreen");',
       'setTimeout(() => setDone(false), 2000);',
     ].join('\n');
     expect(violations(ok, strict)).toEqual([]);
@@ -101,6 +167,6 @@ describe('ui/src', () => {
 
   it('depends on no markdown or HTML sanitizer library', () => {
     const pkg = JSON.parse(readFileSync(join(UI_ROOT, 'package.json'), 'utf8')) as { dependencies: Record<string, string> };
-    expect(Object.keys(pkg.dependencies).filter((d) => /markdown|marked|remark|rehype|dompurify|sanitize|showdown|snarkdown/.test(d))).toEqual([]);
+    expect(Object.keys(pkg.dependencies).filter((d) => MARKUP_PACKAGE.test(d) || /markdown|mdx|sanitize/.test(d))).toEqual([]);
   });
 });
