@@ -2,6 +2,10 @@
 
 Spooky rewrites a draft along two axes: whose **voice** (source author) and for whom (target **persona**). A filter pipeline wraps the single LLM call. The CLI, the HTTP API and the MCP server are thin adapters over the `Engine` class, generated from one operations registry (`src/service/operations.ts`); every capability exists on every surface (`tests/integration/parity.test.ts` and `tests/integration/surfaces-parity.test.ts` enforce this; see [SURFACES.md](SURFACES.md)).
 
+## Topic mode
+
+`generate` takes `mode: 'rewrite' | 'topic'` (default rewrite). In topic mode the input is a subject, not a draft: the orchestrator runs the same flow, with these differences. The topic and the optional `notes` (user-supplied facts, capped at `limits.maxInputChars` like the input) each go through the PRE pipeline on their own, and each must show a successful confidentiality entry or no prompt is built (fail closed). The retrieval query is the redacted topic plus notes. `buildPrompt` fences them as `<topic>` and `<notes>` (look-alikes of those tags in any untrusted text are neutralized like `<input>`) and its system prompt asks for NEW text, with honesty rules: there is no web search; use ONLY the notes for specific facts, numbers, names, dates and quotes; say plainly when the notes or its knowledge do not cover something instead of inventing it. The POST pipeline, the banned-phrase check and the optional humanizer run unchanged. The result carries `caveat` (`TOPIC_CAVEAT`, `config/topic.ts`): facts are not verified. The honesty rules reduce invented specifics; they cannot prevent them, which is why the caveat is on every topic result on every surface.
+
 ## Generation flow
 
 ```

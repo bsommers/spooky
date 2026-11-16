@@ -17,7 +17,7 @@ Claude Desktop / Claude Code style client entry (stdio):
 | Tool | Writes | Open world | Input | Notes |
 |---|---|---|---|---|
 | `ingest` | yes (`readOnlyHint: false`, `destructiveHint: true`, `idempotentHint: true`) | no | `authorId`, `name`, `text` | replaces an earlier ingest of the same id; the only mutating tool; uses the state lock |
-| `generate` | no | yes (calls the configured model) | `authorId`, `persona`, `text`, `exemplars?`, `maxTokens?`, `temperature?`, `humanize?`, `target?` | `humanize` runs the humanizer loop on the result (more model calls) |
+| `generate` | no | yes (calls the configured model) | `authorId`, `persona`, `text`, `mode?`, `notes?`, `length?`, `exemplars?`, `maxTokens?`, `temperature?`, `humanize?`, `target?` | `humanize` runs the humanizer loop on the result (more model calls). `mode: "topic"` makes `text` a topic to write NEW text about (optional `notes` you supply, optional `length` short/medium/long; `notes` and `length` without topic mode are `invalid_request`). No web search: the model uses the topic, the notes and its own knowledge, may be wrong, and the result carries `mode` and a fixed `caveat` (facts are not verified). Topic and notes are redacted before the model sees them |
 | `humanize` | no | yes unless `llm` is false (sends the redacted text to the configured model) | `text`, `authorId?`, `target?`, `maxIterations?`, `llm?` | bounded loop with a meaning guard; scores are a weak local heuristic (held-out AUC 0.694), see [HUMANIZING.md](HUMANIZING.md) |
 | `score` | no | yes if `detectors` are named (text is SENT to them) | `text`, `detectors?` | |
 | `profile` | no | no | `authorId` | |

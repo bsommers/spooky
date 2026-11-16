@@ -17,7 +17,7 @@ flowchart LR
 | Operation | Library | CLI | HTTP | MCP tool | UI |
 |---|---|---|---|---|---|
 | ingest | `engine.ingest` | `ghostwriter ingest` | `POST /api/ingest` | `ingest` | Authors (ingest form) |
-| generate (`humanize?`, `target?`) | `engine.generate` | `ghostwriter generate [--humanize --target]` | `POST /api/generate` | `generate` | Generate |
+| generate (`mode?`, `notes?`, `length?`, `humanize?`, `target?`) | `engine.generate` | `ghostwriter generate [--topic --notes-file --length] [--humanize --target]` | `POST /api/generate` | `generate` | Generate |
 | score | `engine.score` | `ghostwriter score` | `POST /api/score` | `score` | Score / Humanize (Score) |
 | profile | `engine.getProfile` | `ghostwriter profile <id>` | `GET /api/profile?authorId=` | `profile` | Authors (profile view) |
 | list authors | `engine.listAuthors` | `ghostwriter authors` | `GET /api/authors` | `authors` | Authors, Generate |
@@ -26,6 +26,8 @@ flowchart LR
 | config get (redacted) | `engine.getConfigView` | `ghostwriter config get` | `GET /api/config` | `config_get` | Settings, limits on Generate |
 | capabilities | `describeCapabilities()` | `ghostwriter capabilities` | `GET /api/capabilities` | `capabilities` | Overview, nav gating |
 | humanize | `engine.humanize` | `ghostwriter humanize` | `POST /api/humanize` | `humanize` | Score / Humanize (Humanize) |
+
+**Topic mode is one operation, not two.** Writing about a topic is `generate` with `mode: 'topic'` (default `'rewrite'`, so every existing caller is unchanged), `text` meaning the draft or the topic, and optional `notes` and `length`. It was declared once in the registry rather than as a separate `generate_topic` operation because the whole pipeline is shared (persona and author lookup, confidentiality on every input, exemplar retrieval, the model call with retry, the post filters, the humanizer option, the same limits and the same errors): a second operation would duplicate that on every surface and leave the two to drift. The cost is that `notes` and `length` are valid only with `mode: 'topic'`, which the schema (and the Engine, for library callers) enforces with a usage error. The parity test maps the new fields to CLI flags (`mode` -> `--topic`, `notes` -> `--notes-file`, `length` -> `--length`) and a golden test runs one topic request through the library, CLI, HTTP and MCP and requires the same data, caveat included. There is no web search or research behind it; every topic result carries the fixed `caveat`: facts are not verified.
 
 **Pending capabilities.** A capability planned but not built is listed in `PENDING_CAPABILITIES` (`src/service/operations.ts`) and in the `pending` array of every `capabilities` call, so clients can tell "not built yet" from "does not exist"; it has no CLI command, route, tool or OpenAPI path, and the parity test fails the moment the Engine gains the method without a registry entry. The list is empty since Phase 8 built `humanize` ([HUMANIZING.md](HUMANIZING.md)): one registry entry gave it the CLI command, route, tool and OpenAPI path, and `generate` gained `humanize` and `target` on every surface. Its scores come from a weak, confounded heuristic (held-out AUC 0.694); every surface returns that caveat in the result.
 

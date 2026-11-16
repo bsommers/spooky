@@ -10,11 +10,19 @@ curl -s -H "Authorization: Bearer $GHOSTWRITER_API_TOKEN" -H 'Content-Type: appl
   -d '{"authorId":"ann","persona":"executive","text":"Draft to rewrite."}' http://127.0.0.1:8787/api/generate
 ```
 
+## Generate: two modes
+`mode` is `"rewrite"` (default; `text` is a draft to rewrite) or `"topic"` (`text` is the topic and the model writes NEW text about it in the author's voice). `notes` (facts and source material you supply) and `length` (`short`, `medium`, `long`) are topic-only: sending either without `"mode":"topic"` is `400 USAGE`. The topic and the notes are each capped at `limits.maxInputChars` (`413 INPUT_TOO_LARGE`) and redacted by the fail-closed confidentiality filter before the model sees them. A topic result carries `"mode":"topic"` and a fixed `caveat`: **there is no web search or research; the text is written from the topic, the notes and the model's own knowledge, facts are not verified, and it may state things that are wrong.** A rewrite result has `"mode":"rewrite"` and no `caveat`. The same fields exist on the MCP tool, the CLI (`--topic`, `--notes-file`, `--length`) and in `GET /openapi.json`.
+
+```bash
+curl -s -H 'Content-Type: application/json' \
+  -d '{"authorId":"ann","persona":"executive","text":"Why small teams ship faster","mode":"topic","notes":"The team shipped 12 releases in 2024.","length":"short"}' http://127.0.0.1:8787/api/generate
+```
+
 ## Routes
 | Operation | Request | Success body (`{ "ok": true, ... }`) |
 |---|---|---|
 | `ingest` (writes state) | `POST /api/ingest` `{authorId, name, text}` | `profile` |
-| `generate` | `POST /api/generate` `{authorId, persona, text, exemplars?, maxTokens?, temperature?, humanize?, target?}` | `text`, `trace`, `promptTokensEstimate` |
+| `generate` | `POST /api/generate` `{authorId, persona, text, mode?, notes?, length?, exemplars?, maxTokens?, temperature?, humanize?, target?}` | `text`, `trace`, `promptTokensEstimate`, `mode`, `caveat?` (topic mode) |
 | `humanize` | `POST /api/humanize` `{text, authorId?, target?, maxIterations?, llm?}` | `text`, `initialScore`, `finalScore`, `reachedTarget`, `iterations`, `llmCalls`, `guardRejections`, `featureDeltas`, `featuresBefore`, `featuresAfter`, `steps`, `trace`, `caveat` |
 | `score` | `POST /api/score` `{text, detectors?}` | `score`, `local`, `members`, `excluded`, `trace`, `localOnly?` |
 | `profile` | `GET /api/profile?authorId=ann` | `profile` |

@@ -35,6 +35,14 @@ echo "We should ship the billing fix Friday." | node dist/src/cli/bin.js generat
   --provider openai-compat --base-url http://localhost:11434/v1 --model llama3.1
 ```
 
+To write NEW text about a topic instead of rewriting a draft (no web search: see [Topic mode](#topic-mode-write-about-a-subject)):
+
+```bash
+node dist/src/cli/bin.js generate --author ann --persona executive \
+  --topic "Why small teams ship faster" --notes-file facts.txt --length short \
+  --provider openai-compat --base-url http://localhost:11434/v1 --model llama3.1
+```
+
 With Anthropic instead: `export ANTHROPIC_API_KEY=...` and `generate --author ann --persona executive --model <anthropic-model-id>`. The key is only ever read from the environment variable named by `llm.apiKeyEnv` (default `ANTHROPIC_API_KEY`); it is never put in a config file, flag value, log or trace.
 
 `ghostwriter` is the bin name after `npm link` in a built checkout; the commands above call `node dist/src/cli/bin.js` directly. The package is named `spooky` and is not published, so do not run `npx ghostwriter`: outside a linked checkout it would fetch an unrelated registry package of that name.
@@ -44,7 +52,7 @@ With Anthropic instead: `export ANTHROPIC_API_KEY=...` and `generate --author an
 | Command | What it does |
 |---|---|
 | `ghostwriter ingest --author <id> --name <name> [file]` | Profile and store an author's corpus (file, `--file <path>` or stdin). |
-| `ghostwriter generate --author <id> --persona <key> [file]` | Rewrite a draft (file, `--file <path>` or stdin). Options: `--exemplars <0-20>`, `--max-tokens`, `--temperature <0-1>`, `--humanize [--target <0-1>]`, `--model`, `--provider anthropic\|openai-compat`, `--base-url`, `--api-key-env <NAME>`. |
+| `ghostwriter generate --author <id> --persona <key> [file]` | Rewrite a draft (file, `--file <path>` or stdin). **Topic mode:** `--topic <text> [--notes-file <path>] [--length short\|medium\|long]` writes new text about the topic instead (not with a draft file or stdin; `--notes-file` and `--length` need `--topic`; usage error, exit 2). Options: `--exemplars <0-20>`, `--max-tokens`, `--temperature <0-1>`, `--humanize [--target <0-1>]`, `--model`, `--provider anthropic\|openai-compat`, `--base-url`, `--api-key-env <NAME>`. |
 | `ghostwriter score [file] [--detector <name>]...` | Rate how machine-written a text reads, 0 to 1, with a per-feature breakdown (file, `--file <path>` or stdin). Local, offline, deterministic; needs no model or key. `--detector` also asks a detector you declared under `scorer.detectors` and **sends the redacted text to it**; nothing is sent unless you name one. A heuristic proxy, not a detector verdict: [docs/CALIBRATION.md](docs/CALIBRATION.md) has the measured numbers (AUC 0.73 on a small corpus, wide interval, chance level against modern technical prose). |
 | `ghostwriter humanize [file] [--author <id>] [--target <0-1>] [--max-iterations <n>] [--no-llm]` | Rewrite a text to score lower on the local heuristic while a guard keeps numbers, names, quotes, code and URLs unchanged; bounded loop (default target 0.3, 3 iterations), each edit re-redacted and kept only if it scores lower. `generate --humanize [--target]` runs it on the result. The scores come from a weak, confounded heuristic (held-out AUC 0.694) and nothing here is claimed against any real detector: [docs/HUMANIZING.md](docs/HUMANIZING.md) has the measured results, including that the mean drop on the corpus is small (0.593 to 0.543). |
 | `ghostwriter profile <id>` | Show the stored stylometric profile. |
@@ -98,6 +106,22 @@ const r = await engine.humanize(text, { authorId: 'ann', target: 0.3, maxIterati
 const g = await engine.generate('ann', 'executive', draft, { humanize: true });              // generate, then the same loop on the result
 ```
 
+## Topic mode: write about a subject
+
+`generate` has two input modes. **Rewrite** (the default) takes a draft and rewrites it in the author's voice. **Topic** takes a subject we are researching, optionally with notes (facts and source material you supply) and a length (`short`, `medium`, `long`), and the model writes NEW text about it in the author's voice for the persona.
+
+```ts
+const t = await engine.generate('ann', 'executive', 'Why small teams ship faster', { mode: 'topic', notes: 'The team shipped 12 releases in 2024.', length: 'short' });
+t.text;    // new text in Ann's voice
+t.caveat;  // TOPIC_CAVEAT: always present on a topic result
+```
+
+Over HTTP and MCP it is the same `generate` operation: `{"authorId":"ann","persona":"executive","text":"<the topic>","mode":"topic","notes":"...","length":"short"}`. The Generate screen of the web UI has a switch, "Rewrite my draft" or "Write about a topic".
+
+**There is no web search and no research.** The model writes from the topic, your notes and its own knowledge, and it may state things that are wrong or out of date. The prompt tells it to take specific facts, numbers, names, dates and quotes only from your notes, and to say plainly when it lacks information instead of inventing it; that lowers the risk, it does not remove it. Every topic result carries a fixed caveat (`caveat`, and printed after the text by the CLI, shown above the text by the UI): **facts are not verified; check them against a source before you use the text.** If you need a fact in the text, put it in the notes.
+
+Topic and notes get the same treatment as a draft: each is held to `limits.maxInputChars`, redacted by the fail-closed confidentiality filter before anything is sent, and the result is style-checked and redacted again. Instructions written inside the topic or notes are data, not commands (see Privacy below).
+
 `humanize` lowers the LOCAL heuristic score, which is weak and confounded (held-out AUC 0.694); read [docs/HUMANIZING.md](docs/HUMANIZING.md) for what it does, the guard, and the measured results before relying on it.
 
 `trace` lists one entry per stage (`confidentiality`, `llm`, `style`, `confidentiality`, and `persona-banned` when a banned phrase survived) with `modified`, `ms` and counts. It never contains matched text.
@@ -127,7 +151,7 @@ Step 1 is a one-line edit in the source tree: config validation only accepts nam
 
 The provider receives, on every `generate` call:
 
-1. The **redacted draft**, inside `<input>` tags.
+1. The **redacted draft**, inside `<input>` tags. In topic mode, instead, the **redacted topic** (inside `<topic>` tags) and the **redacted notes** (inside `<notes>` tags): they go to the provider exactly as a draft would, so the paragraph below applies to them equally.
 2. Up to `--exemplars` (default 3) **redacted excerpts of the author's ingested corpus**.
 3. The author's numeric style profile and the persona's text (name, load, density, mandates, banned phrases).
 
