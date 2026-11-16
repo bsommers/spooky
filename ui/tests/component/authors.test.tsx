@@ -109,6 +109,36 @@ describe('Authors and ingest screen', () => {
       expect(screen.getByTestId('live-region')).toHaveTextContent('Ingested New Author');
     });
 
+    it('an id that already exists warns that it will be replaced and stays disabled until that is confirmed; changing the id withdraws the confirmation', async () => {
+      const user = userEvent.setup();
+      const bodies: unknown[] = [];
+      renderScreen('#/authors', { 'POST /api/ingest': ({ body }) => (bodies.push(body), respond('POST', '/api/ingest', body)) });
+      await ready();
+      expect(screen.queryByTestId('replace-warning')).toBeNull();
+      await user.type(screen.getByLabelText(/Author id/), 'terse');
+      await user.type(screen.getByLabelText(/Display name/), 'Terse again');
+      await user.type(screen.getByLabelText(/Writing sample/), 'Some text to learn from.');
+      const warning = await screen.findByTestId('replace-warning');
+      expect(warning).toHaveTextContent('terse already exists (Terse Author)');
+      expect(warning).toHaveTextContent('cannot be brought back');
+      const ingest = screen.getByRole('button', { name: 'Ingest' });
+      expect(ingest).toBeDisabled();
+      expect(screen.getByText('Confirm the replacement to enable Ingest.')).toBeInTheDocument();
+      await user.click(screen.getByRole('switch', { name: 'Replace the existing author' }));
+      expect(ingest).toBeEnabled();
+      await user.type(screen.getByLabelText(/Author id/), '2'); // terse2 is new: no warning, and nothing left confirmed
+      expect(screen.queryByTestId('replace-warning')).toBeNull();
+      await user.clear(screen.getByLabelText(/Author id/));
+      await user.type(screen.getByLabelText(/Author id/), 'terse');
+      expect(screen.getByRole('switch', { name: 'Replace the existing author' })).not.toBeChecked();
+      expect(ingest).toBeDisabled();
+      expect(bodies).toEqual([]);
+      await user.click(screen.getByRole('switch', { name: 'Replace the existing author' }));
+      await user.click(ingest);
+      await screen.findByTestId('ingest-done');
+      expect(bodies).toEqual([{ authorId: 'terse', name: 'Terse again', text: 'Some text to learn from.' }]);
+    });
+
     it.each(TYPED_CODES)('an ingest failing with %s shows the banner and keeps the typed text', async (code, status) => {
       const user = userEvent.setup();
       renderScreen('#/authors', { 'POST /api/ingest': () => ({ status, body: ERR(code, `server says ${code}`) }) });

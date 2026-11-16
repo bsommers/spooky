@@ -2,7 +2,7 @@
 // (GET /api/profile), and the form that adds one (POST /api/ingest). A pasted text and a chosen file end up in the same
 // text box; the file is read in the browser and sent as text, never uploaded as a file. Corpus text is untrusted.
 import { useState } from 'react';
-import { Button, FieldError, FileTrigger, Form, Input, Label, ListBox, ListBoxItem, TextArea, TextField } from 'react-aria-components';
+import { Button, FieldError, FileTrigger, Form, Input, Label, ListBox, ListBoxItem, Switch, TextArea, TextField } from 'react-aria-components';
 import { useApi } from '../../api/context';
 import type { GetResponse } from '../../api/client';
 import { useAnnounce } from '../../components/Announcer';
@@ -12,7 +12,7 @@ import { toApiError } from '../../components/errors';
 import { KeyValues, Loading, Section } from '../../components/Section';
 import { useAbortable } from '../../components/useAbortable';
 import { useLoad } from '../../components/useLoad';
-import { CheckIcon } from '../../icons';
+import { CheckIcon, WarningIcon } from '../../icons';
 import type { ApiError } from '../../api/client';
 
 type Profile = GetResponse<'/api/profile'>['profile'];
@@ -47,7 +47,7 @@ function ProfileView({ p }: { p: Profile }) {
   );
 }
 
-function IngestForm({ onDone }: { onDone(authorId: string): void }) {
+function IngestForm({ existing, onDone }: { existing: ReadonlyArray<{ authorId: string; displayName: string }>; onDone(authorId: string): void }) {
   const api = useApi();
   const announce = useAnnounce();
   const { begin } = useAbortable();
@@ -59,8 +59,13 @@ function IngestForm({ onDone }: { onDone(authorId: string): void }) {
   const [error, setError] = useState<ApiError | undefined>(undefined);
   const [done, setDone] = useState<string | undefined>(undefined);
 
+  // Ingesting an id that exists replaces that author's corpus and profile for good: say so, and ask before doing it.
+  const [replace, setReplace] = useState(false);
+  const collision = existing.find((a) => a.authorId === authorId);
+  const confirmed = collision === undefined || replace;
+
   const idBad = authorId !== '' && !AUTHOR_ID.test(authorId);
-  const ready = AUTHOR_ID.test(authorId) && name.trim() !== '' && name.length <= 200 && text.trim() !== '';
+  const ready = AUTHOR_ID.test(authorId) && name.trim() !== '' && name.length <= 200 && text.trim() !== '' && confirmed;
 
   const readFile = async (files: FileList | null) => {
     const f = files?.[0];
@@ -112,7 +117,16 @@ function IngestForm({ onDone }: { onDone(authorId: string): void }) {
           void submit();
         }}
       >
-        <TextField className="gw-field" value={authorId} onChange={setAuthorId} isInvalid={idBad} isRequired>
+        <TextField
+          className="gw-field"
+          value={authorId}
+          onChange={(v) => {
+            setAuthorId(v);
+            setReplace(false); // a confirmation is for the id it was given for
+          }}
+          isInvalid={idBad}
+          isRequired
+        >
           <Label className="gw-label">Author id</Label>
           <Input className="gw-input" spellCheck={false} autoComplete="off" />
           <FieldError className="gw-field__error">Use letters, digits, dots, dashes or underscores, starting with a letter or digit (up to 64).</FieldError>
@@ -139,12 +153,30 @@ function IngestForm({ onDone }: { onDone(authorId: string): void }) {
             {fileNote}
           </p>
         )}
-        <p className="gw-hint">Ingesting an id that already exists replaces that author&apos;s corpus and profile.</p>
+        {collision === undefined ? (
+          <p className="gw-hint">Ingesting an id that already exists replaces that author&apos;s corpus and profile.</p>
+        ) : (
+          <div className="gw-banner gw-banner--warning" role="note" data-testid="replace-warning">
+            <WarningIcon size={20} className="gw-banner__icon" />
+            <div className="gw-banner__body">
+              <p className="gw-banner__title">
+                <code>{collision.authorId}</code> already exists ({collision.displayName}).
+              </p>
+              <p>Ingesting replaces its corpus and profile, and the old ones cannot be brought back. Use a different id to keep both.</p>
+              <Switch className="gw-switch" isSelected={replace} onChange={setReplace}>
+                <div className="gw-switch__track">
+                  <div className="gw-switch__thumb" />
+                </div>
+                Replace the existing author
+              </Switch>
+            </div>
+          </div>
+        )}
         <div className="gw-row">
           <Button type="submit" className="gw-btn gw-btn--primary" isDisabled={!ready} aria-disabled={busy || undefined}>
             {busy ? 'Ingesting...' : 'Ingest'}
           </Button>
-          {!ready && !busy && <span className="gw-hint">Needs a valid id, a name and some text.</span>}
+          {!ready && !busy && <span className="gw-hint">{collision !== undefined && !confirmed ? 'Confirm the replacement to enable Ingest.' : 'Needs a valid id, a name and some text.'}</span>}
         </div>
       </Form>
       {done !== undefined && (
@@ -213,6 +245,7 @@ export default function AuthorsScreen() {
           )}
         </div>
         <IngestForm
+          existing={list}
           onDone={(id) => {
             setPicked(id);
             reloadAuthors();
