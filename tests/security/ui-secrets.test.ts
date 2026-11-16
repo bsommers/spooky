@@ -82,6 +82,13 @@ describe('the scanner (so a clean bundle means something)', () => {
     expect(await scanner.scanDir(dirWith({ 'assets/index-DXn5wVGR.js': body }))).toEqual([]);
   });
 
+  it('does not backtrack on a long identifier followed by a digit or "=" (it used to take minutes on a React development bundle)', async () => {
+    const nasty = 'flushPendingUnsafeLifecycleWarnings'.repeat(2) + '=function';
+    const t0 = Date.now();
+    expect(await scanner.scanDir(dirWith({ 'assets/dev.js': `x.${nasty}=0;y="${'a'.repeat(60)}1"` }))).toEqual([]);
+    expect(Date.now() - t0).toBeLessThan(2000);
+  });
+
   it('entropy: random base64 is above the bar, English and hex identifiers are below', () => {
     expect(scanner.entropy(RANDOM)).toBeGreaterThan(4.5);
     expect(scanner.entropy('aaaaaaaabbbbbbbbccccccccdddddddd')).toBeLessThan(2.5);
@@ -104,6 +111,14 @@ describe('the filter the scanner loads (root dist/)', () => {
     expect(isStale(out, [join(d, 'src')])).toBe(false);
     utimesSync(out, new Date(Date.now() - 120_000), new Date(Date.now() - 120_000));
     expect(isStale(out, [join(d, 'src')])).toBe(true);
+  });
+});
+
+describe('the UI build the tests run against', () => {
+  it('ui/dist is not older than the UI source: the global setup (tests/helpers/uiBuild.ts) rebuilds a stale one', () => {
+    const inputs = ['src', 'public', 'index.html', 'package.json', 'vite.config.ts', 'tsconfig.json', 'scripts'].map((p) => join(root, 'ui', p));
+    expect(existsSync(join(uiDist, 'index.html')), 'ui/dist/index.html').toBe(true);
+    expect(isStale(join(uiDist, 'index.html'), inputs)).toBe(false);
   });
 });
 

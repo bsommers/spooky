@@ -40,6 +40,15 @@ function* walk(dir) {
 const SECRET_LITERAL = /(?:password|passwd|secret|api[_-]?key|apikey|private[_-]?key|token)["'`]?\s{0,5}[:=]\s{0,5}["'`][^"'`\s]{16,}["'`]/i;
 
 /**
+ * Letters in words joined by single `-`, `_` or `.` (at least 4 letters in all). Written without nested quantifiers: the
+ * obvious `(?:[a-z]+[-_.]?){4,}` backtracks exponentially on a long identifier followed by a digit or `=` (a React
+ * development bundle held one that took two minutes), and this scanner reads whole minified bundles.
+ */
+function isWordy(token) {
+  return /^[a-z]+(?:[-_.][a-z]+)*[-_.]?$/i.test(token) && token.replace(/[-_.]/g, '').length >= 4;
+}
+
+/**
  * A file path, not a secret. Base64 uses `/` too, so slashes alone prove nothing: a 40-character secret access key with a
  * `/` in it must still reach the entropy check. A path has a file extension (`.` is not a base64 character) or is a
  * lowercase-only relative or absolute path; anything else with a slash is treated as a possible secret.
@@ -54,7 +63,7 @@ function isPath(token) {
 function benign(token) {
   return (
     /^[A-Za-z]+$/.test(token) || // a long identifier or word
-    /^(?:[a-z]+[-_.]?){4,}$/i.test(token) || // kebab/snake/camel-ish names
+    isWordy(token) || // kebab/snake/dotted names
     isPath(token)
   );
 }
