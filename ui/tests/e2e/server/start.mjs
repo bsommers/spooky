@@ -3,6 +3,9 @@
 // for the provider key in the environment, so the specs can prove it never reaches the browser.
 //
 //   node tests/e2e/server/start.mjs --port 4873 --state-dir .e2e-state
+//   node tests/e2e/server/start.mjs --port 4874 --state-dir .e2e-state-token --token-env GW_E2E_TOKEN --lockout-failures 5
+//     the second form requires a bearer token (read from that environment variable, like `ghostwriter serve --token-env`) and
+//     locks an address out after a few wrong ones, so the specs can drive the 401 and 429 paths in a real browser.
 import { mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -15,6 +18,11 @@ const arg = (name, dflt) => {
   const i = process.argv.indexOf(name);
   return i === -1 ? dflt : process.argv[i + 1];
 };
+
+const tokenEnv = arg('--token-env', undefined);
+const token = tokenEnv === undefined ? undefined : process.env[tokenEnv];
+if (tokenEnv !== undefined && (token === undefined || token === '')) throw new Error(`--token-env ${tokenEnv}: the variable is not set`);
+const lockoutFailures = Number(arg('--lockout-failures', '20'));
 
 const { Engine, MockLlmClient, loadConfig } = await dist('index.js');
 const { startApiServer } = await dist('api/server.js');
@@ -40,6 +48,12 @@ await engine.ingest('terse', 'Terse Author', readFileSync(join(root, 'tests', 'f
 const runtime = new ServiceRuntime(engine, { stateDir });
 await runtime.markLoaded();
 const staticHandler = await createStaticHandler({ root: join(root, 'ui', 'dist') });
-const server = await startApiServer({ runtime, port, staticHandler, log: () => undefined });
+const server = await startApiServer({
+  runtime,
+  port,
+  staticHandler,
+  log: () => undefined,
+  ...(token === undefined ? {} : { token, authThrottle: { freeFailures: 2, baseDelayMs: 10, maxDelayMs: 40, lockoutFailures, windowMs: 60_000, lockoutMs: 5_000 } }),
+});
 process.stderr.write(`e2e server on ${server.url}\n`);
 for (const sig of ['SIGINT', 'SIGTERM']) process.once(sig, () => void server.close().then(() => process.exit(0)));
