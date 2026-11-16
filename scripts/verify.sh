@@ -7,7 +7,7 @@
 #   scripts/verify.sh --no-ui           skip the web UI checks (ui/: typecheck, css lint, license audit, unit/component/a11y/build tests, Playwright)
 #   scripts/verify.sh --no-e2e          run the UI checks but not the Playwright suite (needs a Chromium; GW_E2E_CONTAINER=1 runs it in the pinned container)
 #
-# The web UI (ui/, Phase 10) is its own package: `npm run ui:install` once. --only skips the UI checks (it selects root tests).
+# The web UI (ui/, Phases 10-11) is its own package: `npm run ui:install` once. --only skips the UI checks (it selects root tests).
 
 # Tiers (tests/<tier>/): smoke unit integration system security torture.
 # A tier directory that does not exist yet reports "0 tests"; it is not an error.
@@ -103,6 +103,7 @@ if [ "$UI" -eq 1 ] && [ -z "$ONLY" ]; then
   else
     (cd ui && npx --no-install tsc --noEmit) && echo "ui typecheck: ok" || { echo "ui typecheck: FAILED" >&2; FAIL=1; }
     (cd ui && npx --no-install stylelint "src/**/*.css") && echo "ui css lint (no raw colors in components): ok" || { echo "ui css lint: FAILED" >&2; FAIL=1; }
+    (cd ui && node scripts/gen-api.mjs --check) && echo "ui generated API types and operation manifest: in sync" || { echo "ui gen-api drift: FAILED" >&2; FAIL=1; }
     (cd ui && node scripts/licenses.mjs --check) || { echo "ui license audit: FAILED" >&2; FAIL=1; }
     # vitest's global setup builds ui/dist (production) first; the build itself fails on a bad theme or contrast pair.
     (cd ui && npx --no-install vitest run --reporter=default --reporter=json "--outputFile.json=$TMP/ui-results.json")
