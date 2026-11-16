@@ -185,6 +185,29 @@ describe('Humanize panel', () => {
     expect(bodies[1]).not.toHaveProperty('maxIterations');
   });
 
+  it('clearing the target or the iterations disables Humanize and names the problem; nothing with NaN or null is ever sent', async () => {
+    const user = userEvent.setup();
+    const bodies: unknown[] = [];
+    renderScreen('#/score', { 'POST /api/humanize': ({ body }) => (bodies.push(body), { status: 200, body: HUMANIZE_OK }) });
+    await openHumanize(user);
+    await paste(user, /Text to humanize/, 'A draft.');
+    const run = screen.getByRole('button', { name: 'Humanize' });
+    await waitFor(() => expect(run).toBeEnabled());
+    for (const field of [/Target score/, /Max iterations/]) {
+      await user.clear(screen.getByRole('textbox', { name: field }));
+      await user.tab(); // the field commits on blur
+      expect(await screen.findByText(/^Enter a number from/)).toBeInTheDocument();
+      expect(run).toBeDisabled();
+      expect(screen.getByRole('textbox', { name: field })).toBeInvalid();
+      await user.type(screen.getByRole('textbox', { name: field }), field.source.startsWith('Target') ? '0.5' : '2');
+      await user.tab();
+      await waitFor(() => expect(run).toBeEnabled());
+    }
+    await user.click(run);
+    await screen.findByTestId('score-before');
+    expect(bodies).toEqual([{ text: 'A draft.', target: 0.5, maxIterations: 2, llm: true }]);
+  });
+
   it('a target that was not reached says so; an empty history says no edit was attempted', async () => {
     const user = userEvent.setup();
     renderScreen('#/score', { 'POST /api/humanize': () => ({ status: 200, body: { ...HUMANIZE_OK, reachedTarget: false, steps: [], featureDeltas: {}, featuresBefore: {}, featuresAfter: {} } }) });

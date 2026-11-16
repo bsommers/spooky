@@ -2,7 +2,7 @@
 // The output is the server's answer rendered as plain text. The trace and the indicators show what the safety filters did,
 // as counts. Nothing from the model is ever interpreted as markup.
 import { useState } from 'react';
-import { Button, Form, Label, NumberField, Input, Switch } from 'react-aria-components';
+import { Button, Form, Switch } from 'react-aria-components';
 import type { ApiError, PostResponse } from '../../api/client';
 import { useCapabilities } from '../../api/capabilities';
 import { useApi } from '../../api/context';
@@ -11,6 +11,7 @@ import { Caveat } from '../../components/Caveat';
 import { CopyButton } from '../../components/CopyButton';
 import { ErrorBanner } from '../../components/ErrorBanner';
 import { toApiError } from '../../components/errors';
+import { NumberInput } from '../../components/NumberInput';
 import { Picker } from '../../components/Picker';
 import { PlainText } from '../../components/PlainText';
 import { Loading, Section } from '../../components/Section';
@@ -50,7 +51,8 @@ export default function GenerateScreen() {
   const empty = text.trim() === '';
   const canHumanize = has('humanize');
   const showCaveat = canHumanize && (humanize || resultHumanized);
-  const ready = chosenAuthor !== undefined && chosenPersona !== undefined && !empty && !over && cap !== undefined;
+  const targetBad = canHumanize && humanize && !Number.isFinite(target ?? defaultTarget);
+  const ready = chosenAuthor !== undefined && chosenPersona !== undefined && !empty && !over && cap !== undefined && !targetBad;
 
   const submit = async () => {
     if (!ready || busy || chosenAuthor === undefined || chosenPersona === undefined) return;
@@ -126,12 +128,7 @@ export default function GenerateScreen() {
                 </div>
                 Humanize the result
               </Switch>
-              {humanize && (
-                <NumberField className="gw-field gw-field--inline" value={target ?? defaultTarget} onChange={setTarget} minValue={0} maxValue={1} step={0.05}>
-                  <Label className="gw-label">Target score (0 to 1)</Label>
-                  <Input className="gw-input" />
-                </NumberField>
-              )}
+              {humanize && <NumberInput label="Target score (0 to 1)" value={target ?? defaultTarget} onChange={setTarget} min={0} max={1} step={0.05} />}
             </div>
           )}
           {showCaveat && <Caveat />}
@@ -140,7 +137,7 @@ export default function GenerateScreen() {
               {busy ? 'Generating...' : 'Generate'}
             </Button>
             {!ready && !busy && (
-              <span className="gw-hint">{empty ? 'Write a draft to enable Generate.' : over ? 'The draft is over the limit.' : 'Waiting for the server limits.'}</span>
+              <span className="gw-hint">{empty ? 'Write a draft to enable Generate.' : over ? 'The draft is over the limit.' : targetBad ? 'Enter a target score from 0 to 1.' : 'Waiting for the server limits.'}</span>
             )}
           </div>
         </Form>

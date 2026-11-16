@@ -1,7 +1,7 @@
 // Score and Humanize (Phase 8 operations, gated on the server's capability list). Both use the local heuristic, which is
 // a weak, confounded proxy: the caveat is on screen at all times, not only next to a result.
 import { useState } from 'react';
-import { Button, Form, Input, Label, NumberField, Switch, Tab, TabList, TabPanel, Tabs } from 'react-aria-components';
+import { Button, Form, Switch, Tab, TabList, TabPanel, Tabs } from 'react-aria-components';
 import type { ApiError, GetResponse, PostResponse } from '../../api/client';
 import { useCapabilities } from '../../api/capabilities';
 import { useApi } from '../../api/context';
@@ -11,6 +11,7 @@ import { Caveat } from '../../components/Caveat';
 import { CopyButton } from '../../components/CopyButton';
 import { ErrorBanner } from '../../components/ErrorBanner';
 import { toApiError } from '../../components/errors';
+import { NumberInput } from '../../components/NumberInput';
 import { Picker } from '../../components/Picker';
 import { PlainText } from '../../components/PlainText';
 import { KeyValues, Section } from '../../components/Section';
@@ -196,7 +197,10 @@ function HumanizePanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | undefined>(undefined);
   const [result, setResult] = useState<HumanizeResult | undefined>(undefined);
-  const ready = text.trim() !== '' && cap !== undefined && text.length <= cap;
+  const targetValue = target ?? config?.humanize.targetScore ?? Number.NaN;
+  const iterationsValue = iterations ?? config?.humanize.maxIterations ?? Number.NaN;
+  const numbersOk = Number.isFinite(targetValue) && Number.isFinite(iterationsValue);
+  const ready = text.trim() !== '' && cap !== undefined && text.length <= cap && numbersOk;
   const authorItems = [{ id: NO_AUTHOR, label: 'No author profile' }, ...(authors.kind === 'ok' ? authors.data.map((a) => ({ id: a.authorId, label: `${a.displayName} (${a.authorId})` })) : [])];
 
   const submit = async () => {
@@ -238,14 +242,8 @@ function HumanizePanel() {
         <TextInput label="Text to humanize" value={text} onChange={setText} cap={cap} isDisabled={busy} />
         <div className="gw-row gw-row--top">
           <Picker label="Author profile (optional)" items={authorItems} value={authorId} onChange={setAuthorId} />
-          <NumberField className="gw-field gw-field--inline" value={target ?? config?.humanize.targetScore ?? Number.NaN} onChange={setTarget} minValue={0} maxValue={1} step={0.05}>
-            <Label className="gw-label">Target score (0 to 1)</Label>
-            <Input className="gw-input" />
-          </NumberField>
-          <NumberField className="gw-field gw-field--inline" value={iterations ?? config?.humanize.maxIterations ?? Number.NaN} onChange={setIterations} minValue={0} maxValue={10} step={1}>
-            <Label className="gw-label">Max iterations (0 to 10)</Label>
-            <Input className="gw-input" />
-          </NumberField>
+          <NumberInput label="Target score (0 to 1)" value={targetValue} onChange={setTarget} min={0} max={1} step={0.05} />
+          <NumberInput label="Max iterations (0 to 10)" value={iterationsValue} onChange={setIterations} min={0} max={10} step={1} />
         </div>
         <Switch className="gw-switch" isSelected={useModel} onChange={setUseModel}>
           <div className="gw-switch__track">

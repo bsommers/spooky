@@ -197,6 +197,26 @@ describe('Generate screen', () => {
       expect(bodies[0]).not.toHaveProperty('target');
     });
 
+    it('clearing the target disables Generate with a named reason, and no request carries null', async () => {
+      const user = userEvent.setup();
+      const bodies: unknown[] = [];
+      renderScreen('#/generate', { 'POST /api/generate': ({ body }) => (bodies.push(body), { status: 200, body: GENERATE_OK }) });
+      await typeDraft(user);
+      await user.click(screen.getByRole('switch', { name: 'Humanize the result' }));
+      const target = screen.getByRole('textbox', { name: /Target score/ });
+      await user.clear(target);
+      await user.tab(); // the field commits on blur
+      expect(await screen.findByText(/^Enter a number from 0 to 1/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Generate' })).toBeDisabled();
+      expect(screen.getByText('Enter a target score from 0 to 1.')).toBeInTheDocument();
+      await user.click(target);
+      await user.type(target, '0.5');
+      await user.tab();
+      await user.click(screen.getByRole('button', { name: 'Generate' }));
+      await screen.findByRole('region', { name: 'Generated text' });
+      expect(bodies).toEqual([{ authorId: 'terse', persona: 'exec', text: 'Please write the release note.', humanize: true, target: 0.5 }]);
+    });
+
     it('shows the weak-scorer caveat (the registry text) while the switch is on and while a humanized result is on screen, and not otherwise', async () => {
       const user = userEvent.setup();
       renderScreen('#/generate');
