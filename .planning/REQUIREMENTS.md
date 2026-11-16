@@ -88,14 +88,14 @@ Uniform-surface rule: every capability exists on every surface (library, CLI, HT
 - [x] **UI-04**: Themes "Black Cat" and "Tron Neon" shipped; every text/background token pair used meets WCAG AA (4.5:1 text, 3:1 UI) asserted by a unit test over the token files.
 - [x] **UI-05**: Original SVG logo and icon set (no third-party art); favicon set.
 - [x] **UI-06**: Offline: no runtime request to any external origin (fonts self-hosted, OFL/compatible licenses recorded in `ui/THIRD_PARTY.md`); test asserts built HTML/CSS/JS reference only same-origin URLs.
-- [ ] **UI-07**: Generate screen: persona + author pickers, input, output, trace view, banned-phrase and confidentiality indicators (counts only).
-- [ ] **UI-08**: Ingest/Authors screen: ingest text/file, list authors, stylometric profile view.
-- [ ] **UI-09**: Personas viewer.
-- [ ] **UI-10**: Settings: provider, theme, state dir (read-only display); the API key is never displayed, stored in the browser, or present in the client bundle; token for the API held in memory only.
-- [ ] **UI-11**: Score and Humanize panels with before/after score and per-feature deltas; feature-flagged off until Phases 7/8 are present (capability discovered via `GET /api/capabilities`).
-- [ ] **UI-12**: Security: model output rendered as text only (no `dangerouslySetInnerHTML`, lint rule enforces), strict CSP (`default-src 'self'`, no inline script, no `unsafe-eval`) set by the API server and asserted in tests; secret-scan of the built bundle in CI.
-- [ ] **UI-13**: Tests: Vitest + Testing Library component tests, axe checks per screen in both themes, full keyboard navigation tests, Playwright screenshots in both themes (baselines committed, deterministic).
-- [ ] **UI-14**: Every UI action goes through the same HTTP operations (no UI-only capability), verified by the parity test.
+- [x] **UI-07**: Generate screen: persona + author pickers, input, output, trace view, banned-phrase and confidentiality indicators (counts only).
+- [x] **UI-08**: Ingest/Authors screen: ingest text/file, list authors, stylometric profile view.
+- [x] **UI-09**: Personas viewer.
+- [x] **UI-10**: Settings: provider, theme, state dir (read-only display); the API key is never displayed, stored in the browser, or present in the client bundle; token for the API held in memory only.
+- [x] **UI-11**: Score and Humanize panels with before/after score and per-feature deltas; feature-flagged off until Phases 7/8 are present (capability discovered via `GET /api/capabilities`).
+- [x] **UI-12**: Security: model output rendered as text only (no `dangerouslySetInnerHTML`, lint rule enforces), strict CSP (`default-src 'self'`, no inline script, no `unsafe-eval`) set by the API server and asserted in tests; secret-scan of the built bundle in CI.
+- [x] **UI-13**: Tests: Vitest + Testing Library component tests, axe checks per screen in both themes, full keyboard navigation tests, Playwright screenshots in both themes (baselines committed, deterministic).
+- [x] **UI-14**: Every UI action goes through the same HTTP operations (no UI-only capability), verified by the parity test.
 
 ## v4 (deferred)
 
