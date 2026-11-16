@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { HUMANIZE_CAVEAT } from '../../src/screens/score/caveat';
-import { CAPS_FULL, CAPS_NO_PHASE8, ERR, HOSTILE, HUMANIZE_CAVEAT_TEXT, HUMANIZE_OK, SCORE_OK } from '../helpers/fixtures';
+import { CAPS_FULL, CONFIG, CAPS_NO_PHASE8, ERR, HOSTILE, HUMANIZE_CAVEAT_TEXT, HUMANIZE_OK, SCORE_OK } from '../helpers/fixtures';
 import type { Overrides } from '../helpers/fixtures';
 import { mockClient, renderApp, renderScreen } from '../helpers/app';
 import { TYPED_CODES } from '../helpers/screens';
@@ -146,7 +146,7 @@ describe('Humanize panel', () => {
     await user.click(screen.getByRole('button', { name: 'Humanize' }));
     expect(await screen.findByTestId('score-before')).toHaveTextContent('0.62');
     expect(screen.getByTestId('score-after')).toHaveTextContent('0.28');
-    expect(sent).toEqual({ text: 'Rewrite this with 42 and 7.5.', target: 0.3, maxIterations: 3, llm: false, authorId: 'long-form' });
+    expect(sent).toEqual({ text: 'Rewrite this with 42 and 7.5.', llm: false, authorId: 'long-form' }); // target and iterations untouched: the server's configured defaults apply
     expect(screen.getByText('The target score was reached.')).toBeInTheDocument();
     const deltas = screen.getByRole('table', { name: /Feature values before and after/ });
     expect(within(deltas).getAllByRole('row')).toHaveLength(3);
@@ -160,6 +160,29 @@ describe('Humanize panel', () => {
     expect(within(rows[2]!).getByRole('list', { name: 'Meaning guard reasons' })).toHaveTextContent('number 7.5 changed');
     expect(screen.getByRole('region', { name: 'Humanized text' }).textContent).toBe(HUMANIZE_OK.text);
     expect(screen.getByRole('region', { name: 'Result' })).toHaveTextContent('Edits reverted by the meaning guard1');
+  });
+
+  it('starts from the server\'s configured humanize target and iterations (not literals), omits them until edited, then sends only what was edited', async () => {
+    const user = userEvent.setup();
+    const bodies: unknown[] = [];
+    const config = { ...CONFIG, config: { ...CONFIG.config, humanize: { targetScore: 0.2, maxIterations: 5 } } };
+    renderScreen('#/score', { 'GET /api/config': () => ({ status: 200, body: config }), 'POST /api/humanize': ({ body }) => (bodies.push(body), { status: 200, body: HUMANIZE_OK }) });
+    await openHumanize(user);
+    await paste(user, /Text to humanize/, 'A draft.');
+    await waitFor(() => expect(screen.getByRole('textbox', { name: /Target score/ })).toHaveValue('0.2'));
+    expect(screen.getByRole('textbox', { name: /Max iterations/ })).toHaveValue('5');
+    await user.click(screen.getByRole('button', { name: 'Humanize' }));
+    await screen.findByTestId('score-before');
+    expect(bodies[0]).not.toHaveProperty('target');
+    expect(bodies[0]).not.toHaveProperty('maxIterations');
+    const target = screen.getByRole('textbox', { name: /Target score/ });
+    await user.clear(target);
+    await user.type(target, '0.4');
+    await user.tab();
+    await user.click(screen.getByRole('button', { name: 'Humanize' }));
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(bodies[1]).toMatchObject({ target: 0.4 });
+    expect(bodies[1]).not.toHaveProperty('maxIterations');
   });
 
   it('a target that was not reached says so; an empty history says no edit was attempted', async () => {

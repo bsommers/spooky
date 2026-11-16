@@ -2,7 +2,7 @@
 // a weak, confounded proxy: the caveat is on screen at all times, not only next to a result.
 import { useState } from 'react';
 import { Button, Form, Input, Label, NumberField, Switch, Tab, TabList, TabPanel, Tabs } from 'react-aria-components';
-import type { ApiError, PostResponse } from '../../api/client';
+import type { ApiError, GetResponse, PostResponse } from '../../api/client';
 import { useCapabilities } from '../../api/capabilities';
 import { useApi } from '../../api/context';
 import { useAnnounce } from '../../components/Announcer';
@@ -35,16 +35,20 @@ function Unavailable({ what }: { what: string }) {
   );
 }
 
-function useCap(): number | undefined {
+type ServerConfig = GetResponse<'/api/config'>['config'];
+
+/** The server's configuration: the input cap and the humanize defaults the panels start from. */
+function useServerConfig(): ServerConfig | undefined {
   const api = useApi();
-  const [config] = useLoad(() => api.get('/api/config').then((r) => r.config.limits.maxInputChars), [api]);
+  const [config] = useLoad(() => api.get('/api/config').then((r) => r.config), [api]);
   return config.kind === 'ok' ? config.data : undefined;
 }
 
 function ScorePanel() {
   const api = useApi();
   const announce = useAnnounce();
-  const cap = useCap();
+  const config = useServerConfig();
+  const cap = config?.limits.maxInputChars;
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | undefined>(undefined);
@@ -180,12 +184,14 @@ function ScorePanel() {
 function HumanizePanel() {
   const api = useApi();
   const announce = useAnnounce();
-  const cap = useCap();
+  const config = useServerConfig();
+  const cap = config?.limits.maxInputChars;
   const [authors] = useLoad(() => api.get('/api/authors').then((r) => r.authors), [api]);
   const [text, setText] = useState('');
   const [authorId, setAuthorId] = useState(NO_AUTHOR);
-  const [target, setTarget] = useState(0.3);
-  const [iterations, setIterations] = useState(3);
+  // undefined = not edited: the field shows the server's configured default and the request omits it.
+  const [target, setTarget] = useState<number | undefined>(undefined);
+  const [iterations, setIterations] = useState<number | undefined>(undefined);
   const [useModel, setUseModel] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | undefined>(undefined);
@@ -201,8 +207,8 @@ function HumanizePanel() {
     try {
       const r = await api.post('/api/humanize', {
         text,
-        target,
-        maxIterations: iterations,
+        ...(target === undefined ? {} : { target }),
+        ...(iterations === undefined ? {} : { maxIterations: iterations }),
         llm: useModel,
         ...(authorId === NO_AUTHOR ? {} : { authorId }),
       });
@@ -232,11 +238,11 @@ function HumanizePanel() {
         <TextInput label="Text to humanize" value={text} onChange={setText} cap={cap} isDisabled={busy} />
         <div className="gw-row gw-row--top">
           <Picker label="Author profile (optional)" items={authorItems} value={authorId} onChange={setAuthorId} />
-          <NumberField className="gw-field gw-field--inline" value={target} onChange={setTarget} minValue={0} maxValue={1} step={0.05}>
+          <NumberField className="gw-field gw-field--inline" value={target ?? config?.humanize.targetScore ?? Number.NaN} onChange={setTarget} minValue={0} maxValue={1} step={0.05}>
             <Label className="gw-label">Target score (0 to 1)</Label>
             <Input className="gw-input" />
           </NumberField>
-          <NumberField className="gw-field gw-field--inline" value={iterations} onChange={setIterations} minValue={0} maxValue={10} step={1}>
+          <NumberField className="gw-field gw-field--inline" value={iterations ?? config?.humanize.maxIterations ?? Number.NaN} onChange={setIterations} minValue={0} maxValue={10} step={1}>
             <Label className="gw-label">Max iterations (0 to 10)</Label>
             <Input className="gw-input" />
           </NumberField>

@@ -32,7 +32,8 @@ export default function GenerateScreen() {
   const [persona, setPersona] = useState<string | undefined>(undefined);
   const [text, setText] = useState('');
   const [humanize, setHumanize] = useState(false);
-  const [target, setTarget] = useState(0.3);
+  // undefined = the user has not edited it: the field shows the server's configured default and the request omits it.
+  const [target, setTarget] = useState<number | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | undefined>(undefined);
   const [result, setResult] = useState<Result | undefined>(undefined);
@@ -44,6 +45,7 @@ export default function GenerateScreen() {
   const chosenAuthor = authorId ?? authorList[0]?.authorId;
   const chosenPersona = persona ?? personaList[0]?.key;
   const cap = config.kind === 'ok' ? config.data.limits.maxInputChars : undefined;
+  const defaultTarget = config.kind === 'ok' ? config.data.humanize.targetScore : Number.NaN;
   const over = cap !== undefined && text.length > cap;
   const empty = text.trim() === '';
   const canHumanize = has('humanize');
@@ -60,7 +62,7 @@ export default function GenerateScreen() {
         authorId: chosenAuthor,
         persona: chosenPersona,
         text,
-        ...(canHumanize && humanize ? { humanize: true, target } : {}),
+        ...(canHumanize && humanize ? { humanize: true, ...(target === undefined ? {} : { target }) } : {}),
       });
       setResult(r);
       setResultHumanized(canHumanize && humanize);
@@ -125,7 +127,7 @@ export default function GenerateScreen() {
                 Humanize the result
               </Switch>
               {humanize && (
-                <NumberField className="gw-field gw-field--inline" value={target} onChange={setTarget} minValue={0} maxValue={1} step={0.05}>
+                <NumberField className="gw-field gw-field--inline" value={target ?? defaultTarget} onChange={setTarget} minValue={0} maxValue={1} step={0.05}>
                   <Label className="gw-label">Target score (0 to 1)</Label>
                   <Input className="gw-input" />
                 </NumberField>

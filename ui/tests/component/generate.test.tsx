@@ -183,6 +183,20 @@ describe('Generate screen', () => {
       expect(sent).toMatchObject({ humanize: true, target: 0.4 });
     });
 
+    it('shows the server\'s configured humanize target and omits it from the request until the user edits it', async () => {
+      const user = userEvent.setup();
+      const bodies: unknown[] = [];
+      const config = { ...CONFIG, config: { ...CONFIG.config, humanize: { targetScore: 0.2, maxIterations: 5 } } };
+      renderScreen('#/generate', { 'GET /api/config': () => ({ status: 200, body: config }), 'POST /api/generate': ({ body }) => (bodies.push(body), { status: 200, body: GENERATE_OK }) });
+      await typeDraft(user);
+      await user.click(screen.getByRole('switch', { name: 'Humanize the result' }));
+      expect(screen.getByRole('textbox', { name: /Target score/ })).toHaveValue('0.2');
+      await user.click(screen.getByRole('button', { name: 'Generate' }));
+      await screen.findByRole('region', { name: 'Generated text' });
+      expect(bodies[0]).toMatchObject({ humanize: true });
+      expect(bodies[0]).not.toHaveProperty('target');
+    });
+
     it('shows the weak-scorer caveat (the registry text) while the switch is on and while a humanized result is on screen, and not otherwise', async () => {
       const user = userEvent.setup();
       renderScreen('#/generate');
