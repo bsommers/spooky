@@ -7,6 +7,7 @@ import type { ApiError, PostResponse } from '../../api/client';
 import { useCapabilities } from '../../api/capabilities';
 import { useApi } from '../../api/context';
 import { useAnnounce } from '../../components/Announcer';
+import { Caveat } from '../../components/Caveat';
 import { CopyButton } from '../../components/CopyButton';
 import { ErrorBanner } from '../../components/ErrorBanner';
 import { toApiError } from '../../components/errors';
@@ -35,6 +36,8 @@ export default function GenerateScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | undefined>(undefined);
   const [result, setResult] = useState<Result | undefined>(undefined);
+  // The result on screen came from a humanize request: the caveat stays up even if the switch is turned off afterwards.
+  const [resultHumanized, setResultHumanized] = useState(false);
 
   const authorList = authors.kind === 'ok' ? authors.data : [];
   const personaList = personas.kind === 'ok' ? personas.data : [];
@@ -44,6 +47,7 @@ export default function GenerateScreen() {
   const over = cap !== undefined && text.length > cap;
   const empty = text.trim() === '';
   const canHumanize = has('humanize');
+  const showCaveat = canHumanize && (humanize || resultHumanized);
   const ready = chosenAuthor !== undefined && chosenPersona !== undefined && !empty && !over && cap !== undefined;
 
   const submit = async () => {
@@ -59,6 +63,7 @@ export default function GenerateScreen() {
         ...(canHumanize && humanize ? { humanize: true, target } : {}),
       });
       setResult(r);
+      setResultHumanized(canHumanize && humanize);
       announce(`Generation finished: ${r.text.length.toLocaleString('en-US')} characters`);
     } catch (e) {
       const err = toApiError(e);
@@ -127,6 +132,7 @@ export default function GenerateScreen() {
               )}
             </div>
           )}
+          {showCaveat && <Caveat />}
           <div className="gw-row">
             <Button type="submit" className="gw-btn gw-btn--primary" isDisabled={!ready} aria-disabled={busy || undefined}>
               {busy ? 'Generating...' : 'Generate'}

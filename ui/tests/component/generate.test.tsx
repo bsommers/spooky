@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { HUMANIZE_CAVEAT } from '../../src/screens/score/caveat';
 import { AUTHORS, CAPS_NO_PHASE8, CONFIG, ERR, GENERATE_OK, HOSTILE, PERSONAS } from '../helpers/fixtures';
 import { mockClient, renderApp, renderScreen } from '../helpers/app';
 import { TYPED_CODES, recoversOnRetry, showsTypedError } from '../helpers/screens';
@@ -180,6 +181,19 @@ describe('Generate screen', () => {
       await user.click(screen.getByRole('button', { name: 'Generate' }));
       await screen.findByRole('region', { name: 'Generated text' });
       expect(sent).toMatchObject({ humanize: true, target: 0.4 });
+    });
+
+    it('shows the weak-scorer caveat (the registry text) while the switch is on and while a humanized result is on screen, and not otherwise', async () => {
+      const user = userEvent.setup();
+      renderScreen('#/generate');
+      await typeDraft(user);
+      expect(screen.queryByTestId('caveat')).toBeNull();
+      await user.click(screen.getByRole('switch', { name: 'Humanize the result' }));
+      expect(screen.getByTestId('caveat')).toHaveTextContent(HUMANIZE_CAVEAT);
+      await user.click(screen.getByRole('button', { name: 'Generate' }));
+      await screen.findByRole('region', { name: 'Generated text' });
+      await user.click(screen.getByRole('switch', { name: 'Humanize the result' })); // off again, the humanized result stays
+      expect(screen.getByTestId('caveat')).toBeInTheDocument();
     });
 
     it('is not offered, and never sent, when the server does not list it', async () => {

@@ -7,6 +7,7 @@ import { useCapabilities } from '../../api/capabilities';
 import { useApi } from '../../api/context';
 import { useAnnounce } from '../../components/Announcer';
 import { Bar, BarTable, fmt } from '../../components/Bars';
+import { Caveat } from '../../components/Caveat';
 import { CopyButton } from '../../components/CopyButton';
 import { ErrorBanner } from '../../components/ErrorBanner';
 import { toApiError } from '../../components/errors';
@@ -17,24 +18,11 @@ import { TextInput } from '../../components/TextInput';
 import { TraceTable } from '../../components/Trace';
 import { useLoad } from '../../components/useLoad';
 import { CheckIcon, WarningIcon } from '../../icons';
-import { HUMANIZE_CAVEAT } from './caveat';
 
 type ScoreResult = PostResponse<'/api/score'>;
 type HumanizeResult = PostResponse<'/api/humanize'>;
 
 const NO_AUTHOR = '__none__';
-
-function Caveat() {
-  return (
-    <div role="note" className="gw-banner gw-banner--warning" data-testid="caveat">
-      <WarningIcon size={20} className="gw-banner__icon" />
-      <div className="gw-banner__body">
-        <p className="gw-banner__title">Read this first: the score is a weak proxy.</p>
-        <p>{HUMANIZE_CAVEAT}</p>
-      </div>
-    </div>
-  );
-}
 
 function Unavailable({ what }: { what: string }) {
   return (

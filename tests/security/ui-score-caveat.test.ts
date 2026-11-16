@@ -17,10 +17,19 @@ describe('UI caveat', () => {
     expect(HUMANIZE_CAVEAT).toContain(String(HEURISTIC_HELD_OUT_AUC));
   });
 
-  it('the Score screen renders that constant (not a paraphrase) and the server-sent caveat with each result', () => {
+  it('the shared Caveat component renders that constant (not a paraphrase), and the Score and Generate screens both use it', () => {
+    const comp = readFileSync(join(root, 'ui', 'src', 'components', 'Caveat.tsx'), 'utf8');
+    expect(comp).toMatch(/import \{ HUMANIZE_CAVEAT \} from '\.\.\/screens\/score\/caveat'/);
+    expect(comp).toMatch(/\{HUMANIZE_CAVEAT\}/);
+    for (const f of [['score', 'ScoreScreen.tsx'], ['generate', 'GenerateScreen.tsx']] as const) {
+      const screen = readFileSync(join(root, 'ui', 'src', 'screens', f[0], f[1]), 'utf8');
+      expect(screen, f[1]).toMatch(/import \{ Caveat \} from '\.\.\/\.\.\/components\/Caveat'/);
+      expect(screen, f[1]).toMatch(/<Caveat \/>/);
+    }
+  });
+
+  it('the Score screen shows the server-sent caveat with each humanize result', () => {
     const screen = readFileSync(join(root, 'ui', 'src', 'screens', 'score', 'ScoreScreen.tsx'), 'utf8');
-    expect(screen).toMatch(/import \{ HUMANIZE_CAVEAT \} from '\.\/caveat'/);
-    expect(screen).toMatch(/\{HUMANIZE_CAVEAT\}/);
     expect(screen).toMatch(/\{result\.caveat\}/);
   });
 });
