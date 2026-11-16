@@ -1,6 +1,6 @@
 // Score and Humanize (Phase 8 operations, gated on the server's capability list). Both use the local heuristic, which is
 // a weak, confounded proxy: the caveat is on screen at all times, not only next to a result.
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button, Form, Switch, Tab, TabList, TabPanel, Tabs } from 'react-aria-components';
 import type { ApiError, GetResponse, PostResponse } from '../../api/client';
 import { useCapabilities } from '../../api/capabilities';
@@ -17,6 +17,7 @@ import { PlainText } from '../../components/PlainText';
 import { KeyValues, Section } from '../../components/Section';
 import { TextInput } from '../../components/TextInput';
 import { TraceTable } from '../../components/Trace';
+import { useAbortable } from '../../components/useAbortable';
 import { useLoad } from '../../components/useLoad';
 import { CheckIcon, WarningIcon } from '../../icons';
 
@@ -48,6 +49,8 @@ function useServerConfig(): ServerConfig | undefined {
 function ScorePanel() {
   const api = useApi();
   const announce = useAnnounce();
+  const { begin, cancel } = useAbortable();
+  const submitButton = useRef<HTMLButtonElement>(null);
   const config = useServerConfig();
   const cap = config?.limits.maxInputChars;
   const [text, setText] = useState('');
@@ -58,11 +61,12 @@ function ScorePanel() {
 
   const submit = async () => {
     if (!ready || busy) return;
+    const signal = begin();
     setBusy(true);
     setError(undefined);
     announce('Scoring...');
     try {
-      const r = await api.post('/api/score', { text });
+      const r = await api.post('/api/score', { text }, { signal });
       setResult(r);
       announce(`Score ${fmt(r.score)}`);
     } catch (e) {
@@ -87,9 +91,20 @@ function ScorePanel() {
       >
         <TextInput label="Text to score" value={text} onChange={setText} cap={cap} isDisabled={busy} />
         <div className="gw-row">
-          <Button type="submit" className="gw-btn gw-btn--primary" isDisabled={!ready} aria-disabled={busy || undefined}>
+          <Button ref={submitButton} type="submit" className="gw-btn gw-btn--primary" isDisabled={!ready} aria-disabled={busy || undefined}>
             {busy ? 'Scoring...' : 'Score'}
           </Button>
+          {busy && (
+            <Button
+              className="gw-btn"
+              onPress={() => {
+                cancel();
+                submitButton.current?.focus(); // the Cancel button is about to go away: keep focus on the form
+              }}
+            >
+              Cancel
+            </Button>
+          )}
         </div>
       </Form>
       {error !== undefined && <ErrorBanner error={error} />}
@@ -185,6 +200,8 @@ function ScorePanel() {
 function HumanizePanel() {
   const api = useApi();
   const announce = useAnnounce();
+  const { begin, cancel } = useAbortable();
+  const submitButton = useRef<HTMLButtonElement>(null);
   const config = useServerConfig();
   const cap = config?.limits.maxInputChars;
   const [authors] = useLoad(() => api.get('/api/authors').then((r) => r.authors), [api]);
@@ -205,6 +222,7 @@ function HumanizePanel() {
 
   const submit = async () => {
     if (!ready || busy) return;
+    const signal = begin();
     setBusy(true);
     setError(undefined);
     announce('Humanizing...');
@@ -215,7 +233,7 @@ function HumanizePanel() {
         ...(iterations === undefined ? {} : { maxIterations: iterations }),
         llm: useModel,
         ...(authorId === NO_AUTHOR ? {} : { authorId }),
-      });
+      }, { signal });
       setResult(r);
       announce(`Humanize finished: score ${fmt(r.initialScore)} to ${fmt(r.finalScore)}`);
     } catch (e) {
@@ -252,9 +270,20 @@ function HumanizePanel() {
           Allow a model pass (off = deterministic edits only)
         </Switch>
         <div className="gw-row">
-          <Button type="submit" className="gw-btn gw-btn--primary" isDisabled={!ready} aria-disabled={busy || undefined}>
+          <Button ref={submitButton} type="submit" className="gw-btn gw-btn--primary" isDisabled={!ready} aria-disabled={busy || undefined}>
             {busy ? 'Humanizing...' : 'Humanize'}
           </Button>
+          {busy && (
+            <Button
+              className="gw-btn"
+              onPress={() => {
+                cancel();
+                submitButton.current?.focus(); // the Cancel button is about to go away: keep focus on the form
+              }}
+            >
+              Cancel
+            </Button>
+          )}
         </div>
       </Form>
       {error !== undefined && <ErrorBanner error={error} />}

@@ -5,6 +5,24 @@ import { ApiError, createApiClient } from '../../src/api/client';
 import { CAPABILITIES, fakeClient, jsonResponse, renderApp } from '../helpers/app';
 
 describe('typed API client', () => {
+  it('a request that never answers ends with CLIENT_TIMEOUT after the timeout, and the fetch was given an abort signal', async () => {
+    let signal: AbortSignal | undefined;
+    const c = createApiClient({ timeoutMs: 20, fetch: ((_u: string, init: RequestInit) => ((signal = init.signal ?? undefined), new Promise(() => undefined))) as typeof fetch });
+    const e = await c.post('/api/score', { text: 'x' } as never).catch((x) => x);
+    expect(e).toBeInstanceOf(ApiError);
+    expect(e).toMatchObject({ status: 0, code: 'CLIENT_TIMEOUT' });
+    expect(signal?.aborted).toBe(true);
+  });
+
+  it('the caller\'s signal cancels the request: ABORTED, also when it was already aborted, and also when the fetch ignores its signal', async () => {
+    const c = createApiClient({ fetch: (() => new Promise(() => undefined)) as typeof fetch });
+    const ctl = new AbortController();
+    const pending = c.post('/api/score', { text: 'x' } as never, { signal: ctl.signal }).catch((x) => x);
+    ctl.abort();
+    expect(await pending).toMatchObject({ status: 0, code: 'ABORTED' });
+    expect(await c.get('/api/capabilities', undefined, { signal: ctl.signal }).catch((x) => x)).toMatchObject({ code: 'ABORTED' });
+  });
+
   it('GET sends Accept, no credentials or cookies, no referrer, and no Authorization until a token is set', async () => {
     const c = fakeClient();
     const doc = await c.get('/api/capabilities');

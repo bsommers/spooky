@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { HUMANIZE_CAVEAT } from '../../src/screens/score/caveat';
+import { ApiError } from '../../src/api/client';
 import { AUTHORS, CAPS_NO_PHASE8, CONFIG, ERR, GENERATE_OK, HOSTILE, PERSONAS } from '../helpers/fixtures';
 import { mockClient, renderApp, renderScreen } from '../helpers/app';
 import { TYPED_CODES, recoversOnRetry, showsTypedError } from '../helpers/screens';
@@ -80,6 +81,44 @@ describe('Generate screen', () => {
     expect(rows[3]).toHaveTextContent('3.5');
     expect(rows[3]).toHaveTextContent('phrases_removed: 2');
     expect(screen.getByTestId('live-region')).toHaveTextContent(`Generation finished: ${GENERATE_OK.text.length} characters`);
+  });
+
+  it('Cancel stops a stalled request: a calm cancelled notice (not an alert), focus stays on the form, and Generate works again', async () => {
+    const user = userEvent.setup();
+    const client = mockClient();
+    const post = client.post.bind(client);
+    let calls = 0;
+    client.post = ((path: never, body: never, opts?: { signal?: AbortSignal }) => {
+      calls++;
+      if (calls > 1) return post(path, body);
+      return new Promise((_, reject) => opts?.signal?.addEventListener('abort', () => reject(new ApiError(0, 'ABORTED', 'the request was cancelled'))));
+    }) as never;
+    renderApp('#/generate', client);
+    await typeDraft(user);
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    await user.click(await screen.findByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(document.querySelector('[data-code="ABORTED"]')).not.toBeNull());
+    expect(document.querySelector('[data-code="ABORTED"]')).toHaveAttribute('role', 'status');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Generate' })).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    await screen.findByRole('region', { name: 'Generated text' });
+    expect(document.querySelector('[data-code="ABORTED"]')).toBeNull();
+  });
+
+  it('leaving the screen aborts the request that is in flight', async () => {
+    const user = userEvent.setup();
+    const client = mockClient();
+    let signal: AbortSignal | undefined;
+    client.post = ((_p: never, _b: never, opts?: { signal?: AbortSignal }) => ((signal = opts?.signal), new Promise(() => undefined))) as never;
+    renderApp('#/generate', client);
+    await typeDraft(user);
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    await screen.findByRole('button', { name: 'Cancel' });
+    expect(signal?.aborted).toBe(false);
+    await user.click(screen.getByRole('link', { name: 'Personas' }));
+    await waitFor(() => expect(signal?.aborted).toBe(true));
   });
 
   it('banned-phrase and confidentiality indicators are counts only', async () => {

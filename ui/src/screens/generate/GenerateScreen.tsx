@@ -1,7 +1,7 @@
 // Generate: pick an author and a persona, give a draft, get text back in the author's voice (POST /api/generate).
 // The output is the server's answer rendered as plain text. The trace and the indicators show what the safety filters did,
 // as counts. Nothing from the model is ever interpreted as markup.
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button, Form, Switch } from 'react-aria-components';
 import type { ApiError, PostResponse } from '../../api/client';
 import { useCapabilities } from '../../api/capabilities';
@@ -17,6 +17,7 @@ import { PlainText } from '../../components/PlainText';
 import { Loading, Section } from '../../components/Section';
 import { TextInput } from '../../components/TextInput';
 import { Indicators, TraceTable } from '../../components/Trace';
+import { useAbortable } from '../../components/useAbortable';
 import { useLoad } from '../../components/useLoad';
 
 type Result = PostResponse<'/api/generate'>;
@@ -24,6 +25,8 @@ type Result = PostResponse<'/api/generate'>;
 export default function GenerateScreen() {
   const api = useApi();
   const announce = useAnnounce();
+  const { begin, cancel } = useAbortable();
+  const submitButton = useRef<HTMLButtonElement>(null);
   const { has } = useCapabilities();
   const [authors, reloadAuthors] = useLoad(() => api.get('/api/authors').then((r) => r.authors), [api]);
   const [personas, reloadPersonas] = useLoad(() => api.get('/api/personas').then((r) => r.personas), [api]);
@@ -56,6 +59,7 @@ export default function GenerateScreen() {
 
   const submit = async () => {
     if (!ready || busy || chosenAuthor === undefined || chosenPersona === undefined) return;
+    const signal = begin();
     setBusy(true);
     setError(undefined);
     announce('Generating...');
@@ -65,7 +69,7 @@ export default function GenerateScreen() {
         persona: chosenPersona,
         text,
         ...(canHumanize && humanize ? { humanize: true, ...(target === undefined ? {} : { target }) } : {}),
-      });
+      }, { signal });
       setResult(r);
       setResultHumanized(canHumanize && humanize);
       announce(`Generation finished: ${r.text.length.toLocaleString('en-US')} characters`);
@@ -133,9 +137,20 @@ export default function GenerateScreen() {
           )}
           {showCaveat && <Caveat />}
           <div className="gw-row">
-            <Button type="submit" className="gw-btn gw-btn--primary" isDisabled={!ready} aria-disabled={busy || undefined}>
+            <Button ref={submitButton} type="submit" className="gw-btn gw-btn--primary" isDisabled={!ready} aria-disabled={busy || undefined}>
               {busy ? 'Generating...' : 'Generate'}
             </Button>
+            {busy && (
+              <Button
+                className="gw-btn"
+                onPress={() => {
+                  cancel();
+                  submitButton.current?.focus(); // the Cancel button is about to go away: keep focus on the form
+                }}
+              >
+                Cancel
+              </Button>
+            )}
             {!ready && !busy && (
               <span className="gw-hint">{empty ? 'Write a draft to enable Generate.' : over ? 'The draft is over the limit.' : targetBad ? 'Enter a target score from 0 to 1.' : 'Waiting for the server limits.'}</span>
             )}

@@ -10,6 +10,7 @@ import { BarTable } from '../../components/Bars';
 import { ErrorBanner } from '../../components/ErrorBanner';
 import { toApiError } from '../../components/errors';
 import { KeyValues, Loading, Section } from '../../components/Section';
+import { useAbortable } from '../../components/useAbortable';
 import { useLoad } from '../../components/useLoad';
 import { CheckIcon } from '../../icons';
 import type { ApiError } from '../../api/client';
@@ -49,6 +50,7 @@ function ProfileView({ p }: { p: Profile }) {
 function IngestForm({ onDone }: { onDone(authorId: string): void }) {
   const api = useApi();
   const announce = useAnnounce();
+  const { begin } = useAbortable();
   const [authorId, setAuthorId] = useState('');
   const [name, setName] = useState('');
   const [text, setText] = useState('');
@@ -83,11 +85,12 @@ function IngestForm({ onDone }: { onDone(authorId: string): void }) {
 
   const submit = async () => {
     if (!ready || busy) return;
+    const signal = begin();
     setBusy(true);
     setError(undefined);
     setDone(undefined);
     try {
-      const r = await api.post('/api/ingest', { authorId, name: name.trim(), text });
+      const r = await api.post('/api/ingest', { authorId, name: name.trim(), text }, { signal });
       setDone(r.profile.authorId);
       announce(`Ingested ${r.profile.displayName}`);
       onDone(r.profile.authorId);
