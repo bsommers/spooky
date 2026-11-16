@@ -226,7 +226,8 @@ describe('Generate screen', () => {
     await user.click(screen.getByRole('button', { name: 'Generate' }));
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveAttribute('data-code', code);
-    expect(screen.getByTestId('live-region')).toHaveTextContent(`Generation failed: ${code}`);
+    // said once, by the alert: the polite live region does not repeat it (and no longer says "Generating...")
+    expect(screen.getByTestId('live-region')).toHaveTextContent(/^\s*$/);
     expect(screen.getByLabelText('Draft')).toHaveValue('Please write the release note.');
     fail = false;
     await user.click(screen.getByRole('button', { name: 'Generate' }));

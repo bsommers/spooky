@@ -84,7 +84,7 @@ function ScorePanel() {
     } catch (e) {
       const err = toApiError(e);
       setError(err);
-      announce(`Scoring failed: ${err.code}`);
+      announce(''); // the error banner (role=alert) says it; speaking it again from the live region would read it twice
     } finally {
       setBusy(false);
     }
@@ -255,7 +255,7 @@ function HumanizePanel() {
     } catch (e) {
       const err = toApiError(e);
       setError(err);
-      announce(`Humanize failed: ${err.code}`);
+      announce(''); // the error banner (role=alert) says it; speaking it again from the live region would read it twice
     } finally {
       setBusy(false);
     }

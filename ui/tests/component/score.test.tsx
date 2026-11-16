@@ -290,7 +290,7 @@ describe('Humanize panel', () => {
     await paste(user, /Text to humanize/, 'text');
     await user.click(screen.getByRole('button', { name: 'Humanize' }));
     expect(await screen.findByRole('alert')).toHaveAttribute('data-code', code);
-    expect(screen.getByTestId('live-region')).toHaveTextContent(`Humanize failed: ${code}`);
+    expect(screen.getByTestId('live-region')).toHaveTextContent(/^\s*$/); // the alert says it once
   });
 });
 
