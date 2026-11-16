@@ -422,6 +422,7 @@ export default function ScoreScreen() {
       <h1 id="score-h">Score and humanize</h1>
       <p className="gw-lede">Measure how machine-like a text reads to the local heuristic, or rewrite it to score lower while a guard keeps its facts intact.</p>
       <Caveat />
+      {/* Both panels stay mounted (the idle one is inert and hidden): switching tabs keeps the text, the result and a request in flight. */}
       <Tabs className="gw-tabs">
         <TabList className="gw-tablist" aria-label="Score or humanize">
           <Tab id="score" className="gw-tab">
@@ -431,10 +432,10 @@ export default function ScoreScreen() {
             Humanize
           </Tab>
         </TabList>
-        <TabPanel id="score" className="gw-tabpanel">
+        <TabPanel id="score" className="gw-tabpanel" shouldForceMount>
           {canScore ? <ScorePanel /> : <Unavailable what="Scoring" />}
         </TabPanel>
-        <TabPanel id="humanize" className="gw-tabpanel">
+        <TabPanel id="humanize" className="gw-tabpanel" shouldForceMount>
           {canHumanize ? <HumanizePanel /> : <Unavailable what="Humanizing" />}
         </TabPanel>
       </Tabs>

@@ -12,6 +12,9 @@ const capsWithout = (...names: string[]): Overrides => ({
   'GET /api/capabilities': () => ({ status: 200, body: { ...CAPS_FULL, operations: CAPS_FULL.operations.filter((o) => !names.includes(o.name)) } }),
 });
 
+/** Both panels stay mounted; the idle one is inert (and display:none in the real page). Queries by test id look in the live one. */
+const livePanel = () => within(document.querySelector<HTMLElement>('[role="tabpanel"]:not([data-inert])')!);
+
 async function openHumanize(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('tab', { name: 'Humanize' }));
 }
@@ -48,13 +51,13 @@ describe('Score / Humanize screen: gating on the capability list', () => {
   it('without score and humanize the nav entry is still there, the page renders, and both panels are off with an explanation', async () => {
     const user = userEvent.setup();
     renderScreen('#/score', { 'GET /api/capabilities': () => ({ status: 200, body: CAPS_NO_PHASE8 }) });
-    expect(await screen.findByTestId('unavailable')).toHaveTextContent('Scoring is not available on this server.');
+    await waitFor(() => expect(livePanel().getByTestId('unavailable')).toHaveTextContent('Scoring is not available on this server.'));
     expect(screen.getByRole('heading', { level: 1, name: 'Score and humanize' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Score / Humanize' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.queryByRole('button', { name: 'Score' })).toBeNull();
+    expect(livePanel().queryByRole('button', { name: 'Score' })).toBeNull();
     await openHumanize(user);
-    expect(await screen.findByTestId('unavailable')).toHaveTextContent('Humanizing is not available on this server.');
-    expect(screen.queryByRole('button', { name: 'Humanize' })).toBeNull();
+    await waitFor(() => expect(livePanel().getByTestId('unavailable')).toHaveTextContent('Humanizing is not available on this server.'));
+    expect(livePanel().queryByRole('button', { name: 'Humanize' })).toBeNull();
     // other pages are not broken by it
     await user.click(screen.getByRole('link', { name: 'Personas' }));
     expect(await screen.findByRole('listbox', { name: 'Personas' })).toBeInTheDocument();
@@ -66,13 +69,30 @@ describe('Score / Humanize screen: gating on the capability list', () => {
     await paste(user, /Text to score/, 'Some text.');
     expect(screen.getByRole('button', { name: 'Score' })).toBeEnabled();
     await openHumanize(user);
-    expect(await screen.findByTestId('unavailable')).toHaveTextContent('Humanizing');
+    await waitFor(() => expect(livePanel().getByTestId('unavailable')).toHaveTextContent('Humanizing'));
   });
 
   it('axe: the gated-off state has no violations', async () => {
     const { container } = renderScreen('#/score', { 'GET /api/capabilities': () => ({ status: 200, body: CAPS_NO_PHASE8 }) });
-    await screen.findByTestId('unavailable');
+    await waitFor(() => expect(livePanel().getByTestId('unavailable')).toBeInTheDocument());
     expect(describeViolations((await runAxe(container)).violations)).toBe('');
+  });
+});
+
+describe('switching between the Score and Humanize tabs', () => {
+  it('keeps what was typed and the result on screen in each panel', async () => {
+    const user = userEvent.setup();
+    renderScreen('#/score');
+    await paste(user, /Text to score/, 'Score this text.');
+    await user.click(screen.getByRole('button', { name: 'Score' }));
+    await screen.findByTestId('score-value');
+    await openHumanize(user);
+    await paste(user, /Text to humanize/, 'Humanize that text.');
+    await user.click(screen.getByRole('tab', { name: 'Score' }));
+    expect(screen.getByLabelText(/Text to score/)).toHaveValue('Score this text.');
+    expect(screen.getByTestId('score-value')).toBeInTheDocument();
+    await openHumanize(user);
+    expect(screen.getByLabelText(/Text to humanize/)).toHaveValue('Humanize that text.');
   });
 });
 
@@ -83,7 +103,7 @@ describe('Score panel', () => {
     const button = await screen.findByRole('button', { name: 'Score' });
     expect(button).toBeDisabled();
     await paste(user, /Text to score/, 'x'.repeat(5001));
-    expect(screen.getByTestId('char-count')).toHaveTextContent('5,001 / 5,000');
+    expect(livePanel().getByTestId('char-count')).toHaveTextContent('5,001 / 5,000');
     expect(button).toBeDisabled();
     await user.keyboard('{Backspace}');
     expect(button).toBeEnabled();

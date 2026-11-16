@@ -275,6 +275,11 @@
   outline: none;
 }
 
+/* A panel kept mounted so its text and result survive a tab switch: inert, and gone from the page. */
+.gw-tabpanel[data-inert] {
+  display: none;
+}
+
 .gw-status {
   display: flex;
   align-items: center;
