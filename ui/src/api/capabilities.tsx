@@ -52,6 +52,10 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
     void reload();
   }, [reload]);
 
+  // Any later request answered 401 (the token expired, the server restarted with another one, a wrong token was typed under
+  // Settings): the client has dropped it, so go back to asking for one instead of leaving screens that all fail.
+  useEffect(() => api.onUnauthorized((hadToken) => setState((prev) => (prev.kind === 'ok' ? { kind: 'auth', wrong: hadToken } : prev))), [api]);
+
   const value = useMemo<CapsValue>(
     () => ({ state, reload, has: (op) => state.kind === 'ok' && state.caps.operations.some((o) => o.name === op) }),
     [state, reload],

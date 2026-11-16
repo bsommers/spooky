@@ -12,7 +12,7 @@ export interface ErrorCopy {
 
 /** What each typed code means for the person using the page. The server's own message is shown next to it, as text. */
 export const ERROR_COPY: Readonly<Record<string, ErrorCopy>> = {
-  UNAUTHORIZED: { title: 'The server needs a valid API token.', hint: 'Enter the token on the Overview page.' },
+  UNAUTHORIZED: { title: 'The server needs a valid API token.', hint: 'Enter the token in the form that appears, or under Settings.' },
   FORBIDDEN: { title: 'The server refused this request.' },
   RATE_LIMITED: { title: 'Too many requests.', hint: 'Wait a moment and try again.' },
   OVERLOADED: { title: 'The server is busy.', hint: 'Try again in a moment.' },

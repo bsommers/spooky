@@ -55,6 +55,11 @@ export interface ApiClient {
   /** Keep the token in memory for this page load. `undefined` forgets it. */
   setToken(token: string | undefined): void;
   hasToken(): boolean;
+  /**
+   * Called after any request answered 401. The client has already forgotten the token by then (resending a rejected token
+   * only counts as another wrong guess at the server's throttle). `hadToken` says whether one was being sent.
+   */
+  onUnauthorized(listener: (hadToken: boolean) => void): () => void;
   get<P extends GetPath>(path: P, query?: GetQuery<P>, request?: RequestOptions): Promise<GetResponse<P>>;
   post<P extends PostPath>(path: P, body: PostBody<P>, request?: RequestOptions): Promise<PostResponse<P>>;
 }
@@ -62,6 +67,7 @@ export interface ApiClient {
 export function createApiClient(options: ApiClientOptions = {}): ApiClient {
   const base = options.baseUrl ?? '';
   let token: string | undefined;
+  const unauthorizedListeners = new Set<(hadToken: boolean) => void>();
 
   async function send(method: 'GET' | 'POST', path: string, query?: Json, body?: unknown, request: RequestOptions = {}): Promise<unknown> {
     const doFetch = options.fetch ?? fetch;
@@ -69,7 +75,8 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     for (const [k, v] of Object.entries(query ?? {})) if (v !== undefined) qs.set(k, String(v));
     const url = `${base}${path}${qs.size > 0 ? `?${qs.toString()}` : ''}`;
     const headers: Record<string, string> = { Accept: 'application/json' };
-    if (token !== undefined) headers.Authorization = `Bearer ${token}`;
+    const sentToken = token;
+    if (sentToken !== undefined) headers.Authorization = `Bearer ${sentToken}`;
     if (body !== undefined) headers['Content-Type'] = 'application/json';
 
     // One controller for both reasons to stop: the caller's signal and the timeout. The abort promise is raced against the
@@ -107,6 +114,11 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       }
       const d = doc as { ok?: unknown; error?: { code?: unknown; message?: unknown } };
       if (res.ok && d.ok === true) return doc;
+      if (res.status === 401) {
+        const hadToken = sentToken !== undefined && token === sentToken;
+        if (token === sentToken) token = undefined; // a newer token set while this request was in flight is left alone
+        for (const l of [...unauthorizedListeners]) l(hadToken);
+      }
       const retry = Number(res.headers.get('Retry-After'));
       throw new ApiError(
         res.status,
@@ -125,6 +137,10 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       token = t === undefined || t === '' ? undefined : t;
     },
     hasToken: () => token !== undefined,
+    onUnauthorized(listener) {
+      unauthorizedListeners.add(listener);
+      return () => unauthorizedListeners.delete(listener);
+    },
     get: (path, query, request) => send('GET', path, query as Json | undefined, undefined, request) as never,
     post: (path, body, request) => send('POST', path, undefined, body, request) as never,
   };

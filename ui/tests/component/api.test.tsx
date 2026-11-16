@@ -5,6 +5,22 @@ import { ApiError, createApiClient } from '../../src/api/client';
 import { CAPABILITIES, fakeClient, jsonResponse, renderApp } from '../helpers/app';
 
 describe('typed API client', () => {
+  it('a 401 on any call forgets the token (it is never resent) and tells the listeners whether one was held', async () => {
+    const c = fakeClient((url) => (url.includes('x401') ? jsonResponse(401, { ok: false, error: { code: 'UNAUTHORIZED', message: 'no' } }) : jsonResponse(200, { ok: true })));
+    const heard: boolean[] = [];
+    const off = c.onUnauthorized((had) => heard.push(had));
+    c.setToken('tok-0123456789abcdef');
+    await c.post('/api/score?x401' as never, { text: 'a' } as never).catch(() => undefined);
+    expect(c.hasToken()).toBe(false);
+    await c.get('/api/capabilities?x401' as never).catch(() => undefined);
+    expect(heard).toEqual([true, false]);
+    await c.get('/api/capabilities');
+    expect((c.calls[2]!.init.headers as Record<string, string>).Authorization).toBeUndefined();
+    off();
+    await c.get('/api/capabilities?x401' as never).catch(() => undefined);
+    expect(heard).toHaveLength(2);
+  });
+
   it('a request that never answers ends with CLIENT_TIMEOUT after the timeout, and the fetch was given an abort signal', async () => {
     let signal: AbortSignal | undefined;
     const c = createApiClient({ timeoutMs: 20, fetch: ((_u: string, init: RequestInit) => ((signal = init.signal ?? undefined), new Promise(() => undefined))) as typeof fetch });

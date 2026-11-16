@@ -83,6 +83,27 @@ describe('Generate screen', () => {
     expect(screen.getByTestId('live-region')).toHaveTextContent(`Generation finished: ${GENERATE_OK.text.length} characters`);
   });
 
+  it('a 401 on the generate call forgets the rejected token and puts the token form back; a new token gets the screen working again', async () => {
+    const user = userEvent.setup();
+    let reject = true;
+    const client = mockClient({ 'POST /api/generate': () => (reject ? { status: 401, body: ERR('UNAUTHORIZED', 'a valid bearer token is required') } : { status: 200, body: GENERATE_OK }) });
+    client.setToken('rejected-token-0123456789');
+    renderApp('#/generate', client);
+    await typeDraft(user);
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    expect(await screen.findByText('That token was not accepted.')).toBeInTheDocument();
+    expect(client.hasToken()).toBe(false);
+    expect(screen.queryByLabelText('Draft')).toBeNull();
+    const before = client.calls.length;
+    reject = false;
+    await user.type(screen.getByLabelText('API token'), 'fresh-token-0123456789');
+    await user.click(screen.getByRole('button', { name: 'Connect' }));
+    await draft();
+    const sent = client.calls.slice(before).map((c) => (c.init.headers as Record<string, string>).Authorization);
+    expect(sent.length).toBeGreaterThan(0);
+    expect(sent.every((h) => h === 'Bearer fresh-token-0123456789')).toBe(true); // the rejected token was never sent again
+  });
+
   it('Cancel stops a stalled request: a calm cancelled notice (not an alert), focus stays on the form, and Generate works again', async () => {
     const user = userEvent.setup();
     const client = mockClient();
