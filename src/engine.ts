@@ -204,10 +204,10 @@ export class Engine {
 
   /**
    * Read-only, redacted view of the effective configuration: provider, model, endpoint HOSTS, the NAMES of key
-   * environment variables (never their values), limits, filters, persona keys, scorer settings (src/config/view.ts).
+   * environment variables (never their values), limits, filters, persona keys, scorer settings and the state directory path (src/config/view.ts).
    */
   getConfigView(): ConfigView {
-    return buildConfigView(this.#config, this.#env);
+    return buildConfigView(this.#config, this.#env, this.#stateDir);
   }
 
   /** Every configured persona, sorted by key. */

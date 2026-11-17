@@ -134,6 +134,30 @@ describe('config get (redacted view)', () => {
     for (const forbidden of [secret, 'detectorsecretvalue1234', 'secret-path', 'queryvalue', 'urlsecret', 'Project Falcon', 'Acme', 'TKT-']) expect(text, forbidden).not.toContain(forbidden);
   });
 
+  it('reports the state directory path (read-only) when there is one, and omits it for an in-memory engine', () => {
+    const cfg = loadConfig(full);
+    expect(buildConfigView(cfg, {}, '/home/u/.local/state/ghostwriter').stateDir).toBe('/home/u/.local/state/ghostwriter');
+    expect(buildConfigView(cfg, {}).stateDir).toBeUndefined();
+    expect('stateDir' in buildConfigView(cfg, {})).toBe(false);
+    // control characters are dropped and the length is capped; the path never brings any env value with it
+    expect(buildConfigView(cfg, {}, '/a/b\n\u0000c').stateDir).toBe('/a/bc');
+    expect(buildConfigView(cfg, {}, '/' + 'x'.repeat(5000)).stateDir?.length).toBe(1024);
+    expect(JSON.stringify(buildConfigView(cfg, { MY_LLM_KEY: secret }, '/state'))).not.toContain(secret);
+  });
+
+  it('the config_get operation returns stateDir through the shared output schema and its text rendering', async () => {
+    const rig = await makeRuntime();
+    try {
+      const op = operation('config_get');
+      const out = await invokeOperation(op, rig.engine, {});
+      const parsed = op.output.parse(out) as { config: { stateDir?: string } };
+      expect(parsed.config.stateDir).toBe(rig.stateDir);
+      expect(op.render(out as never)).toContain(`state directory: ${rig.stateDir}`);
+    } finally {
+      rig.cleanup();
+    }
+  });
+
   it('reports whether a key variable is set without reading its value into the view', () => {
     expect(buildConfigView(loadConfig(full), {}).llm.apiKeyEnvSet).toBe(false);
     expect(buildConfigView(loadConfig(full), { MY_LLM_KEY: '' }).llm.apiKeyEnvSet).toBe(false);

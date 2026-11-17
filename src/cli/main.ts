@@ -223,7 +223,9 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
     return { config, engine: await engineFor(config, opts, persisted) };
   };
   const engineFor = async (config: Config, opts: CommonOpts, persisted: boolean): Promise<Engine> => {
-    const options: EngineOptions = { config, env: io.env, ...deps, ...(persisted ? { stateDir: opts.stateDir ?? defaultStateDir(io.env) } : {}) };
+    // The state directory is always named (so `config get` can report where this command's ingests live); only a
+    // `persisted` command reads it (`Engine.create`). A plain `new Engine` never touches the disk until an ingest.
+    const options: EngineOptions = { config, env: io.env, ...deps, stateDir: opts.stateDir ?? defaultStateDir(io.env) };
     return persisted ? Engine.create(options) : new Engine(options);
   };
 

@@ -29,7 +29,7 @@ curl -s -H 'Content-Type: application/json' \
 | `authors` | `GET /api/authors` | `authors` |
 | `personas` | `GET /api/personas` | `personas` |
 | `filters` | `GET /api/filters` | `filters` |
-| `config_get` | `GET /api/config` | `config` (redacted) |
+| `config_get` | `GET /api/config` | `config` (redacted; `stateDir` is the state directory path, absent when in memory) |
 | `capabilities` | `GET /api/capabilities` | `operations`, `pending` |
 | (document) | `GET /openapi.json` | the OpenAPI 3.1 document |
 | (opt-in) | `POST /mcp` with `serve --mcp` | MCP over streamable HTTP, see [MCP.md](MCP.md) |

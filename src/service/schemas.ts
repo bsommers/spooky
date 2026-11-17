@@ -147,6 +147,7 @@ export const configViewSchema = z.object({
   confidentiality: z.object({ blocklistTerms: z.number(), customRules: z.number() }),
   scorer: z.object({ localWeight: z.number(), weights: z.record(z.string(), z.number()), detectors: z.array(detectorViewSchema) }),
   humanize: z.object({ targetScore: z.number(), maxIterations: z.number() }),
+  stateDir: z.string().optional(),
 });
 
 export const ingestOutput = z.object({ profile: profileSchema });

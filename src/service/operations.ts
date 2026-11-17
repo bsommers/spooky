@@ -96,6 +96,7 @@ const configText = (c: ConfigView): string => {
     `personas: ${c.personas.join(', ')}`,
     `confidentiality: ${c.confidentiality.blocklistTerms} blocklist term(s), ${c.confidentiality.customRules} custom rule(s)`,
     `scorer: localWeight ${c.scorer.localWeight}`,
+    `state directory: ${c.stateDir ?? '(none, in memory only)'}`,
   ];
   for (const d of c.scorer.detectors) lines.push(`  detector ${d.name}: ${d.scheme}://${d.host}${d.apiKeyEnv === undefined ? '' : ` key ${d.apiKeyEnv} (${d.apiKeyEnvSet === true ? 'set' : 'not set'})`}`);
   return lines.join('\n');
@@ -276,7 +277,7 @@ const filters = define({
 const configGet = define({
   name: 'config_get',
   description:
-    'Show the effective configuration, redacted: provider, model, endpoint hosts, the NAMES of key environment variables (never values), limits, filters, persona keys, scorer settings. Read-only.',
+    'Show the effective configuration, redacted: provider, model, endpoint hosts, the NAMES of key environment variables (never values), limits, filters, persona keys, scorer settings, the state directory path (where ingests are kept; omitted when in memory only). Read-only.',
   input: S.emptyInput,
   output: S.configOutput,
   mutates: false,

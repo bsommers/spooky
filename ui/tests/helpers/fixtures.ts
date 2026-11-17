@@ -82,6 +82,7 @@ export const CONFIG = {
     confidentiality: { blocklistTerms: 3, customRules: 1 },
     scorer: { localWeight: 1, weights: { punctuation: 0.5 }, detectors: [] },
     humanize: { targetScore: 0.3, maxIterations: 3 },
+    stateDir: '/home/example/.local/state/ghostwriter',
   },
 };
 

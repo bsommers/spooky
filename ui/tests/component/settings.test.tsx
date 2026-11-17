@@ -35,6 +35,32 @@ describe('Settings screen', () => {
     expect(container.innerHTML).not.toContain(SECRET);
   });
 
+  it('shows the state directory path read-only, as plain text, with no control to change it', async () => {
+    renderScreen('#/settings');
+    await screen.findByRole('heading', { level: 2, name: 'Limits and storage' });
+    const storage = screen.getByRole('region', { name: 'Limits and storage' });
+    expect(within(storage).getByText('State directory')).toBeInTheDocument();
+    expect(within(storage).getByText('/home/example/.local/state/ghostwriter')).toBeInTheDocument();
+    expect(within(storage).queryByRole('textbox')).toBeNull();
+    expect(within(storage).queryByRole('button')).toBeNull();
+    expect(storage).toHaveTextContent('Read-only here');
+  });
+
+  it('with no state directory the screen says the server keeps nothing between runs', async () => {
+    const { stateDir: _omit, ...rest } = CONFIG.config;
+    renderApp('#/settings', mockClient({ 'GET /api/config': () => ({ status: 200, body: { ...CONFIG, config: rest } }) }));
+    await screen.findByRole('heading', { level: 2, name: 'Limits and storage' });
+    expect(screen.getByRole('region', { name: 'Limits and storage' })).toHaveTextContent('none: this server keeps nothing between runs');
+  });
+
+  it('a state directory path with markup is shown as literal text', async () => {
+    const hostile = { ...CONFIG, config: { ...CONFIG.config, stateDir: HOSTILE.script } };
+    const { container } = renderApp('#/settings', mockClient({ 'GET /api/config': () => ({ status: 200, body: hostile }) }));
+    await screen.findByRole('heading', { level: 2, name: 'Limits and storage' });
+    expect(container.querySelector('main script, main img')).toBeNull();
+    expect(screen.getByText(HOSTILE.script, { exact: false })).toBeInTheDocument();
+  });
+
   it('an unset key variable says so in words, not only in color', async () => {
     const unset = { ...CONFIG, config: { ...CONFIG.config, llm: { ...CONFIG.config.llm, apiKeyEnvSet: false } } };
     renderApp('#/settings', mockClient({ 'GET /api/config': () => ({ status: 200, body: unset }) }));

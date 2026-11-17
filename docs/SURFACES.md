@@ -23,7 +23,7 @@ flowchart LR
 | list authors | `engine.listAuthors` | `ghostwriter authors` | `GET /api/authors` | `authors` | Authors, Generate |
 | list personas | `engine.listPersonas` | `ghostwriter personas` | `GET /api/personas` | `personas` | Personas, Generate |
 | list filters | `engine.listFilters` | `ghostwriter filters` | `GET /api/filters` | `filters` | Settings |
-| config get (redacted) | `engine.getConfigView` | `ghostwriter config get` | `GET /api/config` | `config_get` | Settings, limits on Generate |
+| config get (redacted; includes the state directory path, read-only) | `engine.getConfigView` | `ghostwriter config get` | `GET /api/config` | `config_get` | Settings, limits on Generate |
 | capabilities | `describeCapabilities()` | `ghostwriter capabilities` | `GET /api/capabilities` | `capabilities` | Overview, nav gating |
 | humanize | `engine.humanize` | `ghostwriter humanize` | `POST /api/humanize` | `humanize` | Score / Humanize (Humanize) |
 
@@ -52,7 +52,7 @@ Same document on every surface: `{ "ok": true, ...data }` or `{ "ok": false, "er
 
 ## Decisions (DECIDED 2026-11-15, user accepted the recommended option for all five)
 1. **HTTP framework: DECIDED `node:http`.** No framework. The whole HTTP surface is one handler in `src/api/server.ts`, routes derived from the registry.
-2. **Config: DECIDED read-only.** `config get` only (redacted view). There is no `config set` on any surface; writes from a UI/API are a secrets and safety risk. Revisit only with an explicit design for secret handling.
+2. **Config: DECIDED read-only.** `config get` only (redacted view; it reports the state directory path, which is a location and not a secret, and never a key or env value). There is no `config set` on any surface; writes from a UI/API are a secrets and safety risk. Revisit only with an explicit design for secret handling.
 3. **Token: DECIDED optional bearer token on loopback, with a docs warning.** Tokenless on `127.0.0.1` is the default; `--token-env NAME` turns the token on for every route. The token must have some variety (8+ distinct characters), `NAME` must be a service-specific upper-case name (not `PATH`, a provider key or another system's credential), and wrong tokens are throttled per address (delay, then a 60 s lockout with 429); see [API.md](API.md#threat-model-and-the-tokenless-default). A non-loopback `--host` without a token refuses to start. The warning (any local process can use a tokenless server) is printed at startup and written in [API.md](API.md#threat-model-and-the-tokenless-default).
 4. **Fonts: DECIDED self-hosted OFL fonts via `@fontsource-variable/*`** (Orbitron/Inter/JetBrains Mono for Tron; Fraunces or Cormorant for Black Cat), bundled with the UI, no CDN. Applies from Phase 10; no font package is added in Phase 9.
 5. **Playwright baselines: DECIDED committed PNGs**, generated in a pinned container, small viewport set. Applies from Phase 10/11; nothing is added in Phase 9.

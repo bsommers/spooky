@@ -161,6 +161,23 @@ describe('golden equality across surfaces', () => {
     });
   }
 
+  it('config get: every surface reports the same state directory path, read-only, and no key or env value', async () => {
+    const mcp = await connectMcp(rig);
+    try {
+      const http = (await raw(server, '/api/config')).json();
+      const cli = JSON.parse((await runCli(['config', 'get', ...cliArgs()])).out);
+      const viaMcp = (await mcp.client.callTool({ name: 'config_get', arguments: {} })).structuredContent as any;
+      for (const doc of [http, cli, viaMcp, { config: rig.engine.getConfigView() }]) expect(doc.config.stateDir, JSON.stringify(doc)).toBe(rig.stateDir);
+      const text = (await runCli(['config', 'get', ...cliArgs().filter((a) => a !== '--json')])).out;
+      expect(text).toContain(`state directory: ${rig.stateDir}`);
+      // reading it does not make it writable: no config write route exists on any surface
+      expect((await postJson(server, '/api/config', { stateDir: '/elsewhere' })).status).toBeGreaterThanOrEqual(400);
+      expect((await raw(server, '/api/config')).json().config.stateDir).toBe(rig.stateDir);
+    } finally {
+      await mcp.close();
+    }
+  });
+
   it('ingest: every surface stores the same profile (HTTP, MCP and CLI write through the one state lock)', async () => {
     const mcp = await connectMcp(rig);
     try {

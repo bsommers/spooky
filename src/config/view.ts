@@ -38,12 +38,16 @@ export interface ConfigView {
   confidentiality: { blocklistTerms: number; customRules: number };
   scorer: { localWeight: number; weights: Record<string, number>; detectors: DetectorView[] };
   humanize: { targetScore: number; maxIterations: number };
+  /** Where ingested authors are kept (the state directory, a path). Absent when the engine is in-memory only. Read-only. */
+  stateDir?: string;
 }
 
 /** Shown in place of a name that does not look like an environment variable name. */
 export const WITHHELD = '(withheld)';
 const ENV_NAME_VIEW = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
 const MAX_SHOWN = 200;
+const MAX_PATH_SHOWN = 1024;
+const shownPath = (p: string): string => p.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, MAX_PATH_SHOWN);
 
 function envName(name: string | undefined, env: Readonly<Record<string, string | undefined>>): { apiKeyEnv: string; apiKeyEnvSet: boolean } | Record<string, never> {
   if (name === undefined) return {};
@@ -61,8 +65,11 @@ function hostOf(raw: string): { host: string; scheme: 'http' | 'https' } {
   }
 }
 
-/** Pure: reads `env` only to report whether a named variable is set. */
-export function buildConfigView(config: Config, env: Readonly<Record<string, string | undefined>>): ConfigView {
+/**
+ * Pure: reads `env` only to report whether a named variable is set. `stateDir` is the engine's state directory path (a
+ * location, not a secret; capped in length, and control characters are dropped); omit it for an in-memory engine.
+ */
+export function buildConfigView(config: Config, env: Readonly<Record<string, string | undefined>>, stateDir?: string): ConfigView {
   const llm = config.llm;
   const provider = llm.provider ?? 'anthropic';
   const defaultKeyEnv = provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : undefined;
@@ -97,5 +104,6 @@ export function buildConfigView(config: Config, env: Readonly<Record<string, str
       })),
     },
     humanize: { targetScore: config.humanize?.targetScore ?? DEFAULT_HUMANIZE.targetScore, maxIterations: config.humanize?.maxIterations ?? DEFAULT_HUMANIZE.maxIterations },
+    ...(stateDir === undefined ? {} : { stateDir: shownPath(stateDir) }),
   };
 }

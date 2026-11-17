@@ -143,7 +143,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Show the effective configuration, redacted: provider, model, endpoint hosts, the NAMES of key environment variables (never values), limits, filters, persona keys, scorer settings. Read-only. */
+        /** Show the effective configuration, redacted: provider, model, endpoint hosts, the NAMES of key environment variables (never values), limits, filters, persona keys, scorer settings, the state directory path (where ingests are kept; omitted when in memory only). Read-only. */
         get: operations["config_get"];
         put?: never;
         post?: never;
@@ -1411,6 +1411,7 @@ export interface operations {
                                 targetScore: number;
                                 maxIterations: number;
                             };
+                            stateDir?: string;
                         };
                     };
                 };

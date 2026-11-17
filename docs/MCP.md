@@ -24,7 +24,7 @@ Claude Desktop / Claude Code style client entry (stdio):
 | `authors` | no | no | none | |
 | `personas` | no | no | none | |
 | `filters` | no | no | none | |
-| `config_get` | no | no | none | redacted view, read-only |
+| `config_get` | no | no | none | redacted view, read-only; includes `stateDir` (the state directory path) |
 | `capabilities` | no | no | none | operations and `pending` (empty since Phase 8 built `humanize`) |
 
 Results: on success `structuredContent` and the text content both hold `{ "ok": true, ...data }`, identical to `ghostwriter --json` and the HTTP body. A failure is a tool result with `isError: true` whose text content is `{ "ok": false, "error": { "code", "message" } }` (no `structuredContent`: clients validate that against the success `outputSchema`), with the same `code` as the other surfaces (table in [API.md](API.md#errors)); `_meta["ghostwriter/category"]` is one of `invalid_request`, `not_found`, `too_large`, `upstream`, `unavailable`, `denied`, `internal`. An unknown tool name is a protocol error (`InvalidParams`). A structurally malformed `tools/call` (for example `arguments: null`) is rejected by the SDK itself with `InvalidParams` and its own wording: schema paths and expected types, never the caller's values (the SDK's `Server` hard-wires that validation, so it is not replaced here).

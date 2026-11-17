@@ -41,7 +41,7 @@ ghostwriter serve          # open http://127.0.0.1:8787/
 | Authors (`#/authors`) | `authors`, `profile`, `ingest` | author list, stylometric profile as numbers beside SVG bars, ingest form (id pattern, name, pasted text or a file read in the browser into the text box, 4 MB cap) |
 | Personas (`#/personas`) | `personas` | list and detail, read-only |
 | Score / Humanize (`#/score`) | `score`, `humanize` | tabs; before/after scores, per-feature contribution and delta bars, iteration history with the meaning guard's reverts; the weak-scorer caveat is on screen at all times |
-| Settings (`#/settings`) | `config_get`, `filters` | provider, model, endpoint host, key variable NAME with set/not-set status, limits, filters, scoring, theme radios, optional API token held in memory. Read-only: the config is changed in the server's config file |
+| Settings (`#/settings`) | `config_get`, `filters` | provider, model, endpoint host, key variable NAME with set/not-set status, limits, the state directory path (read-only; "none" for an in-memory server), filters, scoring, theme radios, optional API token held in memory. Read-only: the config is changed in the server's config file |
 
 **Gating.** The capability list is fetched once per page load (`CapabilitiesProvider`). A 401 shows the token form instead of any feature screen (`AuthGate`). Score and Humanize panels turn off with an explanation when the server does not list `score` / `humanize`; the nav entry stays. Phase 8 is built, so both are normally on; both states are tested with a mocked capability list (no skipped tests).
 

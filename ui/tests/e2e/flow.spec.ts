@@ -119,6 +119,8 @@ test('secrets: a key planted in the server environment never reaches the browser
   await openScreen(page, SCREENS[4], 'black-cat'); // settings
   await expect(page.getByRole('region', { name: 'Model' })).toContainText(KEY_ENV);
   await expect(page.getByRole('region', { name: 'Model' })).toContainText('set on the server');
+  // the real server reports its state directory (a path, read-only): shown as text, not the in-memory notice
+  await expect(page.getByRole('region', { name: 'Limits and storage' }).locator('code.gw-path')).toBeVisible();
   // a full flow, then a token typed into Settings (held in memory)
   await page.getByLabel('API token').fill('memory-only-token-0123456789');
   await page.getByRole('button', { name: 'Use token' }).click();

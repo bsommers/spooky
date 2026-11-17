@@ -145,9 +145,21 @@ function ServerSection({ config }: { config: Config }) {
           rows={[
             ['Max input characters', config.limits.maxInputChars.toLocaleString('en-US')],
             ['Chunk size / overlap', `${config.chunk.size} / ${config.chunk.overlap}`],
-            ['State directory', <span key="s">set on the server (<code>--state-dir</code> or <code>GHOSTWRITER_STATE_DIR</code>); the API does not report the path</span>],
+            [
+              'State directory',
+              config.stateDir === undefined ? (
+                <span key="s">none: this server keeps nothing between runs</span>
+              ) : (
+                <code key="s" className="gw-path">
+                  {config.stateDir}
+                </code>
+              ),
+            ],
           ]}
         />
+        <p className="gw-hint">
+          Where ingested authors are kept. Read-only here: it is set on the server (<code>--state-dir</code> or <code>GHOSTWRITER_STATE_DIR</code>).
+        </p>
       </Section>
       <Section title="Filters">
         <FilterTable />

@@ -1953,7 +1953,7 @@
     "/api/config": {
       "get": {
         "operationId": "config_get",
-        "summary": "Show the effective configuration, redacted: provider, model, endpoint hosts, the NAMES of key environment variables (never values), limits, filters, persona keys, scorer settings. Read-only.",
+        "summary": "Show the effective configuration, redacted: provider, model, endpoint hosts, the NAMES of key environment variables (never values), limits, filters, persona keys, scorer settings, the state directory path (where ingests are kept; omitted when in memory only). Read-only.",
         "tags": [
           "read"
         ],
@@ -2178,6 +2178,9 @@
                             "maxIterations"
                           ],
                           "additionalProperties": false
+                        },
+                        "stateDir": {
+                          "type": "string"
                         }
                       },
                       "required": [

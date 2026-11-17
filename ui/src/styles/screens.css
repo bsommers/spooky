@@ -120,6 +120,11 @@
   overflow-wrap: anywhere;
 }
 
+/* A filesystem path (Settings): a long one wraps instead of widening the page. */
+.gw-path {
+  overflow-wrap: anywhere;
+}
+
 /* Model output, corpus text and persona text: text only, line breaks kept, long lines wrapped. */
 .gw-plain {
   max-height: 24rem;
