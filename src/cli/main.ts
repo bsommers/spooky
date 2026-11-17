@@ -2,7 +2,17 @@
 //
 //   ghostwriter ingest   --author <id> --name <name> [file | --file <path>]   (stdin when no file)
 //   ghostwriter generate --author <id> --persona <key> [file | --file <path>] (stdin when no file)
-//   ghostwriter personas | filters | profile <id>
+//   ghostwriter score    [file | --file <path>] [--detector <name>]...        (stdin when no file)
+//   ghostwriter humanize [file | --file <path>] [--author <id>] [--target <t>] [--max-iterations <n>] [--no-llm]
+//   ghostwriter generate ... [--humanize [--target <t>]]                      (humanizer loop on the result)
+//   ghostwriter generate --author <id> --persona <key> --topic <text> [--notes-file <path>] [--length short|medium|long]
+//                                                                           (write NEW text about a topic; no research)
+//   ghostwriter personas | filters | authors | profile <id> | config get | capabilities
+//   ghostwriter serve [--host --port --token-env --allow-origin --max-body --mcp]   (HTTP API, src/api)
+//   ghostwriter mcp [--stdio | --http]                                              (MCP server, src/mcp)
+//
+// Every command that runs an operation reads it from the registry (src/service/operations.ts): the input is validated by
+// the operation's schema and the handler runs through `invokeOperation`, the same path the HTTP API and MCP use.
 //
 // Contract: the result (and only the result) goes to stdout; logs, warnings and errors go to stderr. `--json` makes
 // stdout a single JSON document `{ok, ...data}` / `{ok:false, error:{code,message}}` so scripts never parse prose.
@@ -10,30 +20,24 @@
 // names, by the engine; this file never sees, prints or logs one. Unexpected errors are reported by class name only,
 // because their messages can embed text from the draft being processed.
 import { readFile, stat } from 'node:fs/promises';
-import { Command, CommanderError, InvalidArgumentError } from 'commander';
+import { Command, CommanderError, InvalidArgumentError, Option } from 'commander';
+import { TOPIC_LENGTHS } from '../../config/topic.js';
 import { loadConfig } from '../config/load.js';
 import { Engine, defaultStateDir } from '../engine.js';
 import type { EngineOptions } from '../engine.js';
 import { ConfigError, GhostwriterError, InputTooLargeError } from '../models/errors.js';
 import type { Config } from '../models/types.js';
+import { EXIT_CODES, SurfaceError, describeError } from '../service/errors.js';
+import { OPERATIONS, invokeOperation, operation, successDocument } from '../service/operations.js';
+import type { AnyOperation } from '../service/operations.js';
+import { registerMcp } from './mcp.js';
+import { registerServe } from './serve.js';
+
+export { EXIT_CODES };
 
 /** Largest corpus (characters) the engine accepts by default; the byte cap for reading is 4 bytes per character. */
 const MAX_CORPUS_CHARS = 10_000_000;
 const MAX_CONFIG_BYTES = 1024 * 1024;
-
-/** Process exit code per error `code` (.planning/CONTRACTS.md "CLI exit codes"). */
-export const EXIT_CODES: Readonly<Record<string, number>> = {
-  CONFIG_INVALID: 2,
-  PROFILE_INVALID: 2,
-  USAGE: 2,
-  UNKNOWN_PERSONA: 3,
-  UNKNOWN_AUTHOR: 3,
-  FILTER_FAILED: 4,
-  LLM_FAILED: 5,
-  INPUT_TOO_LARGE: 6,
-  STORE_CORRUPT: 7,
-  STATE_LOCKED: 8,
-};
 
 export interface CliIo {
   /** Text sink for the result (stdout). */
@@ -45,6 +49,19 @@ export interface CliIo {
   /** True when stdin is an interactive terminal (then "read stdin" would hang, so it is a usage error). */
   stdinIsTTY: boolean;
   env: Readonly<Record<string, string | undefined>>;
+  /** Aborts a long-running command (`serve`, `mcp`). Default: SIGINT / SIGTERM of this process. */
+  signal?: AbortSignal;
+}
+
+/** What `serve` and `mcp` need from this file; they live in their own modules. */
+export interface CliContext {
+  io: CliIo;
+  deps: CliDeps;
+  settings: CliSettings;
+  /** Adds --config / --state-dir / --json. */
+  common(cmd: Command): Command;
+  /** Resolve the config, then build the engine; `persisted` also restores the state directory. */
+  start(opts: CommonOpts & LlmOpts, needsModel: boolean, persisted: boolean): Promise<{ config: Config; engine: Engine }>;
 }
 
 /** Test/embedding hooks; the real binary passes none. */
@@ -60,12 +77,12 @@ function defaultIo(): CliIo {
   };
 }
 
-interface CommonOpts {
+export interface CommonOpts {
   config?: string;
   stateDir?: string;
   json?: boolean;
 }
-interface LlmOpts {
+export interface LlmOpts {
   model?: string;
   provider?: string;
   baseUrl?: string;
@@ -167,6 +184,8 @@ export interface CliSettings {
   json?: boolean;
   text?: string[];
   dispatched?: boolean;
+  /** Exit code of a command that produced its result but still failed its purpose (`score` when no named detector answered). */
+  exitCode?: number;
 }
 
 /** Build the commander program. Exported so the parity test can enumerate the commands without running anything. */
@@ -204,8 +223,18 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
     return { config, engine: await engineFor(config, opts, persisted) };
   };
   const engineFor = async (config: Config, opts: CommonOpts, persisted: boolean): Promise<Engine> => {
-    const options: EngineOptions = { config, env: io.env, ...deps, ...(persisted ? { stateDir: opts.stateDir ?? defaultStateDir(io.env) } : {}) };
+    // The state directory is always named (so `config get` can report where this command's ingests live); only a
+    // `persisted` command reads it (`Engine.create`). A plain `new Engine` never touches the disk until an ingest.
+    const options: EngineOptions = { config, env: io.env, ...deps, stateDir: opts.stateDir ?? defaultStateDir(io.env) };
     return persisted ? Engine.create(options) : new Engine(options);
+  };
+
+  const context: CliContext = { io, deps, settings, common, start };
+
+  /** Print the result of an operation: the one JSON document with --json, else the operation's text rendering. */
+  const emit = (op: AnyOperation, data: Record<string, unknown>): void => {
+    if (settings.json === true) io.stdout(`${JSON.stringify(successDocument(data))}\n`);
+    else out(io, op.render(data as never));
   };
 
   common(
@@ -217,25 +246,29 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
       .requiredOption('--name <name>', 'display name')
       .option('--file <path>', 'corpus file; "-" is stdin'),
   ).action(async (file: string | undefined, opts: CommonOpts & { author: string; name: string; file?: string }) => {
+    const op = operation('ingest');
     const config = await resolveConfig(io, opts, false);
     const text = await readInput(io, file, opts.file, MAX_CORPUS_CHARS * 4);
     const engine = await engineFor(config, opts, true);
-    const profile = await engine.ingest(opts.author, opts.name, text);
-    if (settings.json === true) printJson(io, { profile });
-    else out(io, `ingested ${profile.authorId}: ${profile.corpusWordCount} words`);
+    emit(op, await invokeOperation(op, engine, { authorId: opts.author, name: opts.name, text }));
   });
 
   common(
     program
       .command('generate')
-      .description('rewrite a draft in an author\'s voice for a persona (draft from a file or stdin)')
-      .argument('[file]', 'draft file (default: stdin)')
+      .description('rewrite a draft in an author\'s voice for a persona (draft from a file or stdin), or with --topic write NEW text about a topic (no web research; facts are not verified)')
+      .argument('[file]', 'draft file (default: stdin); not with --topic')
       .requiredOption('--author <id>', 'author id (must have been ingested)')
       .requiredOption('--persona <key>', 'target persona key (see `ghostwriter personas`)')
-      .option('--file <path>', 'draft file; "-" is stdin')
+      .option('--file <path>', 'draft file; "-" is stdin; not with --topic')
+      .option('--topic <text>', 'write new text about this topic instead of rewriting a draft; nothing is looked up online: the model uses the topic, --notes-file and its own knowledge, and may be wrong')
+      .option('--notes-file <path>', 'with --topic: a file of facts and source material to use ("-" is stdin); the only source of specific facts; same size limit as a draft')
+      .addOption(new Option('--length <length>', 'with --topic: the length to aim for').choices(TOPIC_LENGTHS))
       .option('--exemplars <n>', 'writing samples to include in the prompt (0-20)', parseInt10)
       .option('--max-tokens <n>', 'maximum output tokens', parseInt10)
       .option('--temperature <t>', 'sampling temperature, 0 to 1', parseUnit)
+      .option('--humanize', 'then run the humanizer loop on the result (more model calls; scored by a weak local heuristic, docs/HUMANIZING.md)')
+      .option('--target <t>', 'humanizer target score, 0 to 1 (default humanize.targetScore, 0.3); needs --humanize', parseUnit)
       .option('--model <name>', 'model id (overrides llm.model; or $GHOSTWRITER_MODEL)')
       .option('--provider <name>', 'anthropic | openai-compat')
       .option('--base-url <url>', 'endpoint for openai-compat, e.g. http://localhost:11434/v1')
@@ -243,69 +276,119 @@ export function buildProgram(io: CliIo, deps: CliDeps = {}, settings: CliSetting
   ).action(
     async (
       file: string | undefined,
-      opts: CommonOpts & LlmOpts & { author: string; persona: string; file?: string; exemplars?: number; maxTokens?: number; temperature?: number },
+      opts: CommonOpts & LlmOpts & { author: string; persona: string; file?: string; topic?: string; notesFile?: string; length?: string; exemplars?: number; maxTokens?: number; temperature?: number; humanize?: boolean; target?: number },
     ) => {
+      const op = operation('generate');
+      // `--target` without `--humanize` is rejected by the operation's input schema, like on HTTP and MCP (USAGE).
+      // Topic mode and draft mode do not mix: the topic is the whole input, so a draft file or stdin would be silently ignored.
+      if (opts.topic !== undefined && (file !== undefined || opts.file !== undefined)) throw new SurfaceError('USAGE', '--topic and a draft file (argument or --file) cannot be combined: give either a draft to rewrite or a topic to write about');
+      if (opts.topic === undefined && opts.notesFile !== undefined) throw new SurfaceError('USAGE', '--notes-file needs --topic (notes are only for writing about a topic)');
+      if (opts.topic === undefined && opts.length !== undefined) throw new SurfaceError('USAGE', '--length needs --topic (it is only for writing about a topic)');
       const config = await resolveConfig(io, opts, true);
-      const input = await readInput(io, file, opts.file, config.limits.maxInputChars * 4);
+      const topic = opts.topic !== undefined;
+      const input = topic ? (opts.topic as string) : await readInput(io, file, opts.file, config.limits.maxInputChars * 4);
+      const notes = opts.notesFile === undefined ? undefined : await readInput(io, undefined, opts.notesFile, config.limits.maxInputChars * 4);
       const engine = await engineFor(config, opts, true);
-      const result = await engine.generate(opts.author, opts.persona, input, {
-        ...(opts.exemplars === undefined ? {} : { exemplarCount: opts.exemplars }),
+      const data = await invokeOperation(op, engine, {
+        authorId: opts.author,
+        persona: opts.persona,
+        text: input,
+        ...(topic ? { mode: 'topic' } : {}),
+        ...(notes === undefined ? {} : { notes }),
+        ...(opts.length === undefined ? {} : { length: opts.length }),
+        ...(opts.exemplars === undefined ? {} : { exemplars: opts.exemplars }),
         ...(opts.maxTokens === undefined ? {} : { maxTokens: opts.maxTokens }),
         ...(opts.temperature === undefined ? {} : { temperature: opts.temperature }),
+        ...(opts.humanize === true ? { humanize: true } : {}),
+        ...(opts.target === undefined ? {} : { target: opts.target }),
       });
-      const banned = result.trace.find((t) => t.filter === 'persona-banned');
+      const banned = (data.trace as { filter: string; metadata: Record<string, unknown> }[]).find((t) => t.filter === 'persona-banned');
       if (banned) io.stderr(`warning: the output still contains ${String(banned.metadata.count)} phrase(s) banned for persona "${opts.persona}"\n`);
-      if (settings.json === true) printJson(io, { text: result.text, trace: result.trace, promptTokensEstimate: result.promptTokensEstimate });
-      else out(io, result.text);
+      emit(op, data);
     },
   );
 
-  common(program.command('personas').description('list the configured target personas')).action(async (opts: CommonOpts) => {
-    const { engine } = await start(opts, false, false);
-    const personas = engine.listPersonas();
-    if (settings.json === true) printJson(io, { personas });
-    else out(io, personas.map((p) => `${p.key}\t${p.name}`).join('\n'));
+  common(
+    program
+      .command('score')
+      .description('rate how machine-written a text reads, 0 to 1 (a heuristic proxy, not a detector verdict; docs/CALIBRATION.md)')
+      .argument('[file]', 'text file (default: stdin)')
+      .option('--file <path>', 'text file; "-" is stdin')
+      .option('--detector <name>', 'also ask a detector declared in config scorer.detectors; SENDS the redacted text to it (repeatable)', (v: string, prev: string[]) => [...prev, v], [] as string[]),
+  ).action(async (file: string | undefined, opts: CommonOpts & { file?: string; detector: string[] }) => {
+    const op = operation('score');
+    const config = await resolveConfig(io, opts, false);
+    const text = await readInput(io, file, opts.file, config.limits.maxInputChars * 4);
+    const engine = await engineFor(config, opts, false);
+    if (opts.detector.length > 0) io.stderr(`note: sending the redacted text to external detector(s): ${opts.detector.join(', ')}\n`);
+    const data = await invokeOperation(op, engine, { text, detectors: opts.detector });
+    for (const e of data.excluded as { name: string; reason: string }[]) io.stderr(`warning: detector "${e.name}" was not used (${e.reason})\n`);
+    // The caller asked for an external opinion and got none: still print the local result, but do not exit 0 as if it were one.
+    if (data.localOnly === true) {
+      io.stderr('error: no named detector produced a score; the result below is the local heuristic alone\n');
+      settings.exitCode = EXIT_CODES.DETECTORS_FAILED as number;
+    }
+    emit(op, data);
   });
 
-  common(program.command('filters').description('list the configured filter pipeline, in execution order')).action(async (opts: CommonOpts) => {
-    const { engine } = await start(opts, false, false);
-    const filters = engine.listFilters();
-    if (settings.json === true) printJson(io, { filters });
-    else out(io, filters.map((f) => `${f.name}\t${f.stage}\t${f.onError}\t${f.enabled ? 'enabled' : 'disabled'}`).join('\n'));
-  });
-
-  common(program.command('profile').description('show an ingested author\'s stylometric profile').argument('<id>', 'author id')).action(
-    async (id: string, opts: CommonOpts) => {
-      const { engine } = await start(opts, false, true);
-      const profile = engine.getProfile(id);
-      if (settings.json === true) printJson(io, { profile });
-      else {
-        out(
-          io,
-          [
-            `author: ${profile.authorId} (${profile.displayName})`,
-            `words: ${profile.corpusWordCount}`,
-            `avg sentence length: ${profile.avgSentenceLength.toFixed(1)} (sd ${profile.sentenceLengthStdDev.toFixed(1)})`,
-            `lexical density: ${profile.lexicalDensityRatio.toFixed(3)}`,
-            `hedging per 100 words: ${profile.hedgingFrequency.toFixed(2)}`,
-            `active/passive ratio: ${profile.activePassiveRatio.toFixed(2)}`,
-            `punctuation: ${profile.preferredPunctuation.join(' ') || '-'}`,
-            `transitions: ${profile.commonTransitionWords.join(', ') || '-'}`,
-          ].join('\n'),
-        );
+  common(
+    program
+      .command('humanize')
+      .description('rewrite a text to score lower on the local AI-likeness heuristic, keeping numbers, names, quotes and code (a weak proxy, not a detector verdict; docs/HUMANIZING.md)')
+      .argument('[file]', 'text file (default: stdin)')
+      .option('--file <path>', 'text file; "-" is stdin')
+      .option('--author <id>', 'author whose voice profile steers the model pass (must have been ingested)')
+      .option('--target <t>', 'stop at or below this score, 0 to 1 (default humanize.targetScore, 0.3)', parseUnit)
+      .option('--max-iterations <n>', 'at most this many iterations (default humanize.maxIterations, 3)', parseInt10)
+      .option('--no-llm', 'deterministic edits only: no model call')
+      .option('--model <name>', 'model id (overrides llm.model; or $GHOSTWRITER_MODEL)')
+      .option('--provider <name>', 'anthropic | openai-compat')
+      .option('--base-url <url>', 'endpoint for openai-compat, e.g. http://localhost:11434/v1')
+      .option('--api-key-env <NAME>', 'NAME of the environment variable holding the API key (never the key itself)'),
+  ).action(
+    async (
+      file: string | undefined,
+      opts: CommonOpts & LlmOpts & { file?: string; author?: string; target?: number; maxIterations?: number; llm: boolean },
+    ) => {
+      const op = operation('humanize');
+      const config = await resolveConfig(io, opts, false);
+      const text = await readInput(io, file, opts.file, config.limits.maxInputChars * 4);
+      const engine = await engineFor(config, opts, opts.author !== undefined);
+      const data = await invokeOperation(op, engine, {
+        text,
+        ...(opts.author === undefined ? {} : { authorId: opts.author }),
+        ...(opts.target === undefined ? {} : { target: opts.target }),
+        ...(opts.maxIterations === undefined ? {} : { maxIterations: opts.maxIterations }),
+        ...(opts.llm ? {} : { llm: false }),
+      });
+      for (const s of data.steps as { outcome: string; step: string; error?: string }[]) {
+        if (s.outcome === 'llm_error') io.stderr(`warning: the model pass failed (${s.error ?? 'error'}); the earlier text was kept\n`);
       }
+      emit(op, data);
     },
   );
+
+  // The remaining operations are fully described by their registry entry: the command, its arguments and its text
+  // rendering all come from `OPERATIONS` (src/service/operations.ts), so a new registry entry gets a CLI command.
+  for (const op of OPERATIONS.filter((o) => o.cli.derived)) {
+    let parent: Command = program;
+    for (const seg of op.cli.command.slice(0, -1)) {
+      parent = parent.commands.find((c) => c.name() === seg) ?? parent.command(seg).description(`${seg} commands`);
+    }
+    const cmd = parent.command(op.cli.command[op.cli.command.length - 1] as string).description(op.description);
+    for (const a of op.cli.arguments) cmd.argument(`<${a.name}>`, a.description);
+    common(cmd).action(async (...args: unknown[]) => {
+      const opts = args[op.cli.arguments.length] as CommonOpts;
+      const input = Object.fromEntries(op.cli.arguments.map((a, i) => [a.field, args[i]]));
+      const { engine } = await start(opts, false, op.readsState);
+      emit(op, await invokeOperation(op, engine, input));
+    });
+  }
+
+  registerServe(program, context);
+  registerMcp(program, context);
 
   return program;
-}
-
-/** Map any thrown value to `{code, message, exit}`. Only typed errors and commander usage errors keep their message. */
-function describeError(err: unknown): { code: string; message: string; exit: number } {
-  if (err instanceof GhostwriterError) return { code: err.code, message: err.message, exit: EXIT_CODES[err.code] ?? 1 };
-  const errno = (err as NodeJS.ErrnoException | undefined)?.code;
-  if (typeof errno === 'string' && /^E[A-Z0-9]+$/.test(errno)) return { code: 'IO_ERROR', message: `file system error (${errno})`, exit: 1 };
-  return { code: 'INTERNAL', message: `internal error (${err instanceof Error ? err.name : typeof err})`, exit: 1 };
 }
 
 /**
@@ -322,7 +405,7 @@ export async function main(argv: readonly string[], ioOverrides: Partial<CliIo> 
       return EXIT_CODES.USAGE as number;
     }
     await program.parseAsync([...argv], { from: 'user' });
-    return 0;
+    return settings.exitCode ?? 0;
   } catch (err) {
     if (err instanceof CommanderError) {
       // Rejected before any subcommand was reached (unknown command, bad top-level option): commander has no

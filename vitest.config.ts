@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     include: ['tests/**/*.test.ts'],
     environment: 'node',
+    globalSetup: ['tests/helpers/rootBuild.ts', 'tests/helpers/uiBuild.ts'],
     // Only active with `--coverage` (npm run coverage, scripts/verify.sh --coverage).
     coverage: {
       provider: 'v8',

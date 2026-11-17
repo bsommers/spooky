@@ -1,12 +1,12 @@
-# Checkpoint (2026-11-13, autonomous run mid-flight)
+# Checkpoint (2026-11-15, after P10 close)
 
-**Status:** IN PROGRESS. `/gsd-autonomous` running. Phases 1-6 (all of v1) COMPLETE and committed (P6 verified, gate 1125 tests). Next: Phases 7-8 are v2 - confirm with user before running; also open: fast-forward main. No push/PR/merge.
+**Status (2026-11-15):** v1 P1-6 done, main pushed (e198796); branch gsd/phase-01-foundation unpushed. P7, P9 closed by hand (human_needed waived by user, WAIVER.md); P8 humanizer done+reviewed+fixed+verified+closed (mean AI score drop only 0.050, scorer weak AUC 0.694, no live-model run, guard heuristic limits in docs/HUMANIZING.md). Gate: unit 922, integration 285, system 65, security 472, torture 5, 0 skipped. P10 UI foundation DONE+closed by waiver (WAIVER.md; border contrast exemption accepted; UI 167 vitest, 34 e2e; deferred LW-03, LW-08, IN-01..04). P10 deferred items fixed (8a0fc73). P11 UI features closed by waiver 2026-11-17 (WAIVER.md; (b) eslint->syntax-tree test accepted; (a) stateDir fixed f0cfc9a). Roadmap has no phase after 11. Port 4873 is the user's own serve; run e2e with GW_E2E_PORT=4973. Old: P10 UI foundation (plan .planning/phases/10-ui-foundation/10-01-PLAN.md; Black Cat/Tron themes, React Aria Components, 5 decisions accepted), then P11. Per phase: gsd_run query dispatch-isolation --raw --phase NN --force-isolation none, no isolation arg; sonnet agents; executor -> reviewer -> fixer -> verifier -> phase.complete -> ROADMAP -> commit explicit paths. No push/PR without say-so.
 
 ## Goal (user's words)
 "/gsd-execute-phase 1 - ... parallel subagents using the best and cheapest model", then "/gsd-autonomous" (all remaining phases). User confirmed D2 (LLM adapters) and deps @anthropic-ai/sdk ^0.40, commander ^12; D3/D4/D5 kept as written.
 
 ## State (verify by command after compact)
-- Repo https://github.com/bsommers/spooky. Branch `gsd/phase-01-foundation`, far ahead of `main` (97b526f). Nothing pushed, no PR.
+- Repo https://github.com/bsommers/spooky. Branch `gsd/phase-01-foundation`, far ahead of `main` (97b526f). main pushed; branch not pushed; no PR.
 - Docs commits: P1 534e935, P2 e956e8a, P3 5a346d9, P4 f69c48c, P5 2ab63a1 (code commits precede each).
 - Untracked, never commit: `.planning/config.json`, `.planning/state.json`.
 - No background agents running.
@@ -26,7 +26,7 @@ E2E test, 1k-input fuzz torture (only GhostwriterError thrown), perf budget 3x m
 - Optional: `git remote set-head origin -a`; SCR-*/HUM-* missing from REQUIREMENTS traceability.
 
 ## Authorizations
-- None outward-facing. No push/PR/release/merge to main. Commits on the phase branch only.
+- Push of main done once (2026-11-14). Any further push/PR/release needs fresh say-so.
 
 ## Decisions still open
-- Run Phase 6 (user "go" pending). Run v2 phases 7-8? Fast-forward `main`?
+- Run v2 phases 7-8? Fix glued-secret leak in confidentiality filter (documented limit) or keep?

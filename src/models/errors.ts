@@ -104,3 +104,20 @@ export class StateLockedError extends GhostwriterError {
     this.waitedMs = waitedMs;
   }
 }
+
+/**
+ * No ensemble member with a positive weight produced a score (for example `localWeight` 0 and every requested detector
+ * failed): there is nothing to report and no silent substitute. `excluded` lists each detector with its fixed-vocabulary
+ * reason; it never carries a message or response content.
+ */
+export class DetectorsFailedError extends GhostwriterError {
+  readonly excluded: readonly { name: string; reason: string }[];
+
+  constructor(excluded: readonly { name: string; reason: string }[]) {
+    super(
+      'DETECTORS_FAILED',
+      `no score: the local weight is 0 and no requested detector produced one (${excluded.map((e) => `${e.name}: ${e.reason}`).join('; ') || 'none requested'})`,
+    );
+    this.excluded = excluded.map((e) => ({ name: e.name, reason: e.reason }));
+  }
+}

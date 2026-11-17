@@ -17,20 +17,32 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "verify": "scripts/verify.sh",
-    "coverage": "vitest run --coverage"
+    "calibrate": "tsc -p tsconfig.build.json && node dist/scripts/calibrate.js",
+    "coverage": "vitest run --coverage",
+    "prepack": "npm run build && npm run ui:build && node scripts/check-ui-dist.mjs",
+    "ui:install": "npm --prefix ui ci",
+    "ui:build": "npm --prefix ui run build",
+    "ui:test": "npm --prefix ui test",
+    "ui:e2e": "npm run build && npm run ui:build && npm --prefix ui run test:e2e",
+    "ui:e2e:container": "npm run build && npm run ui:build && ui/scripts/e2e-container.sh",
+    "ui:verify": "npm run build && npm run ui:build && node ui/scripts/gen-api.mjs --check && node scripts/scan-bundle.mjs && npm --prefix ui test && npm --prefix ui run test:e2e"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.0",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "commander": "^12.1.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@seriousme/openapi-schema-validator": "2.12.0",
     "@types/node": "^20.14.0",
     "@vitest/coverage-v8": "^4.1.12",
     "typescript": "^5.5.0",
     "vitest": "^4.1.12"
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/scripts",
+    "ui/dist"
   ]
 }

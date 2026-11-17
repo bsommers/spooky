@@ -1,0 +1,29 @@
+/* Tron Neon: palette, fonts and the perspective neon floor grid match lumagrid (extracted 2026-11-14; see docs/UI-THEMES.md). */
+:root[data-theme="tron-neon"] {
+  --gw-bg: #05070a;
+  --gw-bg-raised: #121a24;
+  --gw-surface: #0b0f14;
+  --gw-border: #1f2a37;
+  --gw-text: #e6edf3;
+  --gw-text-muted: #9aa4b2;
+  --gw-accent: #00e5ff;
+  --gw-accent-text: #031014;
+  --gw-accent-2: #ff2bd6;
+  --gw-danger: #ff5c7a;
+  --gw-warning: #ffc233;
+  --gw-success: #3ddc97;
+  --gw-focus-ring: #7df9ff;
+  --gw-glow: 0 0 12px #00e5ff55, 0 0 2px #00e5ff;
+  --gw-radius: 4px;
+  --gw-font-display: "Orbitron Variable", "Orbitron", system-ui, sans-serif;
+  --gw-font-body: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --gw-font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --gw-motion-scale: 1;
+  --gw-bg-art: radial-gradient(60% 40% at 50% 100%, #00e5ff2e, transparent 70%);
+  --gw-bg-grid: linear-gradient(#00e5ff38 1px, transparent 1px), linear-gradient(90deg, #00e5ff38 1px, transparent 1px);
+  --gw-bg-grid-cell: 48px;
+  --gw-bg-grid-transform: perspective(500px) rotateX(62deg);
+  --gw-bg-mark: none;
+  --gw-anim-grid: gw-grid-scroll 8s linear infinite;
+  --gw-anim-glow: gw-glow-pulse 6s ease-in-out infinite alternate;
+}

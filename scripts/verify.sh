@@ -4,7 +4,11 @@
 #   scripts/verify.sh                   run everything
 #   scripts/verify.sh --only <pattern>  run only test files whose path matches <pattern>
 #   scripts/verify.sh --coverage        also enforce the coverage gate (src/filters, src/registry >= 90% lines)
+#   scripts/verify.sh --no-ui           skip the web UI checks (ui/: typecheck, css lint, license audit, unit/component/a11y/build tests, Playwright)
+#   scripts/verify.sh --no-e2e          run the UI checks but not the Playwright suite (needs a Chromium; GW_E2E_CONTAINER=1 runs it in the pinned container)
 #
+# The web UI (ui/, Phases 10-11) is its own package: `npm run ui:install` once. --only skips the UI checks (it selects root tests).
+
 # Tiers (tests/<tier>/): smoke unit integration system security torture.
 # A tier directory that does not exist yet reports "0 tests"; it is not an error.
 # Exits nonzero if the typecheck fails, any test fails, or --only matches nothing.
@@ -16,6 +20,8 @@ cd "$ROOT" || exit 2
 TIERS=(smoke unit integration system security torture)
 ONLY=""
 COVERAGE=0
+UI=1
+E2E=1
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -31,8 +37,16 @@ while [ $# -gt 0 ]; do
       COVERAGE=1
       shift
       ;;
+    --no-ui)
+      UI=0
+      shift
+      ;;
+    --no-e2e)
+      E2E=0
+      shift
+      ;;
     -h|--help)
-      sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -56,6 +70,56 @@ if npx --no-install tsc --noEmit; then
   echo "typecheck: ok"
 else
   echo "typecheck: FAILED" >&2
+  FAIL=1
+fi
+
+# --- web UI: its own package (ui/), its own tiers; counted and held to zero skipped like the root tiers ---
+# Prints "<label> passed/total" from a JSON report; returns nonzero on any failure or skip. $1 = vitest|playwright.
+ui_report() {
+  node - "$1" "$2" "$3" <<'NODE'
+const fs = require('node:fs');
+const [, , kind, file, label] = process.argv;
+let r;
+try { r = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { console.error(`${label}: no report produced`); process.exit(1); }
+let passed, failed, skipped, total;
+if (kind === 'vitest') {
+  passed = r.numPassedTests; failed = r.numFailedTests; skipped = r.numPendingTests + r.numTodoTests;
+  total = r.numTotalTests; failed += (r.testResults ?? []).filter((s) => s.status === 'failed' && (s.assertionResults ?? []).length === 0).length;
+} else {
+  passed = r.stats.expected; failed = r.stats.unexpected + r.stats.flaky; skipped = r.stats.skipped; total = passed + failed + skipped;
+}
+console.log(`${label.padEnd(12)} ${passed}/${total} passed` + (failed ? `, ${failed} FAILED` : '') + (skipped ? `, ${skipped} SKIPPED` : ''));
+if (failed || skipped || total === 0) { if (skipped) console.error(`${label}: a skipped test proves nothing, so this fails`); process.exit(1); }
+NODE
+}
+
+UI_COUNTS=""
+if [ "$UI" -eq 1 ] && [ -z "$ONLY" ]; then
+  echo
+  echo "== web UI (ui/) =="
+  if [ ! -d ui/node_modules ]; then
+    echo "verify.sh: ui/node_modules missing; run 'npm run ui:install' first (or pass --no-ui)" >&2
+    FAIL=1
+  else
+    (cd ui && npx --no-install tsc --noEmit) && echo "ui typecheck: ok" || { echo "ui typecheck: FAILED" >&2; FAIL=1; }
+    (cd ui && npx --no-install stylelint "src/**/*.css") && echo "ui css lint (no raw colors in components): ok" || { echo "ui css lint: FAILED" >&2; FAIL=1; }
+    (cd ui && node scripts/gen-api.mjs --check) && echo "ui generated API types and operation manifest: in sync" || { echo "ui gen-api drift: FAILED" >&2; FAIL=1; }
+    (cd ui && node scripts/licenses.mjs --check) || { echo "ui license audit: FAILED" >&2; FAIL=1; }
+    # vitest's global setup builds ui/dist (production) first; the build itself fails on a bad theme or contrast pair.
+    (cd ui && npx --no-install vitest run --reporter=default --reporter=json "--outputFile.json=$TMP/ui-results.json")
+    [ $? -eq 0 ] || FAIL=1
+    ui_report vitest "$TMP/ui-results.json" "ui" || FAIL=1
+  fi
+fi
+
+echo
+echo "== build (tsc -p tsconfig.build.json: dist/ for the bundle scan and the e2e server) =="
+# The security tier's bundle scan loads the confidentiality filter from dist/, which is gitignored. Build it here so the
+# tests never run against a missing or stale dist/ (vitest's global setup also rebuilds a stale one for a bare `npm test`).
+if npx --no-install tsc -p tsconfig.build.json; then
+  echo "build: ok"
+else
+  echo "build: FAILED" >&2
   FAIL=1
 fi
 
@@ -125,6 +189,23 @@ NODE
 else
   echo "no test report produced (vitest exit code $VITEST_RC)" >&2
   FAIL=1
+fi
+
+if [ "$UI" -eq 1 ] && [ "$E2E" -eq 1 ] && [ -z "$ONLY" ] && [ -d ui/node_modules ]; then
+  echo
+  echo "== web UI end-to-end (Playwright: visual, a11y with contrast, offline, CSP, themes) =="
+  # The suite drives the real `ghostwriter serve` from dist/, built above.
+  if [ -f dist/src/index.js ]; then
+    if [ "${GW_E2E_CONTAINER:-0}" = "1" ]; then
+      PLAYWRIGHT_JSON_OUTPUT_NAME="$TMP/e2e.json" ui/scripts/e2e-container.sh --reporter=json || FAIL=1
+    else
+      (cd ui && PLAYWRIGHT_JSON_OUTPUT_NAME="$TMP/e2e.json" npx --no-install playwright test --reporter=json >/dev/null 2>"$TMP/e2e.err") || { cat "$TMP/e2e.err" >&2; FAIL=1; }
+    fi
+    ui_report playwright "$TMP/e2e.json" "ui e2e" || FAIL=1
+  else
+    echo "dist/ is missing: the root build above failed, so the e2e server cannot start" >&2
+    FAIL=1
+  fi
 fi
 
 echo

@@ -1,0 +1,8 @@
+/* React Aria injects this rule as an inline <style> at runtime, which the CSP (style-src 'self') forbids. It skips the
+   injection when an element with this id exists, so index.html links this file under that id instead. The rule is the one
+   usePress would inject (tests/build/csp-compat.test.ts compares the two). */
+@layer {
+  [data-react-aria-pressable] {
+    touch-action: pan-x pan-y pinch-zoom;
+  }
+}

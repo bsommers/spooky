@@ -1,0 +1,7 @@
+A neural network learns by adjusting the strengths of the connections between its artificial neurons, gradually improving its predictions through repeated exposure to examples.
+
+The network is organized in layers. Input data, such as the pixels of an image, enters the first layer. Each neuron multiplies its inputs by weights, adds them together, and passes the result through an activation function before sending it to the next layer. The final layer produces the network's output, for example a probability that the image shows a cat.
+
+At the start, the weights are random, so the predictions are poor. To improve, the network compares its output to the correct answer using a loss function, which measures how wrong it was. Then it uses an algorithm called backpropagation to work out how much each weight contributed to the error. Finally, an optimizer such as gradient descent nudges each weight slightly in the direction that reduces the loss.
+
+This cycle repeats over thousands or millions of examples. Over time, the weights settle into values that capture meaningful patterns in the data, allowing the network to make accurate predictions on inputs it has never seen before.

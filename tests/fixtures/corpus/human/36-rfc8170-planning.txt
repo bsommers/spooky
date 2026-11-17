@@ -1,0 +1,5 @@
+On the other hand, requiring a translation layer within an endpoint can be a resource issue in some cases, such as if the endpoint could be a constrained node [RFC7228].
+
+In addition, when a translator is within an endpoint, it can attempt to hide the difference between an older protocol and a newer protocol, either by exposing one of the two sets of behavior to applications and internally mapping it to the other set of behavior, or by exposing a higher level of abstraction that is then alternatively mapped to either one depending on detecting which is needed. In contrast, when a translator is in the middle of the path, typically only the first approach can be done since the middle of the path is typically unable to provide a higher level of abstraction.
+
+Any transition strategy for a non-backward-compatible mechanism should include a discussion of where the incompatible mechanism is placed and a rationale. The transition plan should also consider the transition away from the use of translation and adaptation technologies.

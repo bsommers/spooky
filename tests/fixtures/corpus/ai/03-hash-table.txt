@@ -1,0 +1,5 @@
+A hash table is a data structure that stores key-value pairs and allows you to look up values quickly. The core idea is simple: instead of searching through every item, you use a hash function to convert the key into a number, and that number tells you where to look.
+
+Here is how it works in practice. The table is backed by an array of slots, often called buckets. When you insert a key, the hash function computes an integer from it, and that integer is reduced modulo the array size to produce an index. The value is then stored at that index. When you want to retrieve the value, you run the same key through the same function and go straight to the right slot.
+
+Of course, two different keys can sometimes map to the same index. This is called a collision. There are two common ways to handle it. Chaining stores a small list in each bucket, while open addressing probes for the next free slot. As the table fills up, performance degrades, so most implementations resize the array when the load factor passes a threshold. With a good hash function, lookups, insertions, and deletions all take constant time on average.

@@ -1,5 +1,9 @@
 // Generation orchestrator (ORC-01..05): the one place the source axis, the target axis, the filters and the LLM meet.
 //
+// Topic mode (docs/ARCHITECTURE.md): the same flow, with the topic as the input and the optional notes as a second text; the
+// topic and the notes each go through the PRE pipeline on their own, and both are in the retrieval query and the prompt only
+// as redacted text. The result carries TOPIC_CAVEAT: nothing is looked up, no fact is verified.
+//
 //   input -> size cap -> PRE pipeline (confidentiality) -> retrieve exemplars (redacted query) -> PRE on each exemplar -> buildPrompt
 //         -> LLM (bounded retry) -> POST pipeline (style, confidentiality) -> banned-phrase check -> {text, trace}
 //
@@ -7,6 +11,7 @@
 // or LLM runs. The prompt and the retrieval query are built only from PRE-pipeline output, so the provider never sees
 // text the confidentiality filter had a chance to redact. Everything fails closed: a filter that cannot demonstrably
 // have run, an empty / non-string / oversized model answer, or exhausted retries end in a typed error and NO text.
+import { GENERATE_MODES, TOPIC_CAVEAT, TOPIC_LENGTHS } from '../../config/topic.js';
 import { buildPrompt } from '../pipeline/promptBuilder.js';
 import { withRetry } from '../llm/retry.js';
 import type { RetryOptions } from '../llm/retry.js';
@@ -49,10 +54,19 @@ export class Orchestrator {
   async generate(authorId: string, personaKey: string, input: string, options: GenerateOptions = {}): Promise<GenerateResult> {
     const { config } = this.#d;
     const opts = resolveOptions(options, config);
+    const mode = options.mode ?? 'rewrite';
+    const label = mode === 'topic' ? 'topic' : 'input';
     if (typeof authorId !== 'string' || typeof personaKey !== 'string') throw new ConfigError('generate: authorId and personaKey must be strings');
-    if (typeof input !== 'string') throw new ConfigError('generate: input must be a string');
+    if (typeof input !== 'string') throw new ConfigError(`generate: ${label} must be a string`);
     if (input.length > config.limits.maxInputChars) throw new InputTooLargeError(input.length, config.limits.maxInputChars);
-    if (input.trim() === '') throw new ConfigError('generate: input must not be blank');
+    if (input.trim() === '') throw new ConfigError(`generate: ${label} must not be blank`);
+    // Notes: topic mode only, a string, capped like the input. Blank notes are the same as no notes.
+    if (options.notes !== undefined) {
+      if (mode !== 'topic') throw new ConfigError('generate: notes need mode "topic"');
+      if (typeof options.notes !== 'string') throw new ConfigError('generate: notes must be a string');
+      if (options.notes.length > config.limits.maxInputChars) throw new InputTooLargeError(options.notes.length, config.limits.maxInputChars);
+    }
+    const rawNotes = options.notes !== undefined && options.notes.trim() !== '' ? options.notes : undefined;
 
     // Lookups that need no filter and no network come first: a typo costs nothing.
     const persona = this.#d.targets.get(personaKey); // UnknownPersonaError
@@ -63,10 +77,19 @@ export class Orchestrator {
     const pre = await this.#d.pre.run(input, { authorId, personaKey, stage: 'pre' });
     requireConfidentiality(pre, 'pre');
     const safe = pre.text;
+    // The notes get the same treatment as the input, on their own: no successful confidentiality entry = no prompt.
+    let safeNotes: string | undefined;
+    let notesTrace: TraceEntry[] = [];
+    if (rawNotes !== undefined) {
+      const preNotes = await this.#d.pre.run(rawNotes, { authorId, personaKey, stage: 'pre' });
+      requireConfidentiality(preNotes, 'pre');
+      safeNotes = preNotes.text;
+      notesTrace = preNotes.trace;
+    }
 
-    // 2. Retrieve with the redacted query.
-    const retrieved =
-      opts.exemplarCount === 0 ? [] : await this.#d.sources.retrieve(authorId, safe.slice(0, MAX_RETRIEVAL_QUERY_CHARS), opts.exemplarCount);
+    // 2. Retrieve with the redacted query (topic and notes both say what the text is about).
+    const query = (safeNotes === undefined ? safe : `${safe}\n${safeNotes}`).slice(0, MAX_RETRIEVAL_QUERY_CHARS);
+    const retrieved = opts.exemplarCount === 0 ? [] : await this.#d.sources.retrieve(authorId, query, opts.exemplarCount);
     // Stored text was redacted under the ruleset of the ingest; the live ruleset (or a tampered store file) may differ,
     // so every exemplar goes through the same PRE pipeline as the input. No successful confidentiality entry = no prompt.
     const exemplars: ScoredChunk[] = [];
@@ -77,7 +100,14 @@ export class Orchestrator {
     }
 
     // 3. Prompt.
-    const prompt = buildPrompt({ profile, exemplars, persona, input: safe, maxExemplarChars: opts.exemplarCount * config.chunk.size });
+    const prompt = buildPrompt({
+      profile,
+      exemplars,
+      persona,
+      input: safe,
+      maxExemplarChars: opts.exemplarCount * config.chunk.size,
+      ...(mode === 'topic' ? { mode, ...(safeNotes === undefined ? {} : { notes: safeNotes }), ...(options.length === undefined ? {} : { length: options.length }) } : {}),
+    });
 
     // 4. LLM with bounded retry; every failure mode ends in LlmError.
     const llmStart = performance.now();
@@ -106,14 +136,19 @@ export class Orchestrator {
     requireConfidentiality(post, 'post');
 
     // 6. Persona banned phrases: reported, never silently edited (the style filter owns rewriting).
-    const trace: TraceEntry[] = [...pre.trace, llmEntry, ...post.trace];
+    const trace: TraceEntry[] = [...pre.trace, ...notesTrace, llmEntry, ...post.trace];
     const bannedStart = performance.now();
     const banned = findBannedPhrases(post.text, persona);
     if (banned.length > 0) {
       trace.push({ filter: 'persona-banned', modified: false, ms: performance.now() - bannedStart, metadata: { found: true, count: banned.length } });
     }
 
-    return { text: post.text, trace, promptTokensEstimate: Math.ceil((prompt.system.length + prompt.user.length) / 4) };
+    return {
+      text: post.text,
+      trace,
+      promptTokensEstimate: Math.ceil((prompt.system.length + prompt.user.length) / 4),
+      ...(mode === 'topic' ? { caveat: TOPIC_CAVEAT } : {}),
+    };
   }
 }
 
@@ -124,7 +159,12 @@ function requireConfidentiality(out: PipelineOutput, stage: 'pre' | 'post'): voi
   }
 }
 
-function resolveOptions(o: GenerateOptions, config: OrchestratorDeps['config']): Required<GenerateOptions> {
+function resolveOptions(o: GenerateOptions, config: OrchestratorDeps['config']): { exemplarCount: number; maxTokens: number; temperature: number } {
+  if (o.mode !== undefined && !(GENERATE_MODES as readonly unknown[]).includes(o.mode)) throw new ConfigError(`generate: mode must be one of ${GENERATE_MODES.join(', ')}`);
+  if (o.length !== undefined) {
+    if ((o.mode ?? 'rewrite') !== 'topic') throw new ConfigError('generate: length needs mode "topic"');
+    if (!(TOPIC_LENGTHS as readonly unknown[]).includes(o.length)) throw new ConfigError(`generate: length must be one of ${TOPIC_LENGTHS.join(', ')}`);
+  }
   const exemplarCount = o.exemplarCount ?? DEFAULT_EXEMPLAR_COUNT;
   const maxTokens = o.maxTokens ?? config.llm.maxTokens;
   const temperature = o.temperature ?? config.llm.temperature;

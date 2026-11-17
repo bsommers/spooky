@@ -1,0 +1,89 @@
+import { act, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it } from 'vitest';
+import { NOT_FOUND_ROUTE, parseHash } from '../../src/app/route';
+import { renderApp } from '../helpers/app';
+
+describe('app shell', () => {
+  it('has the landmarks: banner, labelled primary navigation, main, contentinfo, and a skip link first', async () => {
+    renderApp();
+    expect(screen.getByRole('banner')).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: 'Primary' });
+    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['Overview', 'Generate', 'Authors', 'Personas', 'Score / Humanize', 'Settings', 'Kitchen sink']);
+    expect(screen.getByRole('main')).toBeInTheDocument();
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+    const links = screen.getAllByRole('link');
+    expect(links[0]).toHaveTextContent('Skip to content');
+    await screen.findByText(/Connected/);
+  });
+
+  it('the footer links the shipped third-party licence texts (a real file, not a route)', () => {
+    renderApp();
+    const footer = screen.getByRole('contentinfo');
+    expect(within(footer).getByRole('link', { name: 'Licences' })).toHaveAttribute('href', '/licenses/THIRD_PARTY_LICENSES.md');
+  });
+
+  it('marks the current page with aria-current and gives the document a matching title', async () => {
+    renderApp('#/kitchen-sink');
+    const nav = screen.getByRole('navigation', { name: 'Primary' });
+    expect(within(nav).getByRole('link', { name: 'Kitchen sink' })).toHaveAttribute('aria-current', 'page');
+    expect(within(nav).getByRole('link', { name: 'Overview' })).not.toHaveAttribute('aria-current');
+    expect(document.title).toBe('Kitchen sink - Spooky');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Kitchen sink');
+  });
+
+  it('navigates by keyboard and moves focus to the content after a navigation', async () => {
+    const user = userEvent.setup();
+    renderApp('#/');
+    await screen.findByText(/Connected/);
+    await user.click(screen.getByRole('link', { name: 'Kitchen sink' }));
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Kitchen sink'));
+    expect(screen.getByRole('main')).toHaveFocus();
+  });
+
+  it('the skip link focuses main without touching the route', async () => {
+    const user = userEvent.setup();
+    renderApp('#/kitchen-sink');
+    await user.click(screen.getByRole('link', { name: 'Skip to content' }));
+    expect(screen.getByRole('main')).toHaveFocus();
+    expect(window.location.hash).toBe('#/kitchen-sink');
+  });
+
+  it('an unknown route says so and keeps the shell', () => {
+    renderApp('#/nope');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Nothing here');
+    expect(screen.getByRole('navigation', { name: 'Primary' })).toBeInTheDocument();
+    expect(document.title).toBe('Not found - Spooky');
+  });
+
+  it('reacts to hashchange', async () => {
+    renderApp('#/');
+    await screen.findByText(/Connected/);
+    act(() => {
+      window.location.hash = '#/kitchen-sink';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Kitchen sink' })).toBeInTheDocument();
+  });
+
+  it('parseHash maps only an empty hash, #/ and the skip target to home; anything malformed is not-found, not Overview', async () => {
+    expect(parseHash('')).toBe('/');
+    expect(parseHash('#')).toBe('/');
+    expect(parseHash('#/')).toBe('/');
+    expect(parseHash('#main')).toBe('/');
+    for (const bad of ['#/Kitchen-Sink', '#/foo.bar', '#other', '#/a b']) expect(parseHash(bad), bad).toBe(NOT_FOUND_ROUTE);
+    renderApp('#/Kitchen-Sink');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Nothing here');
+    expect(within(screen.getByRole('navigation', { name: 'Primary' })).queryByRole('link', { current: 'page' })).toBeNull();
+    // a bypassed skip link lands on #main: that keeps the current page
+    act(() => {
+      window.location.hash = '#main';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Nothing here');
+    expect(parseHash('#/kitchen-sink')).toBe('/kitchen-sink');
+    expect(parseHash('#/a/b')).toBe('/a/b'); // unknown, so the not-found page
+    expect(parseHash('#/<script>')).toBe(NOT_FOUND_ROUTE);
+    expect(parseHash('#//evil.example')).toBe(NOT_FOUND_ROUTE);
+  });
+});

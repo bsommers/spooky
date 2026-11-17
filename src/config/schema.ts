@@ -3,7 +3,9 @@
 import { z } from 'zod';
 import { DEFAULT_CHUNK, DEFAULT_LIMITS, DEFAULT_LLM, MAX_LLM_RETRIES } from '../../config/settings.js';
 import { DEFAULT_PERSONAS } from '../../config/targetPersonas.js';
-import { ENDPOINT_MESSAGES, endpointProblem } from '../llm/endpoint.js';
+import { DETECTOR_KEY_ENV_MESSAGE, ENDPOINT_MESSAGES, detectorEndpointProblem, endpointProblem, isDetectorKeyEnvName } from '../llm/endpoint.js';
+import { DEFAULT_DETECTOR_TIMEOUT_MS, DEFAULT_LOCAL_WEIGHT, DEFAULT_SCORER_WEIGHTS } from '../../config/scorer.js';
+import { DEFAULT_HUMANIZE, MAX_HUMANIZE_ITERATIONS } from '../../config/humanize.js';
 import { DEFAULT_PIPELINE, KNOWN_FILTER_NAMES, firstFilterAfterFinalConfidentiality } from '../../config/filters.js';
 
 const positiveInt = z.number().int().positive();
@@ -121,6 +123,62 @@ const llmSchema = z
     }
   });
 
+const weight = z.number().min(0, 'must be a non-negative number');
+
+const detectorSchema = z
+  .strictObject({
+    name: z
+      .string()
+      .regex(/^[a-z0-9_-]{1,40}$/, 'must be 1-40 characters: lowercase letters, digits, "_" or "-"')
+      .refine((v) => v !== 'local', { error: '"local" is reserved for the built-in heuristic' })
+      .refine((v) => v !== '__proto__', { error: '"__proto__" is reserved' }),
+    url: httpUrl,
+    apiKeyEnv: z
+      .string()
+      .regex(ENV_NAME, 'must be an environment variable name, not a key')
+      .refine(isDetectorKeyEnvName, { error: DETECTOR_KEY_ENV_MESSAGE })
+      .optional(),
+    weight: weight.default(1),
+    timeoutMs: positiveInt.max(120_000).default(DEFAULT_DETECTOR_TIMEOUT_MS),
+  })
+  .superRefine((d, ctx) => {
+    // Stricter than the LLM endpoints: the text sent is the user's prose, so non-loopback http is refused with or without a key.
+    const problem = detectorEndpointProblem(d.url, d.apiKeyEnv !== undefined);
+    if (problem === 'cleartext' || problem === 'cleartext-key') ctx.addIssue({ code: 'custom', path: ['url'], message: ENDPOINT_MESSAGES[problem] });
+  });
+
+const scorerSchema = z
+  .strictObject({
+    weights: z
+      .strictObject({
+        burstiness: weight.default(DEFAULT_SCORER_WEIGHTS.burstiness),
+        lexicalDiversity: weight.default(DEFAULT_SCORER_WEIGHTS.lexicalDiversity),
+        cliche: weight.default(DEFAULT_SCORER_WEIGHTS.cliche),
+        punctuation: weight.default(DEFAULT_SCORER_WEIGHTS.punctuation),
+        repetition: weight.default(DEFAULT_SCORER_WEIGHTS.repetition),
+        paragraphUniformity: weight.default(DEFAULT_SCORER_WEIGHTS.paragraphUniformity),
+      })
+      .refine((w) => Object.values(w).some((v) => v > 0), { error: 'at least one weight must be positive' })
+      .default(() => ({ ...DEFAULT_SCORER_WEIGHTS })),
+    localWeight: weight.default(DEFAULT_LOCAL_WEIGHT),
+    detectors: z
+      .array(detectorSchema)
+      .max(20, 'at most 20 detectors')
+      .superRefine((list, ctx) => {
+        const seen = new Set<string>();
+        list.forEach((d, i) => {
+          if (seen.has(d.name)) ctx.addIssue({ code: 'custom', path: [i, 'name'], message: `duplicate detector name "${d.name}"` });
+          seen.add(d.name);
+        });
+      })
+      .default(() => []),
+  });
+
+const humanizeSchema = z.strictObject({
+  targetScore: z.number().min(0).max(1).default(DEFAULT_HUMANIZE.targetScore),
+  maxIterations: z.number().int().min(0).max(MAX_HUMANIZE_ITERATIONS).default(DEFAULT_HUMANIZE.maxIterations),
+});
+
 export const configSchema = z.strictObject({
   limits: z
     .strictObject({ maxInputChars: positiveInt.default(DEFAULT_LIMITS.maxInputChars) })
@@ -140,4 +198,6 @@ export const configSchema = z.strictObject({
     .default(() => ({ pipeline: DEFAULT_PIPELINE.map((f) => ({ ...f })) })),
   personas: personasSchema.default(() => DEFAULT_PERSONAS.map((p) => structuredClone(p))),
   confidentiality: confidentialitySchema.optional(),
+  scorer: scorerSchema.optional(),
+  humanize: humanizeSchema.optional(),
 });

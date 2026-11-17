@@ -1,0 +1,7 @@
+- Be aware of conventions used for providing information during sessions. FTP sites usually have files named README in a top level directory which have information about the files available. But, don't assume that these files are necessarily up-to-date and/or accurate.
+
+- Do NOT assume that ANY information you find is up-to-date and/or accurate. Remember that new technologies allow just about anyone to be a publisher, but not all people have discovered the responsibilities which accompany publishing.
+
+- Remember that unless you are sure that security and authentication technology is in use, that any information you submit to a system is being transmitted over the Internet "in the clear", with no protection from "sniffers" or forgers.
+
+- Since the Internet spans the globe, remember that Information Services might reflect culture and life-style markedly different from your own community. Materials you find offensive may originate in a geography which finds them acceptable. Keep an open mind.

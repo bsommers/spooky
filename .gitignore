@@ -7,3 +7,7 @@ coverage/
 .DS_Store
 .claude/
 data/
+ui/.e2e-state/
+ui/.e2e-state-token/
+ui/test-results/
+ui/playwright-report/

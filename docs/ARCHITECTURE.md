@@ -1,6 +1,10 @@
 # Architecture
 
-Spooky rewrites a draft along two axes: whose **voice** (source author) and for whom (target **persona**). A filter pipeline wraps the single LLM call. The CLI is a thin adapter over the `Engine` class; every capability exists on both surfaces (`tests/integration/parity.test.ts` enforces this).
+Spooky rewrites a draft along two axes: whose **voice** (source author) and for whom (target **persona**). A filter pipeline wraps the single LLM call. The CLI, the HTTP API and the MCP server are thin adapters over the `Engine` class, generated from one operations registry (`src/service/operations.ts`); every capability exists on every surface (`tests/integration/parity.test.ts` and `tests/integration/surfaces-parity.test.ts` enforce this; see [SURFACES.md](SURFACES.md)).
+
+## Topic mode
+
+`generate` takes `mode: 'rewrite' | 'topic'` (default rewrite). In topic mode the input is a subject, not a draft: the orchestrator runs the same flow, with these differences. The topic and the optional `notes` (user-supplied facts, capped at `limits.maxInputChars` like the input) each go through the PRE pipeline on their own, and each must show a successful confidentiality entry or no prompt is built (fail closed). The retrieval query is the redacted topic plus notes. `buildPrompt` fences them as `<topic>` and `<notes>` (look-alikes of those tags in any untrusted text are neutralized like `<input>`) and its system prompt asks for NEW text, with honesty rules: there is no web search; use ONLY the notes for specific facts, numbers, names, dates and quotes; say plainly when the notes or its knowledge do not cover something instead of inventing it. The POST pipeline, the banned-phrase check and the optional humanizer run unchanged. The result carries `caveat` (`TOPIC_CAVEAT`, `config/topic.ts`): facts are not verified. The honesty rules reduce invented specifics; they cannot prevent them, which is why the caveat is on every topic result on every surface.
 
 ## Generation flow
 
@@ -90,6 +94,7 @@ Nothing downstream of the pre pipeline (profile, embedder, store, disk) ever see
 | `src/pipeline/` | `buildPrompt`: pure `(profile, exemplars, persona, input) -> {system, user}`, delimiter-neutralizing. |
 | `src/llm/` | `LlmClient` adapters (Anthropic, OpenAI-compatible, Mock), retry, endpoint/key-egress policy. |
 | `src/orchestration/` | `Orchestrator`: the one place both axes, the filters and the LLM meet. |
+| `src/scoring/` + `config/scorer.ts` | AI-likeness scorer: pure `features.ts` (six [0,1] features over prose with protected spans removed), `HeuristicScorer` (weighted mean with an exact per-feature breakdown), `DetectorAdapter` + `HttpDetectorAdapter`, `runEnsemble` (weighted mean; failing/invalid detectors excluded and recorded), `calibration.ts` (AUC, bootstrap). `Engine.score` runs the PRE pipeline first, so the heuristic and every detector see redacted text only. Measured quality: [CALIBRATION.md](CALIBRATION.md). |
 | `src/engine.ts` | `Engine` facade: library surface, lazy LLM client, optional persistence. |
 | `src/cli/` | commander program; `main()` returns an exit code, `bin.ts` is the shebang entry. |
 
@@ -97,6 +102,7 @@ Nothing downstream of the pre pipeline (profile, embedder, store, disk) ever see
 
 - **Filter:** implement `Filter`, add its name to `config/filters.ts`, pass a factory to `Engine` (README, "Add a filter in under 20 lines").
 - **LLM provider:** implement `LlmClient.complete(req) => Promise<string>` and pass `llm` to `Engine`.
+- **Score detector:** implement `DetectorAdapter` (`name`, `score(text, signal?) => Promise<number>` in [0,1], 1 = machine-generated; the signal aborts on timeout) and pass `detectors` to `Engine`, or declare an HTTP one under `scorer.detectors`. It runs only when `score()` names it.
 - **Embedder / vector store:** pass `embedder` / `store` to `Engine`; a store needs `save`/`load` only when a state directory is used.
 - **Personas, phrases, blocklist, custom redaction rules:** data in the config file.
 

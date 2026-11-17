@@ -1,0 +1,93 @@
+// Humanizer settings as data (Phase 8). Defaults mirror HUM-01: stop at `targetScore` 0.3 or after `maxIterations` 3.
+// The target is a threshold on the LOCAL heuristic score (a weak, confounded proxy: docs/CALIBRATION.md), not a promise
+// about any third-party detector (docs/HUMANIZING.md).
+
+/**
+ * Held-out AUC of the local heuristic on the labeled corpus (docs/CALIBRATION.md), quoted in every humanizer caveat. The
+ * calibration test (tests/system/humanize-calibration.test.ts) fails when this differs from the number measured in
+ * docs/HUMANIZING.md, so the quoted figure cannot drift from the calibration.
+ */
+export const HEURISTIC_HELD_OUT_AUC = 0.694;
+
+export const DEFAULT_HUMANIZE = { targetScore: 0.3, maxIterations: 3 } as const;
+
+/** Hard upper bound on `maxIterations` (each iteration can cost one model call). */
+export const MAX_HUMANIZE_ITERATIONS = 10;
+
+/** A rewrite may not shrink the text below, or grow it beyond, these fractions of the word count it started from. */
+export const HUMANIZE_LENGTH_BOUNDS = { min: 0.5, max: 2 } as const;
+
+/**
+ * "Added prose" check of the meaning guard: a candidate sentence of at least this many words whose distinct words (3+
+ * letters) overlap the original's vocabulary by less than `OVERLAP` is novel; more than `TOLERANCE` of the original's
+ * sentence count (rounded down: none for a text under 10 sentences) of them fails the candidate.
+ */
+export const HUMANIZE_NOVEL_SENTENCE_MIN_WORDS = 4;
+export const HUMANIZE_NOVEL_SENTENCE_OVERLAP = 0.5;
+export const HUMANIZE_NOVEL_SENTENCE_TOLERANCE = 0.1;
+
+/**
+ * "Silent deletion" check: at least this fraction of the original's distinct words (3+ letters) must still occur in the
+ * candidate. Judged only when the original has at least `MIN_VOCAB` such words.
+ */
+export const HUMANIZE_MIN_CONTENT_KEPT = 0.6;
+export const HUMANIZE_CONTENT_CHECK_MIN_VOCAB = 12;
+
+/** Largest model answer the rewrite step accepts, as a multiple of the input length (plus a floor), in characters. */
+export const HUMANIZE_OUTPUT_FACTOR = 3;
+export const HUMANIZE_OUTPUT_FLOOR = 2000;
+
+/** Sentence-level rewrite thresholds for the deterministic step (words). */
+export const HUMANIZE_RHYTHM = {
+  /** a sentence needs at least this many words before it is split */
+  splitMinWords: 24,
+  /** both sentences of a merged pair have at most this many words */
+  mergeMaxWords: 20,
+  /** at most this many splits / merges per iteration and per paragraph-free text */
+  maxEditsPerIteration: 3,
+} as const;
+
+/**
+ * Plain replacements for the stock words the `cliche` feature counts (config/scorer.ts CLICHE_PHRASES). A word with no
+ * entry here is left to the model pass: replacing it blindly would change its meaning ("significant", "across").
+ * `null` deletes the word (an adverb whose removal leaves a grammatical sentence).
+ * Left out on purpose: `underscore` (also the `_` character and a noun), `aligning` ("aligning with" is not "matching with")
+ * and `exhibited` (adjective, verb and noun). A replacement that starts with a vowel sound where the word did not (or the
+ * reverse) gets its article fixed ("an intricate" -> "a complex").
+ */
+export const HUMANIZE_CLICHE_REPLACEMENTS: Readonly<Record<string, string | null>> = {
+  delve: 'dig',
+  delves: 'digs',
+  delved: 'dug',
+  delving: 'digging',
+  showcasing: 'showing',
+  grappling: 'struggling',
+  garnered: 'earned',
+  pivotal: 'key',
+  notably: null,
+  additionally: 'also',
+  crucial: 'key',
+  enhancing: 'improving',
+  valuable: 'useful',
+  excels: 'does well',
+  intricate: 'complex',
+  meticulously: 'carefully',
+  realm: 'area',
+};
+
+/** Words that may lose their capital when a sentence is joined to the one before it with a semicolon. */
+export const HUMANIZE_LOWERABLE_STARTERS: readonly string[] = [
+  'the', 'this', 'that', 'these', 'those', 'it', 'its', 'they', 'their', 'we', 'he', 'she', 'there', 'a', 'an', 'in', 'on', 'at', 'for',
+  'with', 'but', 'so', 'and', 'then', 'now', 'here', 'some', 'many', 'most', 'each', 'every', 'both', 'such', 'one', 'when', 'while',
+  'because', 'since', 'if', 'as', 'by', 'from', 'to', 'of', 'our', 'your', 'his', 'her', 'what', 'which', 'who', 'how', 'why',
+];
+
+/** What to ask the model for, per scorer feature (a feature with no entry is not asked about). */
+export const HUMANIZE_FEATURE_INSTRUCTIONS: Readonly<Record<string, string>> = {
+  burstiness: 'Vary the sentence length: mix very short sentences with longer ones instead of sentences of similar length.',
+  cliche: 'Replace stock words and connectives (for example delve, pivotal, crucial, notably, additionally, furthermore, moreover) with plain wording.',
+  punctuation: 'Use a wider range of punctuation where it reads naturally (semicolons, colons, dashes, parentheses, question marks).',
+  lexicalDiversity: 'Vary word choice; do not reuse the same words and phrases.',
+  repetition: 'Remove repeated three-word phrases by rewording.',
+  paragraphUniformity: 'Vary paragraph length; do not make paragraphs the same size.',
+};

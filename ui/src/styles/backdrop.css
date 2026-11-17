@@ -1,0 +1,68 @@
+.gw-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: var(--gw-bg);
+  pointer-events: none;
+}
+
+.gw-backdrop__art {
+  position: absolute;
+  inset: 0;
+  background: var(--gw-bg-art);
+  animation: var(--gw-anim-glow);
+}
+
+/* Perspective floor: a tall plane tilted away from the viewer, scrolling one cell per cycle (theme tokens decide if any). */
+.gw-backdrop__grid {
+  position: absolute;
+  inset: auto 0 0;
+  height: 200%;
+  background-image: var(--gw-bg-grid);
+  background-size: var(--gw-bg-grid-cell) var(--gw-bg-grid-cell);
+  transform: var(--gw-bg-grid-transform);
+  transform-origin: 50% 100%;
+  animation: var(--gw-anim-grid);
+}
+
+.gw-backdrop__mark {
+  position: absolute;
+  right: 2rem;
+  bottom: 2rem;
+  width: min(30vw, 300px);
+  aspect-ratio: 5 / 6;
+  background: var(--gw-bg-mark) no-repeat center / contain;
+}
+
+@keyframes gw-grid-scroll {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 0 var(--gw-bg-grid-cell);
+  }
+}
+
+@keyframes gw-glow-pulse {
+  from {
+    opacity: 0.55;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes gw-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+
+  96% {
+    transform: scaleY(0.08);
+  }
+}

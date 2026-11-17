@@ -2,3 +2,17 @@ Spooky
 Copyright 2026 Bill Sommers
 
 This product is licensed under the Apache License, Version 2.0.
+
+Third-party text bundled for testing (tests/fixtures/corpus/, not part of the published package):
+
+  * 26 excerpts of public-domain prose from Project Gutenberg (1787-1907), and 30 more from Project Gutenberg books
+    published 1899-1925 (public domain in the US).
+  * 72 excerpts of US-government web pages and speech transcripts (NASA, NIH, NIST, FDA, NSF, NOAA, DOE, and 2017 White
+    House transcripts), works of the US government not subject to copyright (17 U.S.C. 105). NASA pages may embed
+    third-party material; only page text was excerpted. The manifest lists the URL and retrieval date per file.
+  * 13 excerpts of IETF RFCs (rfc-editor.org). RFC text is (c) IETF Trust and the individual authors and is reproduced
+    here under the IETF Trust Legal Provisions. RFCs published before November 2008 (the RFC 5378 cut-over) may carry
+    terms that allow verbatim reproduction only; the excerpts have line wraps joined, so they may not meet that bar.
+    They are used solely as labeled test data for the scorer calibration (docs/CALIBRATION.md). If you redistribute this
+    repository's test fixtures, check each RFC's own legal notice (manifest.json lists the source URL per file), or
+    delete the RFC fixtures and the calibration gate with them.
