@@ -87,6 +87,9 @@ const SECURITY_HEADERS: Readonly<Record<string, string>> = {
   'Referrer-Policy': 'no-referrer',
   'Cross-Origin-Resource-Policy': 'same-origin',
   'X-Frame-Options': 'DENY',
+  // Defence in depth for a local app that needs no sensors and no cross-window access.
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  'Cross-Origin-Opener-Policy': 'same-origin',
 };
 const API_CSP = "default-src 'none'; frame-ancestors 'none'";
 

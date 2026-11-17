@@ -56,6 +56,8 @@ describe('served by the real server', () => {
         expect(r.headers['content-security-policy'], path).toBe(UI_CSP);
         expect(r.headers['x-content-type-options'], path).toBe('nosniff');
         expect(r.headers['x-frame-options'], path).toBe('DENY');
+        expect(r.headers['permissions-policy'], path).toBe('camera=(), microphone=(), geolocation=()');
+        expect(r.headers['cross-origin-opener-policy'], path).toBe('same-origin');
       }
     } finally {
       await server.close();

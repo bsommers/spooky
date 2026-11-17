@@ -209,10 +209,10 @@ describe('Overview', () => {
     expect(await screen.findByText(/Connected/)).toBeInTheDocument();
   });
 
-  it('a 429 that is not the token lockout is an ordinary error, not "too many wrong tokens"; the real lockout forgets the held token', async () => {
+  it('a 429 that is not the token lockout is an ordinary error, not "too many attempts"; the real lockout forgets the held token', async () => {
     const other = renderApp('#/', fakeClient(() => jsonResponse(429, { ok: false, error: { code: 'OVERLOADED', message: 'busy elsewhere' } })));
     expect(await screen.findByRole('alert')).toHaveTextContent('busy elsewhere');
-    expect(screen.queryByText(/Too many wrong tokens/)).toBeNull();
+    expect(screen.queryByText(/Too many attempts/)).toBeNull();
     other.unmount();
     const locked = fakeClient(() => jsonResponse(429, { ok: false, error: { code: 'RATE_LIMITED', message: 'x' } }, { 'Retry-After': '30' }));
     locked.setToken('held-token-0123456789');
@@ -223,7 +223,7 @@ describe('Overview', () => {
 
   it('a lockout (429) says how long to wait', async () => {
     renderApp('#/', fakeClient(() => jsonResponse(429, { ok: false, error: { code: 'RATE_LIMITED', message: 'x' } }, { 'Retry-After': '60' })));
-    expect(await screen.findByText('Too many wrong tokens; try again in 60 seconds.')).toBeInTheDocument();
+    expect(await screen.findByText('Too many attempts; try again in 60 seconds.')).toBeInTheDocument();
   });
 
   it('a server that cannot be reached is reported as an alert, not a blank page', async () => {

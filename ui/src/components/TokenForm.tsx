@@ -30,7 +30,7 @@ export function TokenForm({ wrong, waitSeconds, busy, onSubmit }: TokenFormProps
     >
       <p className="gw-status gw-status--warning" role="alert">
         <WarningIcon size={18} />
-        {wrong ? (waitSeconds === undefined ? 'That token was not accepted.' : `Too many wrong tokens; try again in ${waitSeconds} seconds.`) : 'This server asks for an API token.'}
+        {wrong ? (waitSeconds === undefined ? 'That token was not accepted.' : `Too many attempts; try again in ${waitSeconds} seconds.`) : 'This server asks for an API token.'}
       </p>
       <TextField name="token" type="password" isRequired autoComplete="off" className="gw-field" isInvalid={unsafe} onChange={() => setUnsafe(false)}>
         <Label className="gw-label">API token</Label>

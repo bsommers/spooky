@@ -112,12 +112,12 @@ test('too many wrong tokens locks the address out: the page says to wait, forget
   let locked = false;
   for (let i = 0; i < 10 && !locked; i++) {
     await connect(page, `${WRONG}${i}`);
-    await expect(page.getByText(/That token was not accepted\.|Too many wrong tokens/)).toBeVisible();
-    locked = await page.getByText(/Too many wrong tokens; try again in \d+ seconds/).isVisible();
+    await expect(page.getByText(/That token was not accepted\.|Too many attempts/)).toBeVisible();
+    locked = await page.getByText(/Too many attempts; try again in \d+ seconds/).isVisible();
   }
   expect(locked).toBe(true);
   await connect(page, E2E_TOKEN);
-  await expect(page.getByText(/Too many wrong tokens; try again in \d+ seconds/)).toBeVisible();
+  await expect(page.getByText(/Too many attempts; try again in \d+ seconds/)).toBeVisible();
   await expect(page.getByLabel('Draft', { exact: true })).toHaveCount(0);
   await nowhere(page, seen, WRONG);
   await nowhere(page, seen, E2E_TOKEN);

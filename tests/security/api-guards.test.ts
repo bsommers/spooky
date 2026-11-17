@@ -467,6 +467,8 @@ describe('size, shape and time limits', () => {
         expect(r.headers['cache-control'], path).toBe('no-store');
         expect(r.headers['content-security-policy'], path).toBe("default-src 'none'; frame-ancestors 'none'");
         expect(r.headers['referrer-policy'], path).toBe('no-referrer');
+        expect(r.headers['permissions-policy'], path).toBe('camera=(), microphone=(), geolocation=()');
+        expect(r.headers['cross-origin-opener-policy'], path).toBe('same-origin');
         expect(r.headers['content-type'], path).toContain('application/json');
       }
     });
