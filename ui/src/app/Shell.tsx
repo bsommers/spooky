@@ -57,6 +57,9 @@ export function Shell({ route, children }: { route: string; children: ReactNode 
       <footer className="gw-footer">
         <PawIcon size={16} />
         <span>Spooky runs on this machine. Nothing on this page is loaded from the internet.</span>
+        <Link className="gw-footer__link" href="/licenses/THIRD_PARTY_LICENSES.md">
+          Licences
+        </Link>
         <LiveRegion />
       </footer>
     </>

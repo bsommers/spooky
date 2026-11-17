@@ -73,6 +73,12 @@ describe('static handler: serving', () => {
     }
   });
 
+  it('the shipped licence text (.md) is served as inert text/plain so a browser shows it instead of downloading it', async () => {
+    const r = await raw(target, '/licenses/THIRD_PARTY_LICENSES.md');
+    expect([r.status, r.headers['content-type'], r.headers['x-content-type-options']]).toEqual([200, 'text/plain; charset=utf-8', 'nosniff']);
+    expect(r.text).toContain('Third-party licences');
+  });
+
   it('a file that cannot be opened is answered (404) before any header, not by resetting the connection', async () => {
     const file = join(fx.root, 'assets', 'locked-AbCdEf12.js');
     let readable = true;

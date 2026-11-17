@@ -50,6 +50,8 @@ const TYPES: Readonly<Record<string, string>> = {
   '.json': 'application/json; charset=utf-8',
   '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.txt': 'text/plain; charset=utf-8',
+  // The shipped licence texts. text/plain, not text/markdown: it shows in the browser and stays inert under nosniff.
+  '.md': 'text/plain; charset=utf-8',
 };
 
 const isProtectedPath = (p: string): boolean => p === '/api' || p.startsWith('/api/') || p === OPENAPI_PATH || p === MCP_PATH;

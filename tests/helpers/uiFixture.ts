@@ -27,6 +27,8 @@ export function makeUiFixture(): UiFixture {
   symlinkSync(join(root, 'assets', 'app-AbCdEf12.js'), join(root, 'assets', 'plain.js')); // an unhashed name pointing at a hashed file
   writeFileSync(join(root, 'assets', 'locked-AbCdEf12.js'), 'locked');
   chmodSync(join(root, 'assets', 'locked-AbCdEf12.js'), 0o000); // exists, stats fine, cannot be opened
+  mkdirSync(join(root, 'licenses'), { recursive: true });
+  writeFileSync(join(root, 'licenses', 'THIRD_PARTY_LICENSES.md'), '# Third-party licences\n');
   writeFileSync(join(root, 'favicon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
   writeFileSync(join(root, 'theme-init.js'), '/* init */');
   writeFileSync(join(root, '.hidden'), 'dotfile');

@@ -17,6 +17,12 @@ describe('app shell', () => {
     await screen.findByText(/Connected/);
   });
 
+  it('the footer links the shipped third-party licence texts (a real file, not a route)', () => {
+    renderApp();
+    const footer = screen.getByRole('contentinfo');
+    expect(within(footer).getByRole('link', { name: 'Licences' })).toHaveAttribute('href', '/licenses/THIRD_PARTY_LICENSES.md');
+  });
+
   it('marks the current page with aria-current and gives the document a matching title', async () => {
     renderApp('#/kitchen-sink');
     const nav = screen.getByRole('navigation', { name: 'Primary' });

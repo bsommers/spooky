@@ -139,6 +139,18 @@
 }
 
 .gw-footer svg {
+  flex: none;
+  color: var(--gw-accent);
+}
+
+.gw-footer__link {
+  margin-left: auto;
+  color: var(--gw-text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.gw-footer__link:hover {
   color: var(--gw-accent);
 }
 
