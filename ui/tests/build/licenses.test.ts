@@ -1,6 +1,6 @@
 // License tier: THIRD_PARTY.md is generated and current, every production dependency and font has an allowed license,
 // every bundled font ships its license file, and the audit demonstrably fails on a disallowed license.
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -38,6 +38,18 @@ describe('production dependencies', () => {
     const names = packages.map((p) => p.name);
     expect(packages.find((p) => p.name === 'react-aria-components')?.license).toBe('Apache-2.0');
     for (const dev of ['vite', 'vitest', 'playwright', '@playwright/test', 'axe-core', 'jsdom', 'stylelint', 'typescript']) expect(names, dev).not.toContain(dev);
+  });
+
+  it('zod is build/test-time only: not a production dependency, not in the audit, and no shipped source imports it as a value', () => {
+    const pkg = JSON.parse(readFileSync(join(UI_ROOT, 'package.json'), 'utf8')) as { dependencies: Record<string, string>; devDependencies: Record<string, string> };
+    expect(Object.keys(pkg.dependencies)).not.toContain('zod');
+    expect(Object.keys(pkg.devDependencies)).toContain('zod');
+    expect(packages.map((p) => p.name)).not.toContain('zod');
+    // The theme contract is the one module that uses zod (build and tests); the app must only ever import its types.
+    const offenders = readdirSync(join(UI_ROOT, 'src'), { recursive: true, encoding: 'utf8' })
+      .filter((f) => /\.(ts|tsx)$/.test(f) && f !== join('theme', 'contract.ts'))
+      .filter((f) => /^import\s+(?!type\b)[^;]*from\s+['"](zod|\.{1,2}\/(?:[^'"]*\/)?theme\/contract|\.\/contract)['"]/m.test(readFileSync(join(UI_ROOT, 'src', f), 'utf8')));
+    expect(offenders).toEqual([]);
   });
 
   it('every production package has an allowed license and the audit reports no problem', () => {

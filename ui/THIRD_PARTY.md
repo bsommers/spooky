@@ -41,7 +41,6 @@ Families: Orbitron, Inter and JetBrains Mono (Tron Neon, matching lumagrid), Fra
 | `scheduler` | 0.28.0 | MIT |
 | `tslib` | 2.9.1 | 0BSD |
 | `use-sync-external-store` | 1.7.0 | MIT |
-| `zod` | 4.6.7 | MIT |
 
 ## Development tools (not shipped)
 
