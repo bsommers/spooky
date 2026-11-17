@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { UI_CSP, createStaticHandler, hasBuiltUi } from '../../../src/api/static.js';
+import { UI_CSP, createStaticHandler, hasBuiltUi, safeSegments } from '../../../src/api/static.js';
 import { raw } from '../../helpers/surfaces.js';
 import { SECRET, makeUiFixture } from '../../helpers/uiFixture.js';
 import type { UiFixture } from '../../helpers/uiFixture.js';
@@ -44,6 +44,8 @@ describe('static handler: serving', () => {
     expect(r.headers['content-security-policy']).toBe(UI_CSP);
     expect(r.headers['x-content-type-options']).toBe('nosniff');
     expect(r.headers['x-frame-options']).toBe('DENY');
+    expect(r.headers['permissions-policy']).toBe('camera=(), microphone=(), geolocation=()');
+    expect(r.headers['cross-origin-opener-policy']).toBe('same-origin');
     expect(r.headers['cache-control']).toBe('no-store');
     expect(r.headers['content-length']).toBe(String(Buffer.byteLength(r.text)));
   });
@@ -153,6 +155,19 @@ describe('static handler: path traversal and hidden files are 404', () => {
       expect(r.status).toBe(404);
     });
   }
+});
+
+describe('static handler: Windows path segments', () => {
+  const hostile = ['/C:/Windows/win.ini', '/index.html::$DATA', '/assets/app-AbCdEf12.js:stream', '/sub/c:'];
+  it('refuses a ":" in any segment on win32 (drive letters, alternate data streams)', () => {
+    for (const p of hostile) expect(safeSegments(p, 'win32'), p).toBeUndefined();
+    expect(safeSegments('/%43%3a/x', 'win32')).toBeUndefined(); // percent-encoded "C:" is decoded before the check
+  });
+  it('still accepts ordinary paths on win32, and leaves ":" alone on other platforms (a legal filename character there)', () => {
+    expect(safeSegments('/assets/app-AbCdEf12.js', 'win32')).toEqual(['assets', 'app-AbCdEf12.js']);
+    expect(safeSegments('/a:b', 'linux')).toEqual(['a:b']);
+    expect(safeSegments('/a:b', 'darwin')).toEqual(['a:b']);
+  });
 });
 
 describe('static handler setup', () => {

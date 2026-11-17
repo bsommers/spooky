@@ -56,8 +56,12 @@ const TYPES: Readonly<Record<string, string>> = {
 
 const isProtectedPath = (p: string): boolean => p === '/api' || p.startsWith('/api/') || p === OPENAPI_PATH || p === MCP_PATH;
 
-/** The decoded path segments, or undefined when any segment could name something outside the root. */
-function safeSegments(pathname: string): string[] | undefined {
+/**
+ * The decoded path segments, or undefined when any segment could name something outside the root. On Windows a ':' in a segment
+ * (a drive letter such as "C:", or an alternate data stream such as "index.html::$DATA") is refused too; ':' is an ordinary
+ * filename character elsewhere. `platform` is a parameter so the Windows rule is testable on any host.
+ */
+export function safeSegments(pathname: string, platform: NodeJS.Platform = process.platform): string[] | undefined {
   const out: string[] = [];
   for (const raw of pathname.split('/').slice(1)) {
     if (raw === '') continue; // a trailing slash or "//" inside the path
@@ -68,6 +72,7 @@ function safeSegments(pathname: string): string[] | undefined {
       return undefined;
     }
     if (seg === '..' || seg.startsWith('.') || /[\\/\0]/.test(seg)) return undefined;
+    if (platform === 'win32' && seg.includes(':')) return undefined;
     out.push(seg);
   }
   return out;
