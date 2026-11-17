@@ -80,6 +80,21 @@ status: partial
 ### IN-01..IN-04
 **Reason:** Deferred by request (info findings, not trivial enough to bundle in): `transformIndexHtml` silent no-op, `<noscript>` and `color-scheme` meta, Windows ADS segments and iOS e2e, `Permissions-Policy` / `Cross-Origin-Opener-Policy` headers and neutral 429 wording.
 
+## Deferred items fixed
+
+The items skipped above were fixed afterwards, in the main checkout (no worktree), one commit each.
+
+| Item | Commit | Fix and tests |
+|------|--------|---------------|
+| LW-03 | f95a16e | `.md` served as `text/plain; charset=utf-8`; the footer links `/licenses/THIRD_PARTY_LICENSES.md`. Tests: static handler (content type, nosniff), shell footer link. The footer change moved 8 phone baselines (generate, generate-topic, personas, score; both themes), regenerated in the pinned container. |
+| IN-03 | 8895a43 | `safeSegments` (now exported, with a `platform` argument) refuses `:` in a segment on win32 (drive letters, `::$DATA`). Unit tests for win32 and non-win32. The optional WebKit e2e was not added. |
+| LW-08 | f353eae | `zod` moved to `ui` devDependencies, lock file and `THIRD_PARTY.md` regenerated (20 production packages). Test: not a production dependency, not in the audit, no shipped source imports the contract as a value. |
+| IN-01 | 05776c7 | `injectThemeHtml` throws when the `<html lang="en">` anchor is missing. Test for both anchors. |
+| IN-02 | 815ee4e, 05776c7 | `<noscript>` message beside `#root`; the `color-scheme` meta is derived from `THEMES` (`dark light` when both schemes exist). Tests in `ui/tests/build/index-html.test.ts`. |
+| IN-04 | ca94e88 | `Permissions-Policy: camera=(), microphone=(), geolocation=()` and `Cross-Origin-Opener-Policy: same-origin` on every response; the lockout text is "Too many attempts; try again in N seconds." (Overview moved to `TokenForm`). Tests: unit, API security, UI security, component, e2e. |
+
+**Verification:** `scripts/verify.sh` in the main checkout (e2e on port 4983 because 4873 was taken): typecheck ok; root smoke 4/4, unit 984/984 (the chunker timing test timed out once under load and passes alone), integration 316/316, system 67/67, security 510/510, torture 5/5; ui vitest 466/466; ui e2e 110/114. The 4 failures are the `settings` visual baselines, which differ because of the state-directory row added in f0cfc9a (page height changes), not because of these fixes. They need a regeneration by whoever owns that change.
+
 ---
 
 _Fixed: 2026-11-15_
